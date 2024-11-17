@@ -7,8 +7,10 @@ app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-const homeRouter = require("./src/home/router");
+const homeRouter = require("./src/api/home/router");
+const userRouter = require("./src/api/user/router");
 
 app.use("/", homeRouter);
+app.use("/user", userRouter);
 
 module.exports = app;
