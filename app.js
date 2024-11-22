@@ -1,3 +1,5 @@
+const { handleError } = require("./src/middleware/errorHandler");
+
 const express = require("express");
 const cors = require("cors");
 
@@ -12,5 +14,7 @@ const userRouter = require("./src/api/user/router");
 
 app.use("/", homeRouter);
 app.use("/user", userRouter);
+
+app.use(handleError);
 
 module.exports = app;

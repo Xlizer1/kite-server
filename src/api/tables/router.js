@@ -1,15 +1,9 @@
 const express = require("express");
-const { registerUserController, loginUserController, getUserByIdController } = require("./controller");
+const { registerUserController, loginUserController } = require("./controller");
 const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
 const validateRequest = require("../../middleware/validateRequest");  // Middleware to validate requests
 
 const router = express.Router();
-
-router.get("/:id", (req, res) => {
-  getUserByIdController(req, (result) => {
-    res.json(result);
-  });
-});
 
 router.post("/register", validateRequest(registerUserSchema), (req, res) => {
   registerUserController(req, (result) => {

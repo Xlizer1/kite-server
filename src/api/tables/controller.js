@@ -1,4 +1,4 @@
-const { registerUserModel, getUserByIdModel } = require("./model");
+const { registerUserModel } = require("./model");
 const { userExists, getUser, verifyPassword, resultObject, createToken } = require("../../helpers/common");
 const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
 const { ValidationError } = require("../../helpers/errors");
@@ -17,7 +17,24 @@ const loginUser = async (request, callBack) => {
       const { hashedPassword } = user;
       const isPasswordCorrect = await verifyPassword(password, hashedPassword);
       if (isPasswordCorrect) {
-        callBack(resultObject(true, "success", { token: await createToken(user) }));
+        const token = await createToken(user);
+        const loginResultObject = {
+          id: user?.id,
+          name: user?.name,
+          username: user?.username,
+          email: user?.email,
+          phone: user?.phone,
+          role: {
+            id: user?.role_id,
+            name: user?.role_name
+          },
+          restaurant: {
+            id: user?.restaurant_id,
+            id: user?.restaurant_name
+          },
+          token: token,
+        }
+        callBack(resultObject(true, "success", loginResultObject));
       } else {
         callBack(resultObject(false, "Wrong Password!"));
       }
@@ -35,46 +52,6 @@ const loginUser = async (request, callBack) => {
         status: false,
         message: "Something went wrong. Please try again later.",
       });
-    }
-  }
-};
-
-const getUserById = async (request, callBack) => {
-  try {
-    const { id } = request.params;
-
-    if (!id || isNaN(id)) {
-      throw new ValidationError("Invalid user ID provided.");
-    }
-
-    getUserByIdModel(id, (user) => {
-      if (user && user?.id) {
-        const object = {
-          id: user?.id,
-          name: user?.name,
-          username: user?.username,
-          email: user?.email,
-          phone: user?.phone,
-          role: {
-            id: user?.role_id,
-            name: user?.role_name,
-          },
-          restaurant: {
-            id: user?.restaurant_id,
-            id: user?.restaurant_name,
-          },
-        };
-        callBack(resultObject(true, "success", object));
-      } else {
-        throw new ValidationError("User doesn't exist.");
-      }
-    });
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      console.log("\n\n\n\n\n")
-      callBack(resultObject(false, error.message));
-    } else {
-      callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
   }
 };
@@ -98,15 +75,20 @@ const registerUser = async (request, callBack) => {
     });
   } catch (error) {
     if (error instanceof ValidationError) {
-      callBack(resultObject(false, error.message));
+      callBack({
+        status: false,
+        message: error.message,
+      });
     } else {
-      callBack(resultObject(false, "Something went wrong. Please try again later."));
+      callBack({
+        status: false,
+        message: "Something went wrong. Please try again later.",
+      });
     }
   }
 };
 
 module.exports = {
-  getUserByIdController: getUserById,
   registerUserController: registerUser,
   loginUserController: loginUser,
 };
