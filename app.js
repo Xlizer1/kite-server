@@ -11,9 +11,11 @@ app.use(express.json());
 
 const homeRouter = require("./src/api/home/router");
 const userRouter = require("./src/api/user/router");
+const rolesRouter = require("./src/api/roles/router");
 
 app.use("/", homeRouter);
 app.use("/user", userRouter);
+app.use("/roles", rolesRouter);
 
 app.use(handleError);
 

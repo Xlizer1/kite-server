@@ -1,5 +1,5 @@
 const { registerUserModel, getUserByIdModel } = require("./model");
-const { userExists, getUser, verifyPassword, resultObject, createToken } = require("../../helpers/common");
+const { userExists, getUser, verifyPassword, resultObject, createToken, verify } = require("../../helpers/common");
 const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
 const { ValidationError } = require("../../helpers/errors");
 
@@ -14,8 +14,7 @@ const loginUser = async (request, callBack) => {
 
     const user = await getUser(username);
     if (user && user?.id) {
-      const { hashedPassword } = user;
-      const isPasswordCorrect = await verifyPassword(password, hashedPassword);
+      const isPasswordCorrect = await verifyPassword(password, user?.password); //first argument is the password from the body and the second argument is the hashed password stored in the database
       if (isPasswordCorrect) {
         callBack(resultObject(true, "success", { token: await createToken(user) }));
       } else {
@@ -71,7 +70,6 @@ const getUserById = async (request, callBack) => {
     });
   } catch (error) {
     if (error instanceof ValidationError) {
-      console.log("\n\n\n\n\n")
       callBack(resultObject(false, error.message));
     } else {
       callBack(resultObject(false, "Something went wrong. Please try again later."));
@@ -81,21 +79,32 @@ const getUserById = async (request, callBack) => {
 
 const registerUser = async (request, callBack) => {
   try {
-    const { error } = registerUserSchema.validate(request.body);
-    if (error) {
-      throw new ValidationError(error.details[0].message);
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.role_id === 1 || authorize?.role_id === 2 || authorize?.role_id === 3) {
+        const { error } = registerUserSchema.validate(request.body);
+        if (error) {
+          throw new ValidationError(error.details[0].message);
+        }
+
+        const { name, email, username, phone, password, role_id, restaurant_id } = request.body;
+
+        const checkUserExists = await userExists(username, email, phone);
+        if (checkUserExists) {
+          throw new ValidationError("User already exists.");
+        }
+
+        registerUserModel({ name, email, username, phone, password, role_id, restaurant_id }, (result) => {
+          callBack(result);
+        });
+      } else {
+        callBack(resultObject(false, "You don't have the permission to create a user!"));
+        return;
+      }
     }
-
-    const { name, email, username, phone, password, role_id, restaurant_id } = request.body;
-
-    const checkUserExists = await userExists(username, email, phone);
-    if (checkUserExists) {
-      throw new ValidationError("User already exists.");
-    }
-
-    registerUserModel({ name, email, username, phone, password, role_id, restaurant_id }, (result) => {
-      callBack(result);
-    });
   } catch (error) {
     if (error instanceof ValidationError) {
       callBack(resultObject(false, error.message));

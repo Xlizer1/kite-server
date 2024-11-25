@@ -34,6 +34,7 @@ const verifyPassword = (password, hashedPassword) => {
 const createToken = (object) => {
   return new Promise(async (resolve, reject) => {
     try {
+      delete object?.password;
       const token = await jwt.sign({ data: object }, tokenKey, { expiresIn: tokenExpiry });
       resolve(token);
     } catch (error) {
@@ -92,13 +93,45 @@ const userExists = (username, email, phone) => {
   });
 };
 
+const verify = (token) => {
+  return new Promise((resolve, reject) => {
+    try {
+      var data = jwt.verify(token, tokenKey).data;
+      if (data)
+        checkDataTokenValidation(data, (result) => {
+          if (result) resolve(data);
+          else resolve(null);
+        });
+      else resolve(data);
+    } catch(e) {
+      resolve(null);
+      console.log(e);
+    }
+  });
+};
+
+function checkDataTokenValidation(data, callback) {
+  var sql = `
+    SELECT 
+      enabled 
+    FROM 
+      users 
+    WHERE 
+      id = ${data.id} 
+    AND 
+      deleted_at IS NULL`;
+  executeQuery(sql, "checkDataTokenValidation", (result) => {
+    if (result && result.length > 0 && result[0].enabled) callback(true);
+    else callback(false);
+  });
+}
+
 const getUser = (username) => {
   return new Promise(async (resolve) => {
     let sql = `
       SELECT
         u.*,
-        u.password AS hashedPassword, 
-        r.id,
+        r.id as role_id,
         r.name AS role_name,
         rest.name AS restaurant_name
       FROM
@@ -120,4 +153,4 @@ const getUser = (username) => {
   });
 };
 
-module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken };
+module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify };
