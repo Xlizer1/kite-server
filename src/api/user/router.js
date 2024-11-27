@@ -1,9 +1,15 @@
 const express = require("express");
-const { registerUserController, loginUserController, getUserByIdController } = require("./controller");
+const { registerUserController, loginUserController, getUserByIdController, getUsersController } = require("./controller");
 const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
 const validateRequest = require("../../middleware/validateRequest");
 
 const router = express.Router();
+
+router.get("/", (req, res) => {
+  getUsersController(req, (result) => {
+    res.json(result);
+  });
+});
 
 router.get("/:id", (req, res) => {
   getUserByIdController(req, (result) => {
