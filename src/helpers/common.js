@@ -12,10 +12,12 @@ const saltRounds = SALT_ROUNDS || 10;
 const hash = (text) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const hashedText = await bcrypt.hash(text, saltRounds);
-      resolve(hashedText);
+      bcrypt
+        .hash(text, typeof saltRounds === "string" ? JSON.parse(saltRounds) : saltRounds)
+        .then((hashedText) => resolve(hashedText))
+        .catch((e) => console.log(e));
     } catch (error) {
-      reject("An error occured while hashing: ", error);
+      reject(`An error occurred while hashing: ${error.message}`);
     }
   });
 };
@@ -103,7 +105,7 @@ const verify = (token) => {
           else resolve(null);
         });
       else resolve(data);
-    } catch(e) {
+    } catch (e) {
       resolve(null);
       console.log(e);
     }
@@ -126,26 +128,52 @@ function checkDataTokenValidation(data, callback) {
   });
 }
 
+const getUserPermissions = (user_id) => {
+  return new Promise(async (resolve) => {
+    let sql = `
+      SELECT
+        r.id
+      FROM
+        permissions p
+      LEFT JOIN
+        roles r ON r.id = p.role_id
+      LEFT JOIN
+        users u ON u.id = p.user_id
+      WHERE
+        u.id = ${user_id}
+    `;
+    await executeQuery(sql, "getUser", (result) => {
+      if (result && result?.length) {
+        resolve(result?.map((r) => r?.id));
+      } else {
+        resolve([]);
+      }
+    });
+  });
+};
+
 const getUser = (username) => {
   return new Promise(async (resolve) => {
     let sql = `
       SELECT
         u.*,
-        r.id as role_id,
-        r.name AS role_name,
+        d.id as role_id,
+        d.name AS role_name,
         rest.name AS restaurant_name
       FROM
         users u
       LEFT JOIN
-        roles r ON r.id = u.role_id
+        departments d ON d.id = u.department_id
       LEFT JOIN
-        restaurant rest ON rest.id = u.restaurant_id
+        restaurants rest ON rest.id = u.restaurant_id
       WHERE
         u.username = "${username}"
     `;
-    await executeQuery(sql, "getUser", (result) => {
-      if (result && result?.length) {
-        resolve(result[0]);
+    await executeQuery(sql, "getUser", async (result) => {
+      if (result && result?.length && result[0]) {
+        let user = result[0];
+        const permissions = await getUserPermissions(user?.id);
+        resolve({ ...user, roles: permissions });
       } else {
         resolve(null);
       }

@@ -1,4 +1,4 @@
-const { registerUserModel, getUserByIdModel } = require("./model");
+const { registerUserModel, updateUserModel, getUserByIdModel, deleteUserModel } = require("./model");
 const { userExists, getUser, verifyPassword, resultObject, createToken, verify } = require("../../helpers/common");
 const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
 const { ValidationError } = require("../../helpers/errors");
@@ -14,7 +14,7 @@ const loginUser = async (request, callBack) => {
 
     const user = await getUser(username);
     if (user && user?.id) {
-      const isPasswordCorrect = await verifyPassword(password, user?.password); //first argument is the password from the body and the second argument is the hashed password stored in the database
+      const isPasswordCorrect = await verifyPassword(password, user?.password);
       if (isPasswordCorrect) {
         callBack(resultObject(true, "success", { token: await createToken(user) }));
       } else {
@@ -40,52 +40,19 @@ const loginUser = async (request, callBack) => {
 
 const getUserById = async (request, callBack) => {
   try {
-    const { id } = request.params;
-
-    if (!id || isNaN(id)) {
-      throw new ValidationError("Invalid user ID provided.");
-    }
-
-    const user = await getUserByIdModel(id); // Assuming getUserByIdModel returns a Promise
-
-    if (user && user?.id) {
-      const object = {
-        id: user?.id,
-        name: user?.name,
-        username: user?.username,
-        email: user?.email,
-        phone: user?.phone,
-        role: {
-          id: user?.role_id,
-          name: user?.role_name,
-        },
-        restaurant: {
-          id: user?.restaurant_id,
-          name: user?.restaurant_name, // Corrected `id` to `name`
-        },
-      };
-      callBack(resultObject(true, "success", object));
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
     } else {
-      throw new ValidationError("User doesn't exist.");
-    }
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      callBack(resultObject(false, error.message));
-    } else {
-      callBack(resultObject(false, "Something went wrong. Please try again later."));
-    }
-  }
-};
+      const { id } = request.params;
 
-const getUsers = async (request, callBack) => {
-  try {
-    const { id } = request.params;
+      if (!id || isNaN(id)) {
+        throw new ValidationError("Invalid user ID provided.");
+      }
 
-    if (!id || isNaN(id)) {
-      throw new ValidationError("Invalid user ID provided.");
-    }
+      const user = await getUserByIdModel(id); // Assuming getUserByIdModel returns a Promise
 
-    getUserByIdModel(id, (user) => {
       if (user && user?.id) {
         const object = {
           id: user?.id,
@@ -99,14 +66,119 @@ const getUsers = async (request, callBack) => {
           },
           restaurant: {
             id: user?.restaurant_id,
-            id: user?.restaurant_name,
+            name: user?.restaurant_name, // Corrected `id` to `name`
           },
         };
         callBack(resultObject(true, "success", object));
       } else {
         throw new ValidationError("User doesn't exist.");
       }
-    });
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      callBack(resultObject(false, error.message));
+    } else {
+      callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+  }
+};
+
+const updateUser = async (request, callBack) => {
+  try {
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.roles?.includes(7)) {
+        const id = request.params.id;
+        const { department_id, restaurant_id, branch_id, name, username, email, phone, password, newPassword, enabled, roles } = request.body;
+
+        const user = await getUser(username);
+
+        const isPasswordCorrect = await verifyPassword(request.body.password, user?.password);
+
+        if (isPasswordCorrect) {
+          const result = await updateUserModel({
+            department_id,
+            restaurant_id,
+            branch_id,
+            name,
+            username,
+            email,
+            phone,
+            newPassword: newPassword ? newPassword : password,
+            enabled,
+            roles,
+            id,
+            updated_id: authorize?.id,
+          });
+
+          if (result?.status === true) {
+            callBack(resultObject(true, "User updated successfully."));
+            return;
+          } else {
+            callBack(resultObject(false, "Failed to update user."));
+            return;
+          }
+        } else {
+          callBack(resultObject(false, "Wrong Password!"));
+        }
+      } else {
+        callBack(resultObject(false, "You don't have the permission to update a user!"));
+        return;
+      }
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      callBack(resultObject(false, error.message));
+    } else {
+      callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+  }
+};
+
+const getUsers = async (request, callBack) => {
+  try {
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.roles?.includes(5)) {
+        const { id } = request.params;
+
+        if (!id || isNaN(id)) {
+          throw new ValidationError("Invalid user ID provided.");
+        }
+
+        getUserByIdModel(id, (user) => {
+          if (user && user?.id) {
+            const object = {
+              id: user?.id,
+              name: user?.name,
+              username: user?.username,
+              email: user?.email,
+              phone: user?.phone,
+              role: {
+                id: user?.role_id,
+                name: user?.role_name,
+              },
+              restaurant: {
+                id: user?.restaurant_id,
+                id: user?.restaurant_name,
+              },
+            };
+            callBack(resultObject(true, "success", object));
+          } else {
+            throw new ValidationError("User doesn't exist.");
+          }
+        });
+      } else {
+        callBack(resultObject(false, "You don't have the permission to see users!"));
+        return;
+      }
+    }
   } catch (error) {
     if (error instanceof ValidationError) {
       callBack(resultObject(false, error.message));
@@ -123,24 +195,61 @@ const registerUser = async (request, callBack) => {
       callBack(resultObject(false, "Token is invalid!"));
       return;
     } else {
-      if (authorize?.role_id === 1 || authorize?.role_id === 2 || authorize?.role_id === 3) {
+      if (authorize?.roles?.includes(6)) {
         const { error } = registerUserSchema.validate(request.body);
         if (error) {
           throw new ValidationError(error.details[0].message);
         }
 
-        const { name, email, username, phone, password, role_id, restaurant_id } = request.body;
+        const { department_id, restaurant_id, branch_id, name, username, email, phone, password, roles } = request.body;
 
         const checkUserExists = await userExists(username, email, phone);
         if (checkUserExists) {
           throw new ValidationError("User already exists.");
         }
 
-        registerUserModel({ name, email, username, phone, password, role_id, restaurant_id }, (result) => {
-          callBack(result);
-        });
+        const result = await registerUserModel({ name, email, username, phone, password, restaurant_id, branch_id, department_id, roles, created_id: authorize?.id });
+        if (result?.status === true) {
+          callBack(resultObject(true, "User created successfully."));
+          return;
+        } else {
+          callBack(resultObject(false, "Failed to create user."));
+          return;
+        }
       } else {
         callBack(resultObject(false, "You don't have the permission to create a user!"));
+        return;
+      }
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      callBack(resultObject(false, error.message));
+    } else {
+      callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+  }
+};
+
+const deleteUser = async (request, callBack) => {
+  try {
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.roles?.includes(8)) {
+        const { id } = request.params;
+
+        const result = await deleteUserModel({ id, deleted_id: authorize?.id });
+        if (result?.status === true) {
+          callBack(resultObject(true, "User deleted successfully."));
+          return;
+        } else {
+          callBack(resultObject(false, "Failed to delete user."));
+          return;
+        }
+      } else {
+        callBack(resultObject(false, "You don't have the permission to delete a user!"));
         return;
       }
     }
@@ -157,5 +266,7 @@ module.exports = {
   getUserByIdController: getUserById,
   registerUserController: registerUser,
   loginUserController: loginUser,
-  getUsersController: getUsers
+  getUsersController: getUsers,
+  updateUserController: updateUser,
+  deleteUserModel: deleteUser,
 };

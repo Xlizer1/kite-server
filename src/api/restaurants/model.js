@@ -1,12 +1,12 @@
 const { executeQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
-const getRoles = async (user, callBack) => {
+const getRestaurants = async (user, callBack) => {
   let sql = `
     SELECT
       *
     FROM
-      roles
+      restaurants
   `;
   
   executeQuery(sql, "registerUser", (result) => {
@@ -22,10 +22,10 @@ const getRoles = async (user, callBack) => {
   });
 };
 
-const createRoles = async (name, callBack) => {
+const createRestaurants = async (name, callBack) => {
   let sql = `
     INSERT INTO
-      roles
+      restaurants
     SET
       name = "${name}"
   `;
@@ -43,65 +43,47 @@ const createRoles = async (name, callBack) => {
   });
 };
 
-const updateRoles = async (id, name) => {
+const updateRestaurants = async (obj, user_id) => {
+  return new Promise((resolve, reject) => {
+    const { id, name, tagline, description } = obj;
+    let sql = `
+      UPDATE
+        restaurants
+      SET
+        name = "${name}",
+        tagline = "${tagline}",
+        description = "${description}",
+        updated_at = NOW(),
+        updated_by = ${user_id},
+      WHERE
+        id = ${id}
+    `;
+    executeQuery(sql, "updateRestaurants", result => {
+      if (Array.isArray(result) &&!result[0]) {
+        return reject(new CustomError(result[1], 400));
+      }
+      
+      if (result && result.affectedRows > 0) {
+        return resolve(true);
+      }
+      
+      return reject(new CustomError("An unknown error occurred during roles update.", 500));
+    })
+  })
+}
+
+const deleteRestaurants = async (id, user_id) => {
   return new Promise((resolve, reject) => {
     let sql = `
       UPDATE
-        roles
+        restaurants
       SET
-        name = "${name}"
+        deleted_at = Now(),
+        deleted_by = ${user_id}
       WHERE
         id = ${id}
     `;
-    executeQuery(sql, "updateRoles", result => {
-      if (Array.isArray(result) &&!result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-      
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
-      
-      return reject(new CustomError("An unknown error occurred during roles update.", 500));
-    })
-  })
-}
-
-const updateUserPermissions = async (id, roles) => {
-  return new Promise((resolve, reject) => {
-    executeQuery(`DELETE FROM permissions WHERE user_id = ${id}`, "deleting user roles", (result) => result);
-    let roleSql = `
-      INSERT INTO
-        permissions (
-          user_id,
-          role_id
-        )
-      VALUES
-        ${roles.map((role) => `(${id}, ${role})`).join(",")}
-    `;
-    executeQuery(roleSql, "inserting user roles", result => {
-      if (Array.isArray(result) &&!result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-      
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
-      
-      return reject(new CustomError("An unknown error occurred during roles update.", 500));
-    })
-  })
-}
-
-const deleteRoles = async (id) => {
-  return new Promise((resolve, reject) => {
-    let sql = `
-      DELETE FROM
-        roles
-      WHERE
-        id = ${id}
-    `;
-    executeQuery(sql, "deleteRoles", result => {
+    executeQuery(sql, "deleteRestaurants", result => {
       if (Array.isArray(result) &&!result[0]) {
         return reject(new CustomError(result[1], 400));
       }
@@ -116,9 +98,8 @@ const deleteRoles = async (id) => {
 }
 
 module.exports = {
-  getRolesModel: getRoles,
-  createRolesModel: createRoles,
-  updateRolesModel: updateRoles,
-  updateUserPermissionsModel: updateUserPermissions,
-  deleteRolesModel: deleteRoles,
+  getRestaurantsModel: getRestaurants,
+  createRestaurantsModel: createRestaurants,
+  updateRestaurantsModel: updateRestaurants,
+  deleteRestaurantsModel: deleteRestaurants,
 };
