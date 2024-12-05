@@ -1,18 +1,34 @@
 const express = require("express");
-const { registerUserController, loginUserController } = require("./controller");
-const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
-const validateRequest = require("../../middleware/validateRequest");  // Middleware to validate requests
+const { getTablesController, getTablesByIDController, createTablesController, updateTablesController, deleteTablesController } = require("./controller");
 
 const router = express.Router();
 
-router.post("/register", validateRequest(registerUserSchema), (req, res) => {
-  registerUserController(req, (result) => {
+router.get("/", (req, res) => {
+  getTablesController(req, (result) => {
     res.json(result);
   });
 });
 
-router.post("/login", validateRequest(loginUserSchema), (req, res) => {
-  loginUserController(req, (result) => {
+router.get("/:id", (req, res) => {
+  getTablesByIDController(req, (result) => {
+    res.json(result);
+  });
+});
+
+router.post("/", (req, res) => {
+  createTablesController(req, (result) => {
+    res.json(result);
+  });
+});
+
+router.put("/:id", (req, res) => {
+  updateTablesController(req, (result) => {
+    res.json(result);
+  });
+});
+
+router.delete("/:id", (req, res) => {
+  deleteTablesController(req, (result) => {
     res.json(result);
   });
 });

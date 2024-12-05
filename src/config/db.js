@@ -5,7 +5,7 @@ const { IP, PORT, DB_NAME, DB_HOST, DB_USER, DB_PASSWORD } = process.env;
 const host = DB_HOST || "localhost";
 const user = DB_USER || "root";
 const password = DB_PASSWORD || "";
-const database = DB_NAME || "restaurants";
+const database = DB_NAME || "restaurantdb";
 
 let con;
 

@@ -1,4 +1,4 @@
-const { getRestaurantsModel, createRestaurantsModel, updateRestaurantsModel, deleteRestaurantsModel } = require("./model");
+const { getRestaurantsModel, createRestaurantsModel, getRestaurantsByIDModel, updateRestaurantsModel, deleteRestaurantsModel } = require("./model");
 const { resultObject, verify } = require("../../helpers/common");
 
 const getRestaurants = async (request, callBack) => {
@@ -13,7 +13,33 @@ const getRestaurants = async (request, callBack) => {
           callBack(resultObject(true, "success", result));
         });
       } else {
-        callBack(resultObject(false, "You don't have the permission to view roles!"));
+        callBack(resultObject(false, "You don't have the permission to view restaurants!"));
+        return;
+      }
+    }
+  } catch (error) {
+    callBack({
+      status: false,
+      message: "Something went wrong. Please try again later.",
+    });
+    console.log(error);
+  }
+};
+
+const getRestaurantsByID = async (request, callBack) => {
+  try {
+    const authorize = await verify(request?.headers["jwt"]);
+    console.log(authorize)
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.roles?.includes(1)) {
+        const { id } = request.params;
+        const result = await getRestaurantsByIDModel(id);
+        console.log(result);
+      } else {
+        callBack(resultObject(false, "You don't have the permission to view restaurants!"));
         return;
       }
     }
@@ -115,6 +141,7 @@ const deleteRestaurants = async (request, callBack) => {
 
 module.exports = {
   getRestaurantsController: getRestaurants,
+  getRestaurantsByIDController: getRestaurantsByID,
   createRestaurantsController: createRestaurants,
   updateRestaurantsController: updateRestaurants,
   deleteRestaurantsController: deleteRestaurants,

@@ -1,10 +1,16 @@
 const express = require("express");
-const { getRestaurantsController, createRestaurantsController, updateRestaurantsController, deleteRestaurantsController } = require("./controller");
+const { getRestaurantsController, getRestaurantsByIDController, createRestaurantsController, updateRestaurantsController, deleteRestaurantsController } = require("./controller");
 
 const router = express.Router();
 
 router.get("/", (req, res) => {
   getRestaurantsController(req, (result) => {
+    res.json(result);
+  });
+});
+
+router.get("/:id", (req, res) => {
+  getRestaurantsByIDController(req, (result) => {
     res.json(result);
   });
 });

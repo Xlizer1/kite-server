@@ -1,94 +1,145 @@
-const { registerUserModel } = require("./model");
-const { userExists, getUser, verifyPassword, resultObject, createToken } = require("../../helpers/common");
-const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
-const { ValidationError } = require("../../helpers/errors");
+const { getTablesModel, createTablesModel, getTablesByIDModel, updateTablesModel, deleteTablesModel } = require("./model");
+const { resultObject, verify } = require("../../helpers/common");
 
-const loginUser = async (request, callBack) => {
+const getTables = async (request, callBack) => {
   try {
-    const { error } = loginUserSchema.validate(request.body);
-    if (error) {
-      throw new ValidationError(error.details[0].message);
-    }
-
-    const { username, password } = request.body;
-
-    const user = await getUser(username);
-    if (user && user?.id) {
-      const { hashedPassword } = user;
-      const isPasswordCorrect = await verifyPassword(password, hashedPassword);
-      if (isPasswordCorrect) {
-        const token = await createToken(user);
-        const loginResultObject = {
-          id: user?.id,
-          name: user?.name,
-          username: user?.username,
-          email: user?.email,
-          phone: user?.phone,
-          role: {
-            id: user?.role_id,
-            name: user?.role_name
-          },
-          restaurant: {
-            id: user?.restaurant_id,
-            id: user?.restaurant_name
-          },
-          token: token,
-        }
-        callBack(resultObject(true, "success", loginResultObject));
-      } else {
-        callBack(resultObject(false, "Wrong Password!"));
-      }
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
     } else {
-      callBack(resultObject(false, "User Doesn't exist!"));
+      if (authorize?.roles?.includes(1)) {
+        getTablesModel(authorize, (result) => {
+          callBack(resultObject(true, "success", result));
+        });
+      } else {
+        callBack(resultObject(false, "You don't have the permission to view Tables!"));
+        return;
+      }
     }
   } catch (error) {
-    if (error instanceof ValidationError) {
-      callBack({
-        status: false,
-        message: error.message,
-      });
-    } else {
-      callBack({
-        status: false,
-        message: "Something went wrong. Please try again later.",
-      });
-    }
+    callBack({
+      status: false,
+      message: "Something went wrong. Please try again later.",
+    });
+    console.log(error);
   }
 };
 
-const registerUser = async (request, callBack) => {
+const getTablesByID = async (request, callBack) => {
   try {
-    const { error } = registerUserSchema.validate(request.body);
-    if (error) {
-      throw new ValidationError(error.details[0].message);
-    }
-
-    const { name, email, username, phone, password, role_id, restaurant_id } = request.body;
-
-    const checkUserExists = await userExists(username, email, phone);
-    if (checkUserExists) {
-      throw new ValidationError("User already exists.");
-    }
-
-    registerUserModel({ name, email, username, phone, password, role_id, restaurant_id }, (result) => {
-      callBack(result);
-    });
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      callBack({
-        status: false,
-        message: error.message,
-      });
+    const authorize = await verify(request?.headers["jwt"]);
+    console.log(authorize);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
     } else {
-      callBack({
-        status: false,
-        message: "Something went wrong. Please try again later.",
-      });
+      if (authorize?.roles?.includes(1)) {
+        const { id } = request.params;
+        const result = await getTablesByIDModel(id);
+        console.log(result);
+      } else {
+        callBack(resultObject(false, "You don't have the permission to view Tables!"));
+        return;
+      }
     }
+  } catch (error) {
+    callBack({
+      status: false,
+      message: "Something went wrong. Please try again later.",
+    });
+    console.log(error);
+  }
+};
+
+const createTables = async (request, callBack) => {
+  try {
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.roles?.includes(2)) {
+        const result = await createTablesModel({ ...request?.body, creator_id: authorize?.id });
+        if (result) {
+          callBack(resultObject(true, "success"));
+        }
+      } else {
+        callBack(resultObject(false, "You don't have the permission to create a table!"));
+        return;
+      }
+    }
+  } catch (error) {
+    callBack({
+      status: false,
+      message: "Something went wrong. Please try again later.",
+    });
+    console.log(error);
+  }
+};
+
+const updateTables = async (request, callBack) => {
+  try {
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.roles?.includes(3)) {
+        const { id } = request?.params;
+        const result = await createTablesModel({ ...request?.body, table_id: id, updater_id: authorize?.id });
+        if (result) {
+          callBack(resultObject(true, "success"));
+        } else {
+          callBack(resultObject(false, "Failed to update table."));
+        }
+      } else {
+        callBack(resultObject(false, "You don't have the permission to update a table!"));
+        return;
+      }
+    }
+  } catch (error) {
+    callBack({
+      status: false,
+      message: "Something went wrong. Please try again later.",
+    });
+    console.log(error);
+  }
+};
+
+const deleteTables = async (request, callBack) => {
+  try {
+    const authorize = await verify(request?.headers["jwt"]);
+    if (!authorize?.id || !authorize?.email) {
+      callBack(resultObject(false, "Token is invalid!"));
+      return;
+    } else {
+      if (authorize?.roles?.includes(4)) {
+        const { id } = request?.params;
+        const result = await deleteTablesModel(id, authorize?.id);
+        if (result) {
+          callBack(resultObject(true, "success"));
+        } else {
+          callBack(resultObject(false, "Failed to delete table."));
+        }
+      } else {
+        callBack(resultObject(false, "You don't have the permission to delete a table!"));
+        return;
+      }
+    }
+  } catch (error) {
+    callBack({
+      status: false,
+      message: "Something went wrong. Please try again later.",
+    });
+    console.log(error);
   }
 };
 
 module.exports = {
-  registerUserController: registerUser,
-  loginUserController: loginUser,
+  getTablesController: getTables,
+  getTablesByIDController: getTablesByID,
+  createTablesController: createTables,
+  updateTablesController: updateTables,
+  deleteTablesController: deleteTables,
 };
