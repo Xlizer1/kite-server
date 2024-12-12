@@ -9,9 +9,12 @@ const getRestaurants = async (request, callBack) => {
       return;
     } else {
       if (authorize?.roles?.includes(1)) {
-        getRestaurantsModel(authorize, (result) => {
+        const result = await getRestaurantsModel(authorize);
+        if (result && result[0] && result?.length > 0) {
           callBack(resultObject(true, "success", result));
-        });
+        } else {
+          callBack(resultObject(true, "No restaurants found.", []));
+        }
       } else {
         callBack(resultObject(false, "You don't have the permission to view restaurants!"));
         return;
@@ -29,15 +32,18 @@ const getRestaurants = async (request, callBack) => {
 const getRestaurantsByID = async (request, callBack) => {
   try {
     const authorize = await verify(request?.headers["jwt"]);
-    console.log(authorize)
     if (!authorize?.id || !authorize?.email) {
       callBack(resultObject(false, "Token is invalid!"));
       return;
     } else {
       if (authorize?.roles?.includes(1)) {
         const { id } = request.params;
-        const result = await getRestaurantsByIDModel(id);
-        console.log(result);
+        const result = await getRestaurantsByIDModel(id, authorize);
+        if (result && result?.id) {
+          callBack(resultObject(true, "success", result));
+        } else {
+          callBack(resultObject(false, "Restaurant not found."));
+        }
       } else {
         callBack(resultObject(false, "You don't have the permission to view restaurants!"));
         return;
@@ -61,11 +67,12 @@ const createRestaurants = async (request, callBack) => {
     } else {
       if (authorize?.roles?.includes(2)) {
         const { name, tagline, description } = request?.body;
-        createRestaurantsModel({ name, tagline, description }, authorize?.id, (result) => {
-          if (result) {
-            callBack(resultObject(true, "success"));
-          }
-        });
+        const result = await createRestaurantsModel({ name, tagline, description, creator_id: authorize?.id });
+        if (result) {
+          callBack(resultObject(true, "success"));
+        } else {
+          callBack(resultObject(false, "Failed to create restaurant."));
+        }
       } else {
         callBack(resultObject(false, "You don't have the permission to create a restaurant!"));
         return;
@@ -90,7 +97,7 @@ const updateRestaurants = async (request, callBack) => {
       if (authorize?.roles?.includes(3)) {
         const { id } = request?.params;
         const { name, tagline, description } = request?.body;
-        const result = await updateRestaurantsModel({ id, name, tagline, description }, authorize?.id);
+        const result = await updateRestaurantsModel({ id, name, tagline, description, updater_id: authorize?.id});
         if (result) {
           callBack(resultObject(true, "success"));
         } else {
@@ -119,7 +126,7 @@ const deleteRestaurants = async (request, callBack) => {
     } else {
       if (authorize?.roles?.includes(4)) {
         const { id } = request?.params;
-        const result = await deleteRestaurantsModel(id);
+        const result = await deleteRestaurantsModel(id, authorize?.id);
         if (result) {
           callBack(resultObject(true, "success"));
         } else {

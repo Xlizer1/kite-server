@@ -82,7 +82,7 @@ const updateUser = async (obj) => {
         phone = "${obj.phone}",
         password = "${passwordHash}",
         department_id = ${obj.department_id},
-        branch_id = ${obj.branch_id ? obj.branch_id : "NULL"},
+        parent_restaurant_id = ${obj.parent_restaurant_id ? obj.parent_restaurant_id : "NULL"},
         restaurant_id = ${obj.restaurant_id},
         updated_at = NOW(),
         updated_by = ${obj.updated_id}
@@ -126,7 +126,7 @@ const updateUser = async (obj) => {
 };
 
 const registerUser = async (user) => {
-  const { department_id, restaurant_id, branch_id, name, username, email, phone, password, roles, created_id } = user;
+  const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, password, roles, created_id } = user;
   const passwordHash = await hash(password);
 
   let sql = `
@@ -139,7 +139,7 @@ const registerUser = async (user) => {
         password,
         restaurant_id,
         department_id,
-        branch_id,
+        parent_restaurant_id,
         enabled,
         created_at,
         created_by
@@ -152,7 +152,7 @@ const registerUser = async (user) => {
       "${passwordHash}",
       ${restaurant_id},
       ${department_id},
-      ${branch_id ? branch_id : "NULL"},
+      ${parent_restaurant_id ? parent_restaurant_id : "NULL"},
       ${1},
       Now(),
       ${created_id}
