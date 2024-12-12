@@ -13,7 +13,7 @@ const homeRouter = require("./src/api/home/router");
 const userRouter = require("./src/api/user/router");
 const rolesRouter = require("./src/api/roles/router");
 const restaurantsRouter = require("./src/api/restaurants/router");
-const tablesRouter = require("./src/api/restaurants/router");
+const tablesRouter = require("./src/api/tables/router");
 
 app.use("/", homeRouter);
 app.use("/user", userRouter);

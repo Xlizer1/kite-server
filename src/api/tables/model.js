@@ -1,5 +1,15 @@
+const crypto = require("crypto");
+const QRCode = require("qrcode");
+
 const { executeQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
+
+const { IP, PORT, BASE_URL } = process.env;
+
+const ip = IP || "localhost";
+const port = PORT || "8000";
+
+const baseUrl = BASE_URL || `http://${ip}:${port}`;
 
 const getTables = async (user) => {
   return new Promise((resolve, reject) => {
@@ -22,9 +32,9 @@ const getTables = async (user) => {
       WHERE
         r.deleted_at IS NULL
     `;
-    
-    if(user.department_id !== 1) {
-      if(user.department_id === 2){
+
+    if (user.department_id !== 1) {
+      if (user.department_id === 2) {
         sql += `
           AND r.id = ${user.restaurant_id}
         `;
@@ -48,7 +58,7 @@ const getTables = async (user) => {
       if (Array.isArray(result)) {
         const parsedResult = result.map((row) => ({
           ...row,
-          images: JSON.parse(row.images || '[]')?.filter((i) => i.id) // Ensure valid JSON for `images`
+          images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
         }));
         return resolve(parsedResult);
       }
@@ -81,9 +91,9 @@ const getTablesByID = async (id, user) => {
       AND
         r.id = ${id}
     `;
-    
-    if(user.department_id !== 1) {
-      if(user.department_id === 2){
+
+    if (user.department_id !== 1) {
+      if (user.department_id === 2) {
         sql += `
           AND r.id = ${user.restaurant_id}
         `;
@@ -107,7 +117,7 @@ const getTablesByID = async (id, user) => {
       if (Array.isArray(result)) {
         const parsedResult = result.map((row) => ({
           ...row,
-          images: JSON.parse(row.images || '[]')?.filter((i) => i.id) // Ensure valid JSON for `images`
+          images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
         }));
         return resolve(parsedResult[0]);
       }
@@ -119,21 +129,55 @@ const getTablesByID = async (id, user) => {
 
 const createTables = async (obj) => {
   return new Promise((resolve, reject) => {
-    const { name, description, tagline, creator_id } = obj;
+    const { restaurant_id, number, creator_id } = obj;
+
+    const hash = crypto.createHash("sha256").update(JSON.stringify({ restaurant_id, number })).digest("hex");
+
     let sql = `
       INSERT INTO
         tables
       SET
-        name = "${name}",
-        description = "${description}",
-        tagline = "${tagline}",
+        restaurant_id = ${restaurant_id},
+        number = ${number},
         created_at = NOW(),
         created_by = ${creator_id}
     `;
 
-    executeQuery(sql, "registerUser", (result) => {
-      if (result?.insertId) return resolve(true);
-      return reject(new CustomError("An unknown error occurred during registration.", 500));
+    executeQuery(sql, "createTables", async (result) => {
+      if (result?.insertId) {
+        const qrCode = await QRCode.toDataURL(`${baseUrl}/${hash}`);
+        let sql = `
+          INSERT INTO
+            qr_codes
+          SET
+            table_id = ${result?.insertId},
+            qr_code = "${qrCode}",
+            created_at = NOW(),
+            created_by = ${creator_id}
+        `;
+
+        executeQuery(sql, "insertQRCode", async (qrCoderesult) => {
+          try {
+            if (!qrCoderesult?.insertId) {
+              let sql = `
+                DELETE FROM
+                  tables
+                WHERE
+                  id = ${result?.insertId}
+              `;
+              executeQuery(sql, "insertQRCode", async () => {
+                resolve(false);
+              });
+            } else {
+              resolve(true);
+            }
+          } catch (err) {
+            reject(new Error("Failed to generate QR code."));
+          }
+        });
+      } else {
+        return reject(new CustomError("An unknown error occurred during registration.", 500));
+      }
     });
   });
 };
@@ -174,7 +218,7 @@ const deleteTables = async (id, user_id) => {
       WHERE
         id = ${id}
     `;
-    
+
     executeQuery(sql, "deleteTables", (result) => {
       if (Array.isArray(result) && !result[0]) {
         return reject(new CustomError(result[1], 400));

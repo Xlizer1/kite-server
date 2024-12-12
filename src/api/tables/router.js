@@ -1,5 +1,7 @@
 const express = require("express");
 const { getTablesController, getTablesByIDController, createTablesController, updateTablesController, deleteTablesController } = require("./controller");
+const { tableSchema } = require("../../validators/tablesValidator");
+const validateRequest = require("../../middleware/validateRequest");
 
 const router = express.Router();
 
@@ -15,13 +17,13 @@ router.get("/:id", (req, res) => {
   });
 });
 
-router.post("/", (req, res) => {
+router.post("/", validateRequest(tableSchema), (req, res) => {
   createTablesController(req, (result) => {
     res.json(result);
   });
 });
 
-router.put("/:id", (req, res) => {
+router.put("/:id", validateRequest(tableSchema), (req, res) => {
   updateTablesController(req, (result) => {
     res.json(result);
   });

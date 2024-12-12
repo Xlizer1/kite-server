@@ -1,5 +1,7 @@
 const express = require("express");
 const { getRestaurantsController, getRestaurantsByIDController, createRestaurantsController, updateRestaurantsController, deleteRestaurantsController } = require("./controller");
+const { restaurantSchema } = require("../../validators/restaurantValidator");
+const validateRequest = require("../../middleware/validateRequest");
 
 const router = express.Router();
 
@@ -15,13 +17,13 @@ router.get("/:id", (req, res) => {
   });
 });
 
-router.post("/", (req, res) => {
+router.post("/", validateRequest(restaurantSchema), (req, res) => {
   createRestaurantsController(req, (result) => {
     res.json(result);
   });
 });
 
-router.put("/:id", (req, res) => {
+router.put("/:id", validateRequest(restaurantSchema), (req, res) => {
   updateRestaurantsController(req, (result) => {
     res.json(result);
   });

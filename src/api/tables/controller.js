@@ -60,16 +60,17 @@ const getTablesByID = async (request, callBack) => {
 
 const createTables = async (request, callBack) => {
   try {
+    console.log(request?.headers["jwt"])
     const authorize = await verify(request?.headers["jwt"]);
     if (!authorize?.id || !authorize?.email) {
       callBack(resultObject(false, "Token is invalid!"));
       return;
     } else {
       if (authorize?.roles?.includes(2)) {
-        const { name, tagline, description } = request?.body;
-        const result = await createTablesModel({ name, tagline, description, creator_id: authorize?.id });
+        const { restaurant_id, number } = request?.body;
+        const result = await createTablesModel({ restaurant_id, number, creator_id: authorize?.id });
         if (result) {
-          callBack(resultObject(true, "success"));
+          callBack(resultObject(true, "success", result));
         } else {
           callBack(resultObject(false, "Failed to create restaurant."));
         }
