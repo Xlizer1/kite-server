@@ -1,24 +1,56 @@
 const { executeQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
-const getRestaurants = async () => {
+const getRestaurants = async (user) => {
   return new Promise((resolve, reject) => {
     let sql = `
       SELECT
-        *
+        r.*,
+        JSON_ARRAYAGG (
+          JSON_OBJECT (
+            'id', i.id,
+            'url', i.url,
+            'primary', rim.is_primary
+          )
+        ) AS images
       FROM
         restaurants r
       LEFT JOIN
-        restaurant_type rt ON rt.id
+        restaurants_image_map rim ON r.id = rim.restaurant_id
+      LEFT JOIN
+        images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
+      WHERE
+        r.deleted_at IS NULL
+    `;
+    
+    if(user.department_id !== 1) {
+      if(user.department_id === 2){
+        sql += `
+          AND r.id = ${user.restaurant_id}
+        `;
+      } else {
+        sql += `
+          AND r.parent_rest_id = ${user.restaurant_id}
+        `;
+      }
+    }
+
+    sql += `
+      GROUP BY
+        r.id;
     `;
 
     executeQuery(sql, "getRestaurants", (result) => {
-      if (Array.isArray(result) && !result[0]) {
+      if (Array.isArray(result) && result[0] === false) {
         return reject(new CustomError(result[1], 400));
       }
 
       if (Array.isArray(result)) {
-        return resolve(result);
+        const parsedResult = result.map((row) => ({
+          ...row,
+          images: JSON.parse(row.images || '[]')?.filter((i) => i.id) // Ensure valid JSON for `images`
+        }));
+        return resolve(parsedResult);
       }
 
       return reject(new CustomError("An unknown error occurred during data read.", 500));
@@ -26,24 +58,58 @@ const getRestaurants = async () => {
   });
 };
 
-const getRestaurantsByID = async (id) => {
+const getRestaurantsByID = async (id, user) => {
   return new Promise((resolve, reject) => {
     let sql = `
       SELECT
-        *
+        r.*,
+        JSON_ARRAYAGG (
+          JSON_OBJECT (
+            'id', i.id,
+            'url', i.url,
+            'primary', rim.is_primary
+          )
+        ) AS images
       FROM
         restaurants r
+      LEFT JOIN
+        restaurants_image_map rim ON r.id = rim.restaurant_id
+      LEFT JOIN
+        images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
       WHERE
+        r.deleted_at IS NULL
+      AND
         r.id = ${id}
+    `;
+    
+    if(user.department_id !== 1) {
+      if(user.department_id === 2){
+        sql += `
+          AND r.id = ${user.restaurant_id}
+        `;
+      } else {
+        sql += `
+          AND r.parent_rest_id = ${user.restaurant_id}
+        `;
+      }
+    }
+
+    sql += `
+      GROUP BY
+        r.id;
     `;
 
     executeQuery(sql, "getRestaurantsByID", (result) => {
-      if (Array.isArray(result) && !result[0]) {
+      if (Array.isArray(result) && result[0] === false) {
         return reject(new CustomError(result[1], 400));
       }
 
       if (Array.isArray(result)) {
-        return resolve(result);
+        const parsedResult = result.map((row) => ({
+          ...row,
+          images: JSON.parse(row.images || '[]')?.filter((i) => i.id) // Ensure valid JSON for `images`
+        }));
+        return resolve(parsedResult[0]);
       }
 
       return reject(new CustomError("An unknown error occurred during registration.", 500));
@@ -61,17 +127,12 @@ const createRestaurants = async (obj) => {
         name = "${name}",
         description = "${description}",
         tagline = "${tagline}",
-        type_id = 1,
         created_at = NOW(),
         created_by = ${creator_id}
     `;
 
     executeQuery(sql, "registerUser", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-
-      if (Array.isArray(result)) {
+      if (result?.insertId) {
         return resolve(true);
       }
 
@@ -96,10 +157,6 @@ const updateRestaurants = async (obj) => {
         id = ${id}
     `;
     executeQuery(sql, "updateRestaurants", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-
       if (result && result.affectedRows > 0) {
         return resolve(true);
       }
@@ -120,6 +177,7 @@ const deleteRestaurants = async (id, user_id) => {
       WHERE
         id = ${id}
     `;
+    
     executeQuery(sql, "deleteRestaurants", (result) => {
       if (Array.isArray(result) && !result[0]) {
         return reject(new CustomError(result[1], 400));

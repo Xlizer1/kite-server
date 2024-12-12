@@ -9,11 +9,14 @@ const getTables = async (request, callBack) => {
       return;
     } else {
       if (authorize?.roles?.includes(1)) {
-        getTablesModel(authorize, (result) => {
+        const result = await getTablesModel(authorize);
+        if (result && result[0] && result?.length > 0) {
           callBack(resultObject(true, "success", result));
-        });
+        } else {
+          callBack(resultObject(true, "No restaurants found.", []));
+        }
       } else {
-        callBack(resultObject(false, "You don't have the permission to view Tables!"));
+        callBack(resultObject(false, "You don't have the permission to view restaurants!"));
         return;
       }
     }
@@ -29,17 +32,20 @@ const getTables = async (request, callBack) => {
 const getTablesByID = async (request, callBack) => {
   try {
     const authorize = await verify(request?.headers["jwt"]);
-    console.log(authorize);
     if (!authorize?.id || !authorize?.email) {
       callBack(resultObject(false, "Token is invalid!"));
       return;
     } else {
       if (authorize?.roles?.includes(1)) {
         const { id } = request.params;
-        const result = await getTablesByIDModel(id);
-        console.log(result);
+        const result = await getTablesByIDModel(id, authorize);
+        if (result && result?.id) {
+          callBack(resultObject(true, "success", result));
+        } else {
+          callBack(resultObject(false, "Restaurant not found."));
+        }
       } else {
-        callBack(resultObject(false, "You don't have the permission to view Tables!"));
+        callBack(resultObject(false, "You don't have the permission to view restaurants!"));
         return;
       }
     }
@@ -60,12 +66,15 @@ const createTables = async (request, callBack) => {
       return;
     } else {
       if (authorize?.roles?.includes(2)) {
-        const result = await createTablesModel({ ...request?.body, creator_id: authorize?.id });
+        const { name, tagline, description } = request?.body;
+        const result = await createTablesModel({ name, tagline, description, creator_id: authorize?.id });
         if (result) {
           callBack(resultObject(true, "success"));
+        } else {
+          callBack(resultObject(false, "Failed to create restaurant."));
         }
       } else {
-        callBack(resultObject(false, "You don't have the permission to create a table!"));
+        callBack(resultObject(false, "You don't have the permission to create a restaurant!"));
         return;
       }
     }
@@ -87,14 +96,15 @@ const updateTables = async (request, callBack) => {
     } else {
       if (authorize?.roles?.includes(3)) {
         const { id } = request?.params;
-        const result = await createTablesModel({ ...request?.body, table_id: id, updater_id: authorize?.id });
+        const { name, tagline, description } = request?.body;
+        const result = await updateTablesModel({ id, name, tagline, description, updater_id: authorize?.id});
         if (result) {
           callBack(resultObject(true, "success"));
         } else {
-          callBack(resultObject(false, "Failed to update table."));
+          callBack(resultObject(false, "Failed to update restaurant."));
         }
       } else {
-        callBack(resultObject(false, "You don't have the permission to update a table!"));
+        callBack(resultObject(false, "You don't have the permission to update a restaurant!"));
         return;
       }
     }
@@ -120,10 +130,10 @@ const deleteTables = async (request, callBack) => {
         if (result) {
           callBack(resultObject(true, "success"));
         } else {
-          callBack(resultObject(false, "Failed to delete table."));
+          callBack(resultObject(false, "Failed to delete restaurant."));
         }
       } else {
-        callBack(resultObject(false, "You don't have the permission to delete a table!"));
+        callBack(resultObject(false, "You don't have the permission to delete a restaurant!"));
         return;
       }
     }
