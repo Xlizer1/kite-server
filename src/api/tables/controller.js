@@ -60,33 +60,40 @@ const getTablesByID = async (request, callBack) => {
 
 const createTables = async (request, callBack) => {
   try {
-    console.log(request?.headers["jwt"])
     const authorize = await verify(request?.headers["jwt"]);
+
     if (!authorize?.id || !authorize?.email) {
-      callBack(resultObject(false, "Token is invalid!"));
-      return;
+      return callBack(resultObject(false, "Token is invalid!"));
+    }
+
+    if (!authorize?.roles?.includes(2)) {
+      return callBack(resultObject(false, "You don't have permission to create a restaurant!"));
+    }
+
+    const { restaurant_id, number } = request?.body;
+
+    const result = await createTablesModel({
+      restaurant_id,
+      number,
+      creator_id: authorize.id,
+    });
+
+    if (result?.status) {
+      return callBack(resultObject(true, "Table created successfully.", result));
+    } else if (result?.message) {
+      return callBack(resultObject(false, result.message));
     } else {
-      if (authorize?.roles?.includes(2)) {
-        const { restaurant_id, number } = request?.body;
-        const result = await createTablesModel({ restaurant_id, number, creator_id: authorize?.id });
-        if (result) {
-          callBack(resultObject(true, "success", result));
-        } else {
-          callBack(resultObject(false, "Failed to create restaurant."));
-        }
-      } else {
-        callBack(resultObject(false, "You don't have the permission to create a restaurant!"));
-        return;
-      }
+      return callBack(resultObject(false, "Failed to create table. Please try again."));
     }
   } catch (error) {
-    callBack({
+    console.error("Error in createTables controller:", error);
+    return callBack({
       status: false,
       message: "Something went wrong. Please try again later.",
     });
-    console.log(error);
   }
 };
+
 
 const updateTables = async (request, callBack) => {
   try {

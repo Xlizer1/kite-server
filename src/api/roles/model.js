@@ -8,18 +8,17 @@ const getRoles = async (user, callBack) => {
     FROM
       roles
   `;
-  
-  executeQuery(sql, "registerUser", (result) => {
-    if (Array.isArray(result) && !result[0]) {
-      return callBack(new CustomError(result[1], 400));
-    }
 
-    if (Array.isArray(result)) {
-      return callBack(result);
-    }
+  const result = await executeQuery(sql, "registerUser");
+  if (Array.isArray(result) && !result[0]) {
+    return callBack(new CustomError(result[1], 400));
+  }
 
-    return callBack(new CustomError("An unknown error occurred during registration.", 500));
-  });
+  if (Array.isArray(result)) {
+    return callBack(result);
+  }
+
+  return callBack(new CustomError("An unknown error occurred during registration.", 500));
 };
 
 const createRoles = async (name, callBack) => {
@@ -29,22 +28,21 @@ const createRoles = async (name, callBack) => {
     SET
       name = "${name}"
   `;
-  
-  executeQuery(sql, "registerUser", (result) => {
-    if (Array.isArray(result) && !result[0]) {
-      return callBack(new CustomError(result[1], 400));
-    }
 
-    if (Array.isArray(result)) {
-      return callBack(true);
-    }
+  const result = await executeQuery(sql, "registerUser");
+  if (Array.isArray(result) && !result[0]) {
+    return callBack(new CustomError(result[1], 400));
+  }
 
-    return callBack(new CustomError("An unknown error occurred during registration.", 500));
-  });
+  if (Array.isArray(result)) {
+    return callBack(true);
+  }
+
+  return callBack(new CustomError("An unknown error occurred during registration.", 500));
 };
 
-const updateRoles = async (id, name) => {
-  return new Promise((resolve, reject) => {
+const updateRoles = (id, name) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       UPDATE
         roles
@@ -53,23 +51,22 @@ const updateRoles = async (id, name) => {
       WHERE
         id = ${id}
     `;
-    executeQuery(sql, "updateRoles", result => {
-      if (Array.isArray(result) &&!result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-      
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
-      
-      return reject(new CustomError("An unknown error occurred during roles update.", 500));
-    })
-  })
-}
+    const result = await executeQuery(sql, "updateRoles");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-const updateUserPermissions = async (id, roles) => {
-  return new Promise((resolve, reject) => {
-    executeQuery(`DELETE FROM permissions WHERE user_id = ${id}`, "deleting user roles", (result) => result);
+    if (result && result.affectedRows > 0) {
+      return resolve(true);
+    }
+
+    return reject(new CustomError("An unknown error occurred during roles update.", 500));
+  });
+};
+
+const updateUserPermissions = (id, roles) => {
+  return new Promise(async (resolve, reject) => {
+    const deleteResult = await executeQuery(`DELETE FROM permissions WHERE user_id = ${id}`, "deleting user roles");
     let roleSql = `
       INSERT INTO
         permissions (
@@ -79,41 +76,39 @@ const updateUserPermissions = async (id, roles) => {
       VALUES
         ${roles.map((role) => `(${id}, ${role})`).join(",")}
     `;
-    executeQuery(roleSql, "inserting user roles", result => {
-      if (Array.isArray(result) &&!result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-      
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
-      
-      return reject(new CustomError("An unknown error occurred during roles update.", 500));
-    })
-  })
-}
+    const result = await executeQuery(roleSql, "inserting user roles");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-const deleteRoles = async (id) => {
-  return new Promise((resolve, reject) => {
+    if (result && result.affectedRows > 0) {
+      return resolve(true);
+    }
+
+    return reject(new CustomError("An unknown error occurred during roles update.", 500));
+  });
+};
+
+const deleteRoles = (id) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       DELETE FROM
         roles
       WHERE
         id = ${id}
     `;
-    executeQuery(sql, "deleteRoles", result => {
-      if (Array.isArray(result) &&!result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-      
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
-      
-      return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
-    })
-  })
-}
+    const result = await executeQuery(sql, "deleteRoles");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
+
+    if (result && result.affectedRows > 0) {
+      return resolve(true);
+    }
+
+    return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
+  });
+};
 
 module.exports = {
   getRolesModel: getRoles,

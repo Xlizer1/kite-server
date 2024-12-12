@@ -11,65 +11,42 @@ const port = PORT || "8000";
 
 const baseUrl = BASE_URL || `http://${ip}:${port}`;
 
-const getTables = async (user) => {
-  return new Promise((resolve, reject) => {
+const getTables = () => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       SELECT
-        r.*,
-        JSON_ARRAYAGG (
-          JSON_OBJECT (
-            'id', i.id,
-            'url', i.url,
-            'primary', rim.is_primary
-          )
-        ) AS images
+        t.id,
+        t.number,
+        r.name,
+        ts.name AS status,
+        qr.qr_code
       FROM
-        tables r
+        tables t
       LEFT JOIN
-        restaurants_image_map rim ON r.id = rim.restaurant_id
+        qr_codes qr ON t.id = qr.table_id
       LEFT JOIN
-        images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
+        restaurants r ON t.restaurant_id = r.id
+      LEFT JOIN
+        table_statuses ts ON t.status = ts.id
       WHERE
-        r.deleted_at IS NULL
+        t.deleted_at IS NULL
     `;
 
-    if (user.department_id !== 1) {
-      if (user.department_id === 2) {
-        sql += `
-          AND r.id = ${user.restaurant_id}
-        `;
-      } else {
-        sql += `
-          AND r.parent_rest_id = ${user.restaurant_id}
-        `;
-      }
+    const result = await executeQuery(sql, "getTables");
+    if (Array.isArray(result) && result[0] === false) {
+      return reject(new CustomError(result[1], 400));
     }
 
-    sql += `
-      GROUP BY
-        r.id;
-    `;
+    if (Array.isArray(result)) {
+      return resolve(result);
+    }
 
-    executeQuery(sql, "getTables", (result) => {
-      if (Array.isArray(result) && result[0] === false) {
-        return reject(new CustomError(result[1], 400));
-      }
-
-      if (Array.isArray(result)) {
-        const parsedResult = result.map((row) => ({
-          ...row,
-          images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
-        }));
-        return resolve(parsedResult);
-      }
-
-      return reject(new CustomError("An unknown error occurred during data read.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during data read.", 500));
   });
 };
 
-const getTablesByID = async (id, user) => {
-  return new Promise((resolve, reject) => {
+const getTablesByID = (id, user) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       SELECT
         r.*,
@@ -109,81 +86,106 @@ const getTablesByID = async (id, user) => {
         r.id;
     `;
 
-    executeQuery(sql, "getTablesByID", (result) => {
-      if (Array.isArray(result) && result[0] === false) {
-        return reject(new CustomError(result[1], 400));
-      }
+    const result = await executeQuery(sql, "getTablesByID");
+    if (Array.isArray(result) && result[0] === false) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (Array.isArray(result)) {
-        const parsedResult = result.map((row) => ({
-          ...row,
-          images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
-        }));
-        return resolve(parsedResult[0]);
-      }
+    if (Array.isArray(result)) {
+      const parsedResult = result.map((row) => ({
+        ...row,
+        images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
+      }));
+      return resolve(parsedResult[0]);
+    }
 
-      return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during registration.", 500));
   });
 };
 
 const createTables = async (obj) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const { restaurant_id, number, creator_id } = obj;
 
-    const hash = crypto.createHash("sha256").update(JSON.stringify({ restaurant_id, number })).digest("hex");
+    try {
+      let checkSql = `
+        SELECT
+          id
+        FROM
+          tables
+        WHERE
+          restaurant_id = ${restaurant_id} AND number = ${number}
+      `;
+      const existingTable = await executeQuery(checkSql, "checkExistingTable");
 
-    let sql = `
-      INSERT INTO
-        tables
-      SET
-        restaurant_id = ${restaurant_id},
-        number = ${number},
-        created_at = NOW(),
-        created_by = ${creator_id}
-    `;
+      if (existingTable.length > 0) {
+        return resolve({
+          status: false,
+          message: "A table with the same number already exists for this restaurant.",
+        });
+      }
 
-    executeQuery(sql, "createTables", async (result) => {
-      if (result?.insertId) {
+      const hash = crypto
+        .createHash("sha256")
+        .update(JSON.stringify({ restaurant_id, number }))
+        .digest("hex");
+
+      let tableSql = `
+        INSERT INTO
+          tables
+        SET
+          restaurant_id = ${restaurant_id},
+          number = ${number},
+          created_at = NOW(),
+          created_by = ${creator_id}
+      `;
+      const tableResult = await executeQuery(tableSql, "createTables");
+
+      if (tableResult?.insertId) {
+        const tableId = tableResult.insertId;
+
         const qrCode = await QRCode.toDataURL(`${baseUrl}/${hash}`);
-        let sql = `
+
+        let qrSql = `
           INSERT INTO
             qr_codes
           SET
-            table_id = ${result?.insertId},
+            table_id = ${tableId},
             qr_code = "${qrCode}",
             created_at = NOW(),
             created_by = ${creator_id}
         `;
+        const qrResult = await executeQuery(qrSql, "insertQRCode");
 
-        executeQuery(sql, "insertQRCode", async (qrCoderesult) => {
-          try {
-            if (!qrCoderesult?.insertId) {
-              let sql = `
-                DELETE FROM
-                  tables
-                WHERE
-                  id = ${result?.insertId}
-              `;
-              executeQuery(sql, "insertQRCode", async () => {
-                resolve(false);
-              });
-            } else {
-              resolve(true);
-            }
-          } catch (err) {
-            reject(new Error("Failed to generate QR code."));
-          }
-        });
+        if (!qrResult?.insertId) {
+          let deleteSql = `
+            DELETE FROM
+              tables
+            WHERE
+              id = ${tableId}
+          `;
+          await executeQuery(deleteSql, "rollbackTable");
+          return resolve({
+            status: false,
+            message: "Failed to insert QR code; rolled back table creation.",
+          });
+        } else {
+          return resolve({
+            status: true,
+            message: "Table and QR code created successfully.",
+          });
+        }
       } else {
-        return reject(new CustomError("An unknown error occurred during registration.", 500));
+        return reject(new CustomError("An unknown error occurred during table creation.", 500));
       }
-    });
+    } catch (error) {
+      reject(new Error("Failed to create table and QR code."));
+    }
   });
 };
 
-const updateTables = async (obj) => {
-  return new Promise((resolve, reject) => {
+const updateTables = (obj) => {
+  return new Promise(async (resolve, reject) => {
     const { id, name, tagline, description, updater_id } = obj;
     let sql = `
       UPDATE
@@ -197,18 +199,17 @@ const updateTables = async (obj) => {
       WHERE
         id = ${id}
     `;
-    executeQuery(sql, "updateTables", (result) => {
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
+    const result = await executeQuery(sql, "updateTables");
+    if (result && result.affectedRows > 0) {
+      return resolve(true);
+    }
 
-      return reject(new CustomError("An unknown error occurred during roles update.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during roles update.", 500));
   });
 };
 
-const deleteTables = async (id, user_id) => {
-  return new Promise((resolve, reject) => {
+const deleteTables = (id, user_id) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       UPDATE
         tables
@@ -219,17 +220,16 @@ const deleteTables = async (id, user_id) => {
         id = ${id}
     `;
 
-    executeQuery(sql, "deleteTables", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
+    const result = await executeQuery(sql, "deleteTables");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
+    if (result && result.affectedRows > 0) {
+      return resolve(true);
+    }
 
-      return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
   });
 };
 

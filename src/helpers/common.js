@@ -53,26 +53,28 @@ const resultObject = (status, message, data) => {
   };
 };
 
-const executeQuery = async (sql, logName, callback) => {
-  try {
-    await db.query(
-      {
-        sql: sql,
-        timeout: 40000,
-      },
-      (error, result) => {
-        if (!error) {
-          callback(result);
-        } else {
-          console.error(`${logName}sql: ${sql}`);
-          console.error(logName + ": " + error);
-          callback([false, error?.message]);
+const executeQuery = async (sql, logName) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      await db.query(
+        {
+          sql: sql,
+          timeout: 40000,
+        },
+        (error, result) => {
+          if (!error) {
+            resolve(result);
+          } else {
+            console.error(`${logName}sql: ${sql}`);
+            console.error(logName + ": " + error);
+            resolve([false, error?.message]);
+          }
         }
-      }
-    );
-  } catch (e) {
-    console.log("Error in common.js -> executeQuery: " + e);
-  }
+      );
+    } catch (e) {
+      console.log("Error in common.js -> executeQuery: " + e);
+    }
+  });
 };
 
 const userExists = (username, email, phone) => {
@@ -85,13 +87,12 @@ const userExists = (username, email, phone) => {
       WHERE
         (username = "${username}" OR email = "${email}" OR phone = "${phone}")
     `;
-    await executeQuery(sql, "userExists", (result) => {
-      if (result && result?.length) {
-        resolve(true);
-      } else {
-        resolve(false);
-      }
-    });
+    const result = await executeQuery(sql, "userExists");
+    if (result && result?.length) {
+      resolve(true);
+    } else {
+      resolve(false);
+    }
   });
 };
 
@@ -99,12 +100,12 @@ const verify = (token) => {
   return new Promise((resolve, reject) => {
     try {
       var data = jwt.verify(token, tokenKey).data;
-      if (data)
+      if (data) {
         checkDataTokenValidation(data, (result) => {
           if (result) resolve(data);
           else resolve(null);
         });
-      else resolve(data);
+      } else resolve(data);
     } catch (e) {
       resolve(null);
       console.log(e);
@@ -112,7 +113,7 @@ const verify = (token) => {
   });
 };
 
-function checkDataTokenValidation(data, callback) {
+async function checkDataTokenValidation(data, callback) {
   var sql = `
     SELECT 
       enabled 
@@ -122,10 +123,9 @@ function checkDataTokenValidation(data, callback) {
       id = ${data.id} 
     AND 
       deleted_at IS NULL`;
-  executeQuery(sql, "checkDataTokenValidation", (result) => {
-    if (result && result.length > 0 && result[0].enabled) callback(true);
-    else callback(false);
-  });
+  const result = await executeQuery(sql, "checkDataTokenValidation");
+  if (result && result.length > 0 && result[0].enabled) callback(true);
+  else callback(false);
 }
 
 const getUserPermissions = (user_id) => {
@@ -142,13 +142,12 @@ const getUserPermissions = (user_id) => {
       WHERE
         u.id = ${user_id}
     `;
-    await executeQuery(sql, "getUser", (result) => {
-      if (result && result?.length) {
-        resolve(result?.map((r) => r?.id));
-      } else {
-        resolve([]);
-      }
-    });
+    const result = await executeQuery(sql, "getUser");
+    if (result && result?.length) {
+      resolve(result?.map((r) => r?.id));
+    } else {
+      resolve([]);
+    }
   });
 };
 
@@ -169,15 +168,14 @@ const getUser = (username) => {
       WHERE
         u.username = "${username}"
     `;
-    await executeQuery(sql, "getUser", async (result) => {
-      if (result && result?.length && result[0]) {
-        let user = result[0];
-        const permissions = await getUserPermissions(user?.id);
-        resolve({ ...user, roles: permissions });
-      } else {
-        resolve(null);
-      }
-    });
+    const result = await executeQuery(sql, "getUser");
+    if (result && result?.length && result[0]) {
+      let user = result[0];
+      const permissions = await getUserPermissions(user?.id);
+      resolve({ ...user, roles: permissions });
+    } else {
+      resolve(null);
+    }
   });
 };
 

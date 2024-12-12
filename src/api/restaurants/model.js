@@ -2,7 +2,7 @@ const { executeQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getRestaurants = async (user) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       SELECT
         r.*,
@@ -22,9 +22,9 @@ const getRestaurants = async (user) => {
       WHERE
         r.deleted_at IS NULL
     `;
-    
-    if(user.department_id !== 1) {
-      if(user.department_id === 2){
+
+    if (user.department_id !== 1) {
+      if (user.department_id === 2) {
         sql += `
           AND r.id = ${user.restaurant_id}
         `;
@@ -40,26 +40,26 @@ const getRestaurants = async (user) => {
         r.id;
     `;
 
-    executeQuery(sql, "getRestaurants", (result) => {
-      if (Array.isArray(result) && result[0] === false) {
-        return reject(new CustomError(result[1], 400));
-      }
+    const result = await executeQuery(sql, "getRestaurants");
 
-      if (Array.isArray(result)) {
-        const parsedResult = result.map((row) => ({
-          ...row,
-          images: JSON.parse(row.images || '[]')?.filter((i) => i.id) // Ensure valid JSON for `images`
-        }));
-        return resolve(parsedResult);
-      }
+    if (Array.isArray(result) && result[0] === false) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      return reject(new CustomError("An unknown error occurred during data read.", 500));
-    });
+    if (Array.isArray(result)) {
+      const parsedResult = result.map((row) => ({
+        ...row,
+        images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
+      }));
+      return resolve(parsedResult);
+    }
+
+    return reject(new CustomError("An unknown error occurred during data read.", 500));
   });
 };
 
 const getRestaurantsByID = async (id, user) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       SELECT
         r.*,
@@ -81,9 +81,9 @@ const getRestaurantsByID = async (id, user) => {
       AND
         r.id = ${id}
     `;
-    
-    if(user.department_id !== 1) {
-      if(user.department_id === 2){
+
+    if (user.department_id !== 1) {
+      if (user.department_id === 2) {
         sql += `
           AND r.id = ${user.restaurant_id}
         `;
@@ -99,26 +99,25 @@ const getRestaurantsByID = async (id, user) => {
         r.id;
     `;
 
-    executeQuery(sql, "getRestaurantsByID", (result) => {
-      if (Array.isArray(result) && result[0] === false) {
-        return reject(new CustomError(result[1], 400));
-      }
+    const result = await executeQuery(sql, "getRestaurantsByID");
+    if (Array.isArray(result) && result[0] === false) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (Array.isArray(result)) {
-        const parsedResult = result.map((row) => ({
-          ...row,
-          images: JSON.parse(row.images || '[]')?.filter((i) => i.id) // Ensure valid JSON for `images`
-        }));
-        return resolve(parsedResult[0]);
-      }
+    if (Array.isArray(result)) {
+      const parsedResult = result.map((row) => ({
+        ...row,
+        images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
+      }));
+      return resolve(parsedResult[0]);
+    }
 
-      return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during registration.", 500));
   });
 };
 
 const createRestaurants = async (obj) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const { name, description, tagline, creator_id } = obj;
     let sql = `
       INSERT INTO
@@ -131,18 +130,17 @@ const createRestaurants = async (obj) => {
         created_by = ${creator_id}
     `;
 
-    executeQuery(sql, "registerUser", (result) => {
-      if (result?.insertId) {
-        return resolve(true);
-      }
+    const result = await executeQuery(sql, "registerUser");
+    if (result?.insertId) {
+      return resolve(true);
+    }
 
-      return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during registration.", 500));
   });
 };
 
 const updateRestaurants = async (obj) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const { id, name, tagline, description, updater_id } = obj;
     let sql = `
       UPDATE
@@ -156,18 +154,17 @@ const updateRestaurants = async (obj) => {
       WHERE
         id = ${id}
     `;
-    executeQuery(sql, "updateRestaurants", (result) => {
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
+    const result = await executeQuery(sql, "updateRestaurants");
+    if (result && result.affectedRows > 0) {
+      return resolve(true);
+    }
 
-      return reject(new CustomError("An unknown error occurred during roles update.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during roles update.", 500));
   });
 };
 
 const deleteRestaurants = async (id, user_id) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       UPDATE
         restaurants
@@ -177,18 +174,18 @@ const deleteRestaurants = async (id, user_id) => {
       WHERE
         id = ${id}
     `;
+
+    const result = await executeQuery(sql, "deleteRestaurants");
     
-    executeQuery(sql, "deleteRestaurants", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (result && result.affectedRows > 0) {
-        return resolve(true);
-      }
+    if (result && result.affectedRows > 0) {
+      return resolve(true);
+    }
 
-      return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
   });
 };
 

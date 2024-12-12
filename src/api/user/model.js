@@ -2,7 +2,7 @@ const { hash, executeQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getUsers = (id) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       SELECT
         u.*,
@@ -20,22 +20,21 @@ const getUsers = (id) => {
         u.id = ${id}
     `;
 
-    executeQuery(sql, "getUserById", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
+    const result = await executeQuery(sql, "getUserById");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (result && result.length > 0) {
-        return resolve(result[0]);
-      }
+    if (result && result.length > 0) {
+      return resolve(result[0]);
+    }
 
-      return reject(new CustomError("User not found.", 404));
-    });
+    return reject(new CustomError("User not found.", 404));
   });
 };
 
 const getUserById = (id) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       SELECT
         u.*,
@@ -53,23 +52,21 @@ const getUserById = (id) => {
         u.id = ${id}
     `;
 
-    executeQuery(sql, "getUserById", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
+    const result = await executeQuery(sql, "getUserById");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (result && result.length > 0) {
-        return resolve(result[0]);
-      }
+    if (result && result.length > 0) {
+      return resolve(result[0]);
+    }
 
-      return reject(new CustomError("User not found.", 404));
-    });
+    return reject(new CustomError("User not found.", 404));
   });
 };
 
-const updateUser = async (obj) => {
+const updateUser = (obj) => {
   return new Promise(async (resolve, reject) => {
-
     var passwordHash = await hash(obj.newPassword);
 
     let sql = `
@@ -90,15 +87,15 @@ const updateUser = async (obj) => {
         id = ${obj.id}
     `;
 
-    executeQuery(sql, "updateUser", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
+    const result = await executeQuery(sql, "updateUser");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (result && result.affectedRows > 0) {
-        if (obj?.roles && obj?.roles.length > 0 && obj?.roles.every((role) => typeof role === "number")) {
-          executeQuery(`DELETE FROM permissions WHERE user_id = ${obj.id}`, "deleting user roles", (result) => result);
-          let roleSql = `
+    if (result && result.affectedRows > 0) {
+      if (obj?.roles && obj?.roles.length > 0 && obj?.roles.every((role) => typeof role === "number")) {
+        const deleteResult = await executeQuery(`DELETE FROM permissions WHERE user_id = ${obj.id}`, "deleting user roles");
+        let roleSql = `
             INSERT INTO
               permissions (
                 user_id,
@@ -107,21 +104,20 @@ const updateUser = async (obj) => {
             VALUES
               ${obj?.roles.map((role) => `(${obj.id}, ${role})`).join(",")}
           `;
-          executeQuery(roleSql, "inserting user roles", (result) => result);
-          return resolve({
-            status: true,
-            message: "Updated Successfully!",
-          });
-        } else {
-          return resolve({
-            status: true,
-            message: "Updated Successfully, couldn't insert user roles!",
-          });
-        }
+        const result = await executeQuery(roleSql, "inserting user roles");
+        return resolve({
+          status: true,
+          message: "Updated Successfully!",
+        });
+      } else {
+        return resolve({
+          status: true,
+          message: "Updated Successfully, couldn't insert user roles!",
+        });
       }
+    }
 
-      return reject(new CustomError("An unknown error occurred during user update.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during user update.", 500));
   });
 };
 
@@ -159,15 +155,15 @@ const registerUser = async (user) => {
     )
   `;
 
-  return new Promise((resolve, reject) => {
-    executeQuery(sql, "registerUser", (result) => {
-      if (Array.isArray(result) && !result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
+  return new Promise(async (resolve, reject) => {
+    const result = await executeQuery(sql, "registerUser");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
 
-      if (result && result?.insertId) {
-        if (roles && roles.length > 0 && roles.every((role) => typeof role === "number")) {
-          let roleSql = `
+    if (result && result?.insertId) {
+      if (roles && roles.length > 0 && roles.every((role) => typeof role === "number")) {
+        let roleSql = `
             INSERT INTO
               permissions (
                 user_id,
@@ -176,26 +172,25 @@ const registerUser = async (user) => {
             VALUES
               ${roles.map((role) => `(${result.insertId}, ${role})`).join(",")}
           `;
-          executeQuery(roleSql, "inserting userr roles", (result) => console.log(result));
-          return resolve({
-            status: true,
-            message: "Registered Successfully!",
-          });
-        } else {
-          return resolve({
-            status: true,
-            message: "Registered Successfully, couldn't insert user roles!",
-          });
-        }
+        const rolesResult = await executeQuery(roleSql, "inserting userr roles");
+        return resolve({
+          status: true,
+          message: "Registered Successfully!",
+        });
+      } else {
+        return resolve({
+          status: true,
+          message: "Registered Successfully, couldn't insert user roles!",
+        });
       }
+    }
 
-      return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+    return reject(new CustomError("An unknown error occurred during registration.", 500));
   });
 };
 
 const deleteUser = (obj) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let sql = `
       UPDATE
         users
@@ -205,22 +200,21 @@ const deleteUser = (obj) => {
       WHERE
         id = ${obj.id}
     `;
-    executeQuery(sql, "deleteUser", (result) => {
-      if (Array.isArray(result) &&!result[0]) {
-        return reject(new CustomError(result[1], 400));
-      }
-      
-      if (result && result.affectedRows > 0) {
-        return resolve({
-          status: true,
-          message: "User deleted successfully!",
-        });
-      }
-      
-      return reject(new CustomError("An unknown error occurred during user deletion.", 500));
-    })
+    const result = await executeQuery(sql, "deleteUser");
+    if (Array.isArray(result) && !result[0]) {
+      return reject(new CustomError(result[1], 400));
+    }
+
+    if (result && result.affectedRows > 0) {
+      return resolve({
+        status: true,
+        message: "User deleted successfully!",
+      });
+    }
+
+    return reject(new CustomError("An unknown error occurred during user deletion.", 500));
   });
-}
+};
 
 module.exports = {
   getUsersModel: getUsers,
