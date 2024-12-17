@@ -67,7 +67,8 @@ const createRestaurants = async (request, callBack) => {
     } else {
       if (authorize?.roles?.includes(2)) {
         const { name, tagline, description } = request?.body;
-        const result = await createRestaurantsModel({ name, tagline, description, creator_id: authorize?.id });
+
+        const result = await createRestaurantsModel({ name, tagline, description, images: request?.files, creator_id: authorize?.id });
         if (result) {
           callBack(resultObject(true, "success"));
         } else {
@@ -97,7 +98,7 @@ const updateRestaurants = async (request, callBack) => {
       if (authorize?.roles?.includes(3)) {
         const { id } = request?.params;
         const { name, tagline, description } = request?.body;
-        const result = await updateRestaurantsModel({ id, name, tagline, description, updater_id: authorize?.id});
+        const result = await updateRestaurantsModel({ id, name, tagline, description, updater_id: authorize?.id });
         if (result) {
           callBack(resultObject(true, "success"));
         } else {

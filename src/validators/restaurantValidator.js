@@ -5,6 +5,7 @@ const restaurantSchema = Joi.object({
     name: Joi.string().required(),
     tagline: Joi.string().required(),
     description: Joi.string().required(),
+    image: Joi.binary().required(),
 });
 
 module.exports = {

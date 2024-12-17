@@ -1,4 +1,4 @@
-const { getTablesModel, createTablesModel, getTablesByIDModel, updateTablesModel, deleteTablesModel } = require("./model");
+const { getTablesModel, createTablesModel, updateTablesModel, deleteTablesModel } = require("./model");
 const { resultObject, verify } = require("../../helpers/common");
 
 const getTables = async (request, callBack) => {
@@ -14,35 +14,6 @@ const getTables = async (request, callBack) => {
           callBack(resultObject(true, "success", result));
         } else {
           callBack(resultObject(true, "No restaurants found.", []));
-        }
-      } else {
-        callBack(resultObject(false, "You don't have the permission to view restaurants!"));
-        return;
-      }
-    }
-  } catch (error) {
-    callBack({
-      status: false,
-      message: "Something went wrong. Please try again later.",
-    });
-    console.log(error);
-  }
-};
-
-const getTablesByID = async (request, callBack) => {
-  try {
-    const authorize = await verify(request?.headers["jwt"]);
-    if (!authorize?.id || !authorize?.email) {
-      callBack(resultObject(false, "Token is invalid!"));
-      return;
-    } else {
-      if (authorize?.roles?.includes(1)) {
-        const { id } = request.params;
-        const result = await getTablesByIDModel(id, authorize);
-        if (result && result?.id) {
-          callBack(resultObject(true, "success", result));
-        } else {
-          callBack(resultObject(false, "Restaurant not found."));
         }
       } else {
         callBack(resultObject(false, "You don't have the permission to view restaurants!"));
@@ -94,7 +65,6 @@ const createTables = async (request, callBack) => {
   }
 };
 
-
 const updateTables = async (request, callBack) => {
   try {
     const authorize = await verify(request?.headers["jwt"]);
@@ -105,7 +75,7 @@ const updateTables = async (request, callBack) => {
       if (authorize?.roles?.includes(3)) {
         const { id } = request?.params;
         const { name, tagline, description } = request?.body;
-        const result = await updateTablesModel({ id, name, tagline, description, updater_id: authorize?.id});
+        const result = await updateTablesModel({ id, name, tagline, description, updater_id: authorize?.id });
         if (result) {
           callBack(resultObject(true, "success"));
         } else {
@@ -156,7 +126,6 @@ const deleteTables = async (request, callBack) => {
 
 module.exports = {
   getTablesController: getTables,
-  getTablesByIDController: getTablesByID,
   createTablesController: createTables,
   updateTablesController: updateTables,
   deleteTablesController: deleteTables,

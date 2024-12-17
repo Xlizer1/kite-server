@@ -2,6 +2,7 @@ const express = require("express");
 const { getRestaurantsController, getRestaurantsByIDController, createRestaurantsController, updateRestaurantsController, deleteRestaurantsController } = require("./controller");
 const { restaurantSchema } = require("../../validators/restaurantValidator");
 const validateRequest = require("../../middleware/validateRequest");
+const multer = require("../../middleware/multer");
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get("/:id", (req, res) => {
   });
 });
 
-router.post("/", validateRequest(restaurantSchema), (req, res) => {
+router.post("/", multer.upload.array("logo_file"), (req, res) => {
   createRestaurantsController(req, (result) => {
     res.json(result);
   });

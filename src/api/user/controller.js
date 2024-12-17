@@ -190,16 +190,16 @@ const getUsers = async (request, callBack) => {
 
 const registerUser = async (request, callBack) => {
   try {
-    const authorize = await verify(request?.headers["jwt"]);
-    if (!authorize?.id || !authorize?.email) {
-      callBack(resultObject(false, "Token is invalid!"));
-      return;
-    } else {
-      if (authorize?.roles?.includes(6)) {
-        const { error } = registerUserSchema.validate(request.body);
-        if (error) {
-          throw new ValidationError(error.details[0].message);
-        }
+    // const authorize = await verify(request?.headers["jwt"]);
+    // if (!authorize?.id || !authorize?.email) {
+    //   callBack(resultObject(false, "Token is invalid!"));
+    //   return;
+    // } else {
+    //   if (authorize?.roles?.includes(6)) {
+    //     const { error } = registerUserSchema.validate(request.body);
+    //     if (error) {
+    //       throw new ValidationError(error.details[0].message);
+    //     }
 
         const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, password, roles } = request.body;
 
@@ -208,7 +208,7 @@ const registerUser = async (request, callBack) => {
           throw new ValidationError("User already exists.");
         }
 
-        const result = await registerUserModel({ name, email, username, phone, password, restaurant_id, parent_restaurant_id, department_id, roles, created_id: authorize?.id });
+        const result = await registerUserModel({ name, email, username, phone, password, restaurant_id, parent_restaurant_id, department_id, roles, created_id: 0 });
         if (result?.status === true) {
           callBack(resultObject(true, "User created successfully."));
           return;
@@ -216,16 +216,17 @@ const registerUser = async (request, callBack) => {
           callBack(resultObject(false, "Failed to create user."));
           return;
         }
-      } else {
-        callBack(resultObject(false, "You don't have the permission to create a user!"));
-        return;
-      }
-    }
+    //   } else {
+    //     callBack(resultObject(false, "You don't have the permission to create a user!"));
+    //     return;
+    //   }
+    // }
   } catch (error) {
     if (error instanceof ValidationError) {
       callBack(resultObject(false, error.message));
     } else {
       callBack(resultObject(false, "Something went wrong. Please try again later."));
+      console.log(error)
     }
   }
 };

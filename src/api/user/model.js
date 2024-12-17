@@ -135,7 +135,6 @@ const registerUser = async (user) => {
         password,
         restaurant_id,
         department_id,
-        parent_restaurant_id,
         enabled,
         created_at,
         created_by
@@ -148,7 +147,6 @@ const registerUser = async (user) => {
       "${passwordHash}",
       ${restaurant_id},
       ${department_id},
-      ${parent_restaurant_id ? parent_restaurant_id : "NULL"},
       ${1},
       Now(),
       ${created_id}

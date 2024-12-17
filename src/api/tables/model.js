@@ -1,7 +1,6 @@
-const crypto = require("crypto");
 const QRCode = require("qrcode");
 
-const { executeQuery } = require("../../helpers/common");
+const { executeQuery, encryptObject } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const { IP, PORT, BASE_URL } = process.env;
@@ -45,69 +44,12 @@ const getTables = () => {
   });
 };
 
-const getTablesByID = (id, user) => {
-  return new Promise(async (resolve, reject) => {
-    let sql = `
-      SELECT
-        r.*,
-        JSON_ARRAYAGG (
-          JSON_OBJECT (
-            'id', i.id,
-            'url', i.url,
-            'primary', rim.is_primary
-          )
-        ) AS images
-      FROM
-        tables r
-      LEFT JOIN
-        restaurants_image_map rim ON r.id = rim.restaurant_id
-      LEFT JOIN
-        images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
-      WHERE
-        r.deleted_at IS NULL
-      AND
-        r.id = ${id}
-    `;
-
-    if (user.department_id !== 1) {
-      if (user.department_id === 2) {
-        sql += `
-          AND r.id = ${user.restaurant_id}
-        `;
-      } else {
-        sql += `
-          AND r.parent_rest_id = ${user.restaurant_id}
-        `;
-      }
-    }
-
-    sql += `
-      GROUP BY
-        r.id;
-    `;
-
-    const result = await executeQuery(sql, "getTablesByID");
-    if (Array.isArray(result) && result[0] === false) {
-      return reject(new CustomError(result[1], 400));
-    }
-
-    if (Array.isArray(result)) {
-      const parsedResult = result.map((row) => ({
-        ...row,
-        images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
-      }));
-      return resolve(parsedResult[0]);
-    }
-
-    return reject(new CustomError("An unknown error occurred during registration.", 500));
-  });
-};
-
 const createTables = async (obj) => {
   return new Promise(async (resolve, reject) => {
     const { restaurant_id, number, creator_id } = obj;
 
     try {
+      // Check if the table exists
       let checkSql = `
         SELECT
           id
@@ -124,12 +66,16 @@ const createTables = async (obj) => {
           message: "A table with the same number already exists for this restaurant.",
         });
       }
+      // Encrypt the data
+      const hash = encryptObject({ restaurant_id, number });
 
-      const hash = crypto
-        .createHash("sha256")
-        .update(JSON.stringify({ restaurant_id, number }))
-        .digest("hex");
+      // Convert the hash object to a URL-compatible format
+      const qrData = `${hash.iv}:${hash.encryptedData}`;
 
+      // Generate QR code
+      const qrCode = await QRCode.toDataURL(`${baseUrl}/${qrData}`);
+
+      // Insert table
       let tableSql = `
         INSERT INTO
           tables
@@ -144,8 +90,7 @@ const createTables = async (obj) => {
       if (tableResult?.insertId) {
         const tableId = tableResult.insertId;
 
-        const qrCode = await QRCode.toDataURL(`${baseUrl}/${hash}`);
-
+        // Insert QR Code into the database
         let qrSql = `
           INSERT INTO
             qr_codes
@@ -179,6 +124,7 @@ const createTables = async (obj) => {
         return reject(new CustomError("An unknown error occurred during table creation.", 500));
       }
     } catch (error) {
+      console.error("Error during table creation:", error);
       reject(new Error("Failed to create table and QR code."));
     }
   });
@@ -235,7 +181,6 @@ const deleteTables = (id, user_id) => {
 
 module.exports = {
   getTablesModel: getTables,
-  getTablesByIDModel: getTablesByID,
   createTablesModel: createTables,
   updateTablesModel: updateTables,
   deleteTablesModel: deleteTables,

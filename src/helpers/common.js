@@ -2,12 +2,51 @@ var db = require("../config/db");
 
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const { TOKEN_KEY, EXPIRES_IN, SALT_ROUNDS } = process.env;
 
 const tokenKey = TOKEN_KEY || "cyka";
 const tokenExpiry = EXPIRES_IN || "12h";
 const saltRounds = SALT_ROUNDS || 10;
+
+// Define the encryption algorithm, key, and IV (Initialization Vector)
+const algorithm = "aes-256-cbc";
+const secretKey = Buffer.from(process.env.SECRET_KEY, 'hex');
+const iv = crypto.randomBytes(16); // A 16-byte IV
+
+function encryptObject(obj) {
+  const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(obj)), cipher.final()]);
+  return {
+    iv: iv.toString("hex"),
+    encryptedData: encrypted.toString("hex"),
+  };
+}
+
+function decryptObject(encrypted) {
+  const decipher = crypto.createDecipheriv(
+    algorithm,
+    secretKey,
+    Buffer.from(encrypted.iv, "hex")
+  );
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(encrypted.encryptedData, "hex")),
+    decipher.final(),
+  ]);
+  return JSON.parse(decrypted.toString());
+}
+
+async function processTableEncryptedKey(qrData) {
+  try {
+    const [iv, encryptedData] = qrData.split(":"); // Split into iv and encryptedData
+
+    return decryptObject({ iv, encryptedData });
+  } catch (error) {
+    console.error("Error processing QR code:", error);
+    return null;
+  }
+}
 
 const hash = (text) => {
   return new Promise(async (resolve, reject) => {
@@ -179,4 +218,4 @@ const getUser = (username) => {
   });
 };
 
-module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify };
+module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify, encryptObject, decryptObject, processTableEncryptedKey };
