@@ -23,8 +23,8 @@ const getRestaurantMainMenu = async (request, callBack) => {
 
         const result = await getRestaurantMainMenuModel(restaurant_id, number);
 
-        if (result && result?.id) {
-          callBack(resultObject(true, "success"));
+        if (result) {
+          callBack(resultObject(true, "success", result));
         } else {
           callBack(resultObject(false, "Restaurant not found."));
         }

@@ -16,6 +16,8 @@ const rolesRouter = require("./src/api/roles/router");
 const restaurantsRouter = require("./src/api/restaurants/router");
 const tablesRouter = require("./src/api/tables/router");
 const menuRouter = require("./src/api/menu/router");
+const categoriesRouter = require("./src/api/categories/router");
+const subCategoriesRouter = require("./src/api/sub_categories/router");
 
 app.use("/uploads", express.static(__dirname + "/uploads"));
 
@@ -30,6 +32,8 @@ app.use("/roles", rolesRouter);
 app.use("/restaurants", restaurantsRouter);
 app.use("/tables", tablesRouter);
 app.use("/menu", menuRouter);
+app.use("/categories", categoriesRouter);
+app.use("/sub_categories", subCategoriesRouter);
 
 app.use(handleError);
 
