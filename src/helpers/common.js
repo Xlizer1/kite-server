@@ -218,4 +218,25 @@ const getUser = (username) => {
   });
 };
 
-module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify, encryptObject, decryptObject, processTableEncryptedKey };
+const checkCategoryForRestaurant = (restaurant_id, category_id) => {
+  return new Promise(async (resolve) => {
+    let sql = `
+      SELECT
+        id
+      FROM
+        categories
+      WHERE
+        restaurant_id = ${restaurant_id}
+      AND
+        id = ${category_id}
+    `;
+    const result = await executeQuery(sql, "checkCategoryForRestaurant");
+    if (result && result?.length) {
+      resolve(true);
+    } else {
+      resolve(false);
+    }
+  });
+}
+
+module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify, encryptObject, decryptObject, processTableEncryptedKey, checkCategoryForRestaurant };

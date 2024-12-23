@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Dec 17, 2024 at 12:37 AM
+-- Generation Time: Dec 23, 2024 at 06:47 PM
 -- Server version: 8.3.0
 -- PHP Version: 8.2.18
 
@@ -45,7 +45,6 @@ DROP TABLE IF EXISTS `categories`;
 CREATE TABLE IF NOT EXISTS `categories` (
   `id` int NOT NULL AUTO_INCREMENT,
   `restaurant_id` int NOT NULL,
-  `image_id` int DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `created_by` int NOT NULL,
@@ -54,9 +53,15 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `restaurant_id` (`restaurant_id`),
-  KEY `image_id` (`image_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `restaurant_id` (`restaurant_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `categories`
+--
+
+INSERT INTO `categories` (`id`, `restaurant_id`, `name`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(1, 11, 'grilled', '2024-12-18 19:58:28', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -80,7 +85,14 @@ CREATE TABLE IF NOT EXISTS `categories_image_map` (
   KEY `image_id` (`image_id`),
   KEY `category_id` (`category_id`),
   KEY `created_by` (`created_by`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `categories_image_map`
+--
+
+INSERT INTO `categories_image_map` (`id`, `image_id`, `category_id`, `is_primary`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`, `created_at`) VALUES
+(1, 21, 1, 1, 1, NULL, NULL, NULL, NULL, '2024-12-18 19:58:28');
 
 -- --------------------------------------------------------
 
@@ -127,7 +139,7 @@ CREATE TABLE IF NOT EXISTS `images` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `created_by` (`created_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `images`
@@ -137,7 +149,11 @@ INSERT INTO `images` (`id`, `url`, `created_at`, `created_by`, `updated_at`, `up
 (17, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759959.jpg', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
 (18, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759963.webp', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
 (19, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759967.exe', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
-(20, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759970.avif', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL);
+(20, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759970.avif', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
+(21, 'http://localhost:8000/uploads/restaurarnts/restaurant_1_1734551908709.jpg', '2024-12-18 19:58:28', 1, NULL, NULL, NULL, NULL),
+(26, 'http://localhost:8000/uploads/sub_categories/sub_categories_1_1734556023098.jpg', '2024-12-18 21:07:03', 1, NULL, NULL, NULL, NULL),
+(27, 'http://localhost:8000/uploads/sub_categories/sub_categories_2_1734556104628.jpg', '2024-12-18 21:08:24', 1, NULL, NULL, NULL, NULL),
+(28, 'http://localhost:8000/uploads/sub_categories/sub_categories_3_1734975736690.avif', '2024-12-23 17:42:16', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -462,7 +478,14 @@ CREATE TABLE IF NOT EXISTS `qr_codes` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `table_id` (`table_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `qr_codes`
+--
+
+INSERT INTO `qr_codes` (`id`, `table_id`, `qr_code`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(1, 1, 'data:image/png;base64,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', '2024-12-18 18:39:22', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -542,7 +565,14 @@ CREATE TABLE IF NOT EXISTS `restaurant_settings` (
   `secondary_color` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `restaurant_settings`
+--
+
+INSERT INTO `restaurant_settings` (`id`, `restaurant_id`, `primary_color`, `secondary_color`) VALUES
+(1, 11, '#213555', '#3E5879');
 
 -- --------------------------------------------------------
 
@@ -622,7 +652,15 @@ CREATE TABLE IF NOT EXISTS `sub_categories` (
   PRIMARY KEY (`id`),
   KEY `category_id` (`category_id`),
   KEY `image_id` (`image_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `sub_categories`
+--
+
+INSERT INTO `sub_categories` (`id`, `category_id`, `image_id`, `name`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(2, 1, NULL, 'tekka', '2024-12-18 21:08:24', 1, NULL, NULL, NULL, NULL),
+(3, 1, NULL, 'tekkaa', '2024-12-23 17:42:16', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -646,7 +684,15 @@ CREATE TABLE IF NOT EXISTS `sub_categories_image_map` (
   KEY `image_id` (`image_id`),
   KEY `sub_category_id` (`sub_category_id`),
   KEY `created_by` (`created_by`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `sub_categories_image_map`
+--
+
+INSERT INTO `sub_categories_image_map` (`id`, `image_id`, `sub_category_id`, `is_primary`, `created_by`, `created_at`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(1, 27, 2, 1, 1, '2024-12-18 21:08:24', NULL, NULL, NULL, NULL),
+(2, 28, 3, 1, 1, '2024-12-23 17:42:16', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -681,7 +727,14 @@ CREATE TABLE IF NOT EXISTS `tables` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `tables`
+--
+
+INSERT INTO `tables` (`id`, `restaurant_id`, `number`, `status`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(1, 11, 1, NULL, '2024-12-18 18:39:22', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -793,8 +846,7 @@ ALTER TABLE `attributes`
 -- Constraints for table `categories`
 --
 ALTER TABLE `categories`
-  ADD CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
-  ADD CONSTRAINT `categories_ibfk_2` FOREIGN KEY (`image_id`) REFERENCES `images` (`id`);
+  ADD CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
 
 --
 -- Constraints for table `categories_image_map`
