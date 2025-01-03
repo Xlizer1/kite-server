@@ -139,7 +139,7 @@ const createRestaurants = async (obj) => {
         const result = await executeQuery(sql, "registerUser");
         if (result?.insertId) {
             if (images?.length) {
-              let index = 0;
+                let index = 0;
                 for (const image of images) {
                     var tmp_path = image.path;
                     var image_ext = image.originalname.split(".").pop();
@@ -158,8 +158,8 @@ const createRestaurants = async (obj) => {
                         created_by = ${creator_id}
                     `;
                     const imageResult = await executeQuery(sql, "registerUser");
-                    if(imageResult?.insertId) {
-                      let sql = `
+                    if (imageResult?.insertId) {
+                        let sql = `
                         INSERT INTO
                           restaurants_image_map
                         SET
@@ -169,8 +169,8 @@ const createRestaurants = async (obj) => {
                           created_at = NOW(),
                           created_by = ${creator_id}
                       `;
-                      await executeQuery(sql, "registerUser");
-                      index++;
+                        await executeQuery(sql, "registerUser");
+                        index++;
                     }
                 }
             }
