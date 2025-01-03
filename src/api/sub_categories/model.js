@@ -6,7 +6,41 @@ const { IP, PORT } = process.env;
 
 const ip = IP || "localhost";
 const port = PORT || "8000";
-const getSubRestaurantCategory = (sub_category_id) => {
+
+const getSubCategories = (restaurant_id) => {
+    return new Promise(async (resolve, reject) => {
+      let sql = `
+        SELECT
+          sc.id,
+          sc.name,
+          isc.url AS image_url
+        FROM
+          sub_categories AS sc
+        LEFT JOIN
+          sub_categories_image_map AS scim ON scim.sub_category_id = sc.id
+        LEFT JOIN
+          images AS isc ON scim.image_id = isc.id AND scim.is_primary = 1
+        WHERE
+          sc.restaurant_id = ${restaurant_id}
+        GROUP BY
+          sc.id, sc.name, isc.url;
+      `;
+
+      const result = await executeQuery(sql, "getRestaurantSettings");
+
+      if (Array.isArray(result) && result[0] === false) {
+          return reject(new CustomError(result[1], 400));
+      }
+
+      if (Array.isArray(result)) {
+          return resolve(result);
+      }
+
+      return reject(new CustomError("An unknown error occurred during registration.", 500));
+    });
+};
+
+const getSubCategoriesByCategoryID = (sub_category_id) => {
     return new Promise(async (resolve, reject) => {
       let sql = `
         SELECT
@@ -38,6 +72,7 @@ const getSubRestaurantCategory = (sub_category_id) => {
       return reject(new CustomError("An unknown error occurred during registration.", 500));
     });
 };
+
 const createSubRestaurantCategory = (name, category_id, image, creator_id) => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -98,6 +133,7 @@ const createSubRestaurantCategory = (name, category_id, image, creator_id) => {
 };
 
 module.exports = {
-    getSubRestaurantCategoryModel: getSubRestaurantCategory,
+    getSubRestaurantCategoriesModel: getSubCategories,
+    getSubCategoriesByCategoryIDModel: getSubCategoriesByCategoryID,
     createSubRestaurantCategoryModel: createSubRestaurantCategory,
 };
