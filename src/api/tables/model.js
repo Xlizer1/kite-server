@@ -73,7 +73,7 @@ const createTables = async (obj) => {
       const qrData = `${hash.iv}:${hash.encryptedData}`;
 
       // Generate QR code
-      const qrCode = await QRCode.toDataURL(`${baseUrl}/${qrData}`);
+      const qrCode = await QRCode.toDataURL(`${baseUrl}/menu&key=${qrData}`);
 
       // Insert table
       let tableSql = `

@@ -10,7 +10,7 @@ router.get("/", (req, res) => {
   });
 });
 
-router.get("/", (req, res) => {
+router.get("/get_by_category_id", (req, res) => {
   getSubCategoriesByCategoryIDController(req, (result) => {
     res.json(result);
   });

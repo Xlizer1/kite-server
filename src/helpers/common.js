@@ -239,4 +239,25 @@ const checkCategoryForRestaurant = (restaurant_id, category_id) => {
   });
 }
 
-module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify, encryptObject, decryptObject, processTableEncryptedKey, checkCategoryForRestaurant };
+const checkSubCategoryForRestaurant = (restaurant_id, category_id) => {
+  return new Promise(async (resolve) => {
+    let sql = `
+      SELECT
+        id
+      FROM
+        sub_categories
+      WHERE
+        restaurant_id = ${restaurant_id}
+      AND
+        id = ${category_id}
+    `;
+    const result = await executeQuery(sql, "checkSubCategoryForRestaurant");
+    if (result && result?.length) {
+      resolve(true);
+    } else {
+      resolve(false);
+    }
+  });
+}
+
+module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify, encryptObject, decryptObject, processTableEncryptedKey, checkCategoryForRestaurant, checkSubCategoryForRestaurant };

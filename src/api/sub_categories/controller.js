@@ -3,32 +3,21 @@ const { resultObject, verify, checkCategoryForRestaurant, processTableEncryptedK
 
 const getSubCategories = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
+        const { key } = request.query;
+
+        if (!key || typeof key !== "string") {
+            callBack(resultObject(false, "Invalid key!"));
             return;
+        }
+
+        const { restaurant_id } = await processTableEncryptedKey(key);
+
+        const result = await getSubRestaurantCategoriesModel(restaurant_id);
+
+        if (result) {
+            callBack(resultObject(true, "success", result));
         } else {
-            if (authorize?.roles?.includes(1)) {
-                const { key } = request.query;
-
-                if (!key || typeof key !== "string") {
-                    callBack(resultObject(false, "Invalid key!"));
-                    return;
-                }
-
-                const { restaurant_id } = await processTableEncryptedKey(key);
-
-                const result = await getSubRestaurantCategoriesModel(restaurant_id);
-
-                if (result) {
-                    callBack(resultObject(true, "success", result));
-                } else {
-                    callBack(resultObject(false, "Could not get category."));
-                }
-            } else {
-                callBack(resultObject(false, "You don't have the permission to view restaurants!"));
-                return;
-            }
+            callBack(resultObject(false, "Could not get category."));
         }
     } catch (error) {
         callBack({
@@ -41,29 +30,26 @@ const getSubCategories = async (request, callBack) => {
 
 const getSubCategoriesByCategoryID = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (authorize?.roles?.includes(1)) {
-            const { category_id, key } = request.query;
+        const { category_id, key } = request.query;
 
-            if (!category_id || !key || typeof key !== "string") {
-                callBack(resultObject(false, "Invalid category id or key!"));
-                return;
-            }
+        if (!category_id || !key || typeof key !== "string") {
+            callBack(resultObject(false, "Invalid category id or key!"));
+            return;
+        }
 
-            const { restaurant_id } = await processTableEncryptedKey(key);
+        const { restaurant_id } = await processTableEncryptedKey(key);
 
-            if (!(await checkCategoryForRestaurant(restaurant_id, category_id))) {
-                callBack(resultObject(false, "Invalid category or restaurant."));
-                return;
-            }
+        if (!(await checkCategoryForRestaurant(restaurant_id, category_id))) {
+            callBack(resultObject(false, "Invalid category or restaurant."));
+            return;
+        }
 
-            const result = await getSubCategoriesByCategoryIDModel(category_id);
+        const result = await getSubCategoriesByCategoryIDModel(restaurant_id, category_id);
 
-            if (result) {
-                callBack(resultObject(true, "success", result));
-            } else {
-                callBack(resultObject(false, "Could not get category."));
-            }
+        if (result) {
+            callBack(resultObject(true, "success", result));
+        } else {
+            callBack(resultObject(false, "Could not get category."));
         }
     } catch (error) {
         callBack({

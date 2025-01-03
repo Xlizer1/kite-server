@@ -3,30 +3,25 @@ const { resultObject, verify, processTableEncryptedKey } = require("../../helper
 
 const getRestaurantCategory = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
+        const { key } = request.query;
+
+        if (!key || typeof key !== "string") {
+            callBack(resultObject(false, "Invalid Table Key!"));
             return;
+        }
+        const { restaurant_id } = await processTableEncryptedKey(key);
+
+        if (!restaurant_id) {
+            callBack(resultObject(false, "Invalid Table"));
+            return;
+        }
+
+        const result = await getRestaurantCategoryModel(restaurant_id);
+
+        if (result) {
+            callBack(resultObject(true, "success", result));
         } else {
-            if (authorize?.roles?.includes(1)) {
-                const { restaurant_id } = request.query;
-
-                if (!restaurant_id) {
-                    callBack(resultObject(false, "Invalid restaurant id!"));
-                    return;
-                }
-
-                const result = await getRestaurantCategoryModel(restaurant_id);
-
-                if (result) {
-                    callBack(resultObject(true, "success", result));
-                } else {
-                    callBack(resultObject(false, "Could not get category."));
-                }
-            } else {
-                callBack(resultObject(false, "You don't have the permission to view restaurants!"));
-                return;
-            }
+            callBack(resultObject(false, "Could not get category."));
         }
     } catch (error) {
         callBack({
