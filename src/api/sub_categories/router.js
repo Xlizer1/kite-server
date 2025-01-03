@@ -1,11 +1,17 @@
 const express = require("express");
-const { createSubRestaurantCategoryController, getSubRestaurantCategoryController } = require("./controller");
+const { createSubRestaurantCategoryController, getSubCategoriesController, getSubCategoriesByCategoryIDController } = require("./controller");
 const multer = require("../../middleware/multer");
 
 const router = express.Router();
 
 router.get("/", (req, res) => {
-  getSubRestaurantCategoryController(req, (result) => {
+  getSubCategoriesController(req, (result) => {
+    res.json(result);
+  });
+});
+
+router.get("/", (req, res) => {
+  getSubCategoriesByCategoryIDController(req, (result) => {
     res.json(result);
   });
 });

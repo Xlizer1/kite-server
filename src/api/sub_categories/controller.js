@@ -1,7 +1,7 @@
-const { createSubRestaurantCategoryModel, getSubRestaurantCategoryModel } = require("./model");
+const { createSubRestaurantCategoryModel, getSubRestaurantCategoriesModel, getSubCategoriesByCategoryIDModel } = require("./model");
 const { resultObject, verify, checkCategoryForRestaurant, processTableEncryptedKey } = require("../../helpers/common");
 
-const getSubRestaurantCategory = async (request, callBack) => {
+const getSubCategories = async (request, callBack) => {
     try {
         const authorize = await verify(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
@@ -9,21 +9,16 @@ const getSubRestaurantCategory = async (request, callBack) => {
             return;
         } else {
             if (authorize?.roles?.includes(1)) {
-                const { category_id, key } = request.query;
+                const { key } = request.query;
 
-                if (!category_id || !key || typeof key !== "string") {
-                    callBack(resultObject(false, "Invalid category id or key!"));
+                if (!key || typeof key !== "string") {
+                    callBack(resultObject(false, "Invalid key!"));
                     return;
                 }
 
                 const { restaurant_id } = await processTableEncryptedKey(key);
 
-                if(!await checkCategoryForRestaurant(restaurant_id, category_id)) {
-                    callBack(resultObject(false, "Invalid category or restaurant."));
-                    return;
-                }
-
-                const result = await getSubRestaurantCategoryModel(category_id);
+                const result = await getSubRestaurantCategoriesModel(restaurant_id);
 
                 if (result) {
                     callBack(resultObject(true, "success", result));
@@ -33,6 +28,41 @@ const getSubRestaurantCategory = async (request, callBack) => {
             } else {
                 callBack(resultObject(false, "You don't have the permission to view restaurants!"));
                 return;
+            }
+        }
+    } catch (error) {
+        callBack({
+            status: false,
+            message: "Something went wrong. Please try again later.",
+        });
+        console.log(error);
+    }
+};
+
+const getSubCategoriesByCategoryID = async (request, callBack) => {
+    try {
+        const authorize = await verify(request?.headers["jwt"]);
+        if (authorize?.roles?.includes(1)) {
+            const { category_id, key } = request.query;
+
+            if (!category_id || !key || typeof key !== "string") {
+                callBack(resultObject(false, "Invalid category id or key!"));
+                return;
+            }
+
+            const { restaurant_id } = await processTableEncryptedKey(key);
+
+            if (!(await checkCategoryForRestaurant(restaurant_id, category_id))) {
+                callBack(resultObject(false, "Invalid category or restaurant."));
+                return;
+            }
+
+            const result = await getSubCategoriesByCategoryIDModel(category_id);
+
+            if (result) {
+                callBack(resultObject(true, "success", result));
+            } else {
+                callBack(resultObject(false, "Could not get category."));
             }
         }
     } catch (error) {
@@ -56,7 +86,7 @@ const createSubRestaurantCategory = async (request, callBack) => {
                 const image = request.file;
 
                 if (!name || !category_id || !image) {
-                    if(!image) {
+                    if (!image) {
                         callBack(resultObject(false, "Image is required."));
                         return;
                     } else if (!name) {
@@ -90,6 +120,7 @@ const createSubRestaurantCategory = async (request, callBack) => {
 };
 
 module.exports = {
-    getSubRestaurantCategoryController: getSubRestaurantCategory,
+    getSubCategoriesController: getSubCategories,
+    getSubCategoriesByCategoryIDController: getSubCategoriesByCategoryID,
     createSubRestaurantCategoryController: createSubRestaurantCategory,
 };
