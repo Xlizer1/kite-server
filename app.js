@@ -19,6 +19,7 @@ const menuRouter = require("./src/api/menu/router");
 const categoriesRouter = require("./src/api/categories/router");
 const subCategoriesRouter = require("./src/api/sub_categories/router");
 const itemsRouter = require("./src/api/items/router");
+const inventoryItemsRouter = require("./src/api/inventory/router");
 
 app.use("/uploads", express.static(__dirname + "/uploads"));
 
@@ -36,6 +37,7 @@ app.use("/menu", menuRouter);
 app.use("/categories", categoriesRouter);
 app.use("/sub_categories", subCategoriesRouter);
 app.use("/items", itemsRouter);
+app.use("/inventory", inventoryItemsRouter);
 
 app.use(handleError);
 

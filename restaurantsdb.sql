@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Dec 23, 2024 at 06:47 PM
+-- Generation Time: Jan 04, 2025 at 08:00 PM
 -- Server version: 8.3.0
 -- PHP Version: 8.2.18
 
@@ -54,14 +54,15 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `categories`
 --
 
 INSERT INTO `categories` (`id`, `restaurant_id`, `name`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(1, 11, 'grilled', '2024-12-18 19:58:28', 1, NULL, NULL, NULL, NULL);
+(1, 11, 'grilled', '2024-12-18 19:58:28', 1, NULL, NULL, NULL, NULL),
+(6, 11, 'Juices', '2025-01-03 11:48:32', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -85,14 +86,37 @@ CREATE TABLE IF NOT EXISTS `categories_image_map` (
   KEY `image_id` (`image_id`),
   KEY `category_id` (`category_id`),
   KEY `created_by` (`created_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `categories_image_map`
 --
 
 INSERT INTO `categories_image_map` (`id`, `image_id`, `category_id`, `is_primary`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`, `created_at`) VALUES
-(1, 21, 1, 1, 1, NULL, NULL, NULL, NULL, '2024-12-18 19:58:28');
+(1, 21, 1, 1, 1, NULL, NULL, NULL, NULL, '2024-12-18 19:58:28'),
+(6, 29, 6, 1, 1, NULL, NULL, NULL, NULL, '2024-12-18 19:58:28');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `currencies`
+--
+
+DROP TABLE IF EXISTS `currencies`;
+CREATE TABLE IF NOT EXISTS `currencies` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `currency_symbol` varchar(25) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `currencies`
+--
+
+INSERT INTO `currencies` (`id`, `name`, `currency_symbol`) VALUES
+(1, 'United states Dollar', 'USD'),
+(2, 'Iraqi Dinar', 'IQD');
 
 -- --------------------------------------------------------
 
@@ -139,21 +163,28 @@ CREATE TABLE IF NOT EXISTS `images` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `created_by` (`created_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `images`
 --
 
 INSERT INTO `images` (`id`, `url`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(17, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759959.jpg', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
-(18, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759963.webp', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
-(19, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759967.exe', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
-(20, 'http://localhost:8000/uploads/restaurarnts/restaurant_11_1734395759970.avif', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
-(21, 'http://localhost:8000/uploads/restaurarnts/restaurant_1_1734551908709.jpg', '2024-12-18 19:58:28', 1, NULL, NULL, NULL, NULL),
-(26, 'http://localhost:8000/uploads/sub_categories/sub_categories_1_1734556023098.jpg', '2024-12-18 21:07:03', 1, NULL, NULL, NULL, NULL),
-(27, 'http://localhost:8000/uploads/sub_categories/sub_categories_2_1734556104628.jpg', '2024-12-18 21:08:24', 1, NULL, NULL, NULL, NULL),
-(28, 'http://localhost:8000/uploads/sub_categories/sub_categories_3_1734975736690.avif', '2024-12-23 17:42:16', 1, NULL, NULL, NULL, NULL);
+(17, '/uploads/restaurarnts/restaurant_11_1734395759959.jpg', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
+(18, '/uploads/restaurarnts/restaurant_11_1734395759963.webp', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
+(19, '/uploads/restaurarnts/restaurant_11_1734395759967.exe', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
+(20, '/uploads/restaurarnts/restaurant_11_1734395759970.avif', '2024-12-17 00:35:59', 1, NULL, NULL, NULL, NULL),
+(21, '/uploads/restaurarnts/restaurant_1_1734551908709.jpg', '2024-12-18 19:58:28', 1, NULL, NULL, NULL, NULL),
+(26, '/uploads/sub_categories/sub_categories_1_1734556023098.jpg', '2024-12-18 21:07:03', 1, NULL, NULL, NULL, NULL),
+(27, '/uploads/sub_categories/sub_categories_2_1734556104628.jpg', '2024-12-18 21:08:24', 1, NULL, NULL, NULL, NULL),
+(28, '/uploads/sub_categories/sub_categories_3_1734975736690.avif', '2024-12-23 17:42:16', 1, NULL, NULL, NULL, NULL),
+(29, '/uploads/categories/categories_6_1734975736690.png', '2024-12-23 17:42:16', 1, NULL, NULL, NULL, NULL),
+(30, '/uploads/restaurarnts/restaurant_5_1735907277516.jpeg', '2025-01-03 12:27:57', 1, NULL, NULL, NULL, NULL),
+(31, '/uploads/restaurarnts/restaurant_6_1735907308130.jpeg', '2025-01-03 12:28:28', 1, NULL, NULL, NULL, NULL),
+(32, '/uploads/restaurarnts/restaurant_7_1735907340532.jpeg', '2025-01-03 12:29:00', 1, NULL, NULL, NULL, NULL),
+(33, '/uploads/restaurarnts/restaurant_8_1735907350832.jpeg', '2025-01-03 12:29:10', 1, NULL, NULL, NULL, NULL),
+(34, '/uploads/restaurarnts/restaurant_9_1735907412910.jpeg', '2025-01-03 12:30:12', 1, NULL, NULL, NULL, NULL),
+(35, '/uploads/items/items_10_1735909278302.jpg', '2025-01-03 13:01:18', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -182,12 +213,12 @@ DROP TABLE IF EXISTS `inventory`;
 CREATE TABLE IF NOT EXISTS `inventory` (
   `id` int NOT NULL AUTO_INCREMENT,
   `restaurant_id` int NOT NULL,
-  `ingredient_name` varchar(255) DEFAULT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `quantity` float DEFAULT NULL,
-  `unit` varchar(50) DEFAULT NULL,
+  `unit_id` int DEFAULT NULL,
   `threshold` int DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `is_propirty` tinyint(1) DEFAULT '0',
+  `currency_id` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `created_by` int NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -195,8 +226,25 @@ CREATE TABLE IF NOT EXISTS `inventory` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `restaurant_id` (`restaurant_id`)
+  KEY `restaurant_id` (`restaurant_id`),
+  KEY `currency_id` (`currency_id`),
+  KEY `unit_id` (`unit_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `inventory_items`
+--
+
+DROP TABLE IF EXISTS `inventory_items`;
+CREATE TABLE IF NOT EXISTS `inventory_items` (
+  `item_id` int NOT NULL AUTO_INCREMENT,
+  `item_name` varchar(100) NOT NULL,
+  `preferred_unit_id` int DEFAULT NULL,
+  PRIMARY KEY (`item_id`),
+  KEY `preferred_unit_id` (`preferred_unit_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -259,7 +307,15 @@ CREATE TABLE IF NOT EXISTS `items` (
   PRIMARY KEY (`id`),
   KEY `sub_category_id` (`sub_category_id`),
   KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `items`
+--
+
+INSERT INTO `items` (`id`, `sub_category_id`, `restaurant_id`, `name`, `eng_name`, `description`, `eng_description`, `price`, `is_shisha`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(9, 2, 11, 'Tekka', NULL, 'boneless pieces of meat or vegetarian alternatives such as paneer, which are marinated in spices and yogurt and subsequently strung through a skewer to be cooked', NULL, 20000.00, 0, '2025-01-03 12:30:12', 1, NULL, NULL, NULL, NULL),
+(10, 4, 11, 'Orange Juice', NULL, 'Natural Orange Juice', NULL, 5000.00, 0, '2025-01-03 13:01:18', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -283,7 +339,15 @@ CREATE TABLE IF NOT EXISTS `items_image_map` (
   KEY `image_id` (`image_id`),
   KEY `item_id` (`item_id`),
   KEY `created_by` (`created_by`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `items_image_map`
+--
+
+INSERT INTO `items_image_map` (`id`, `image_id`, `item_id`, `is_primary`, `created_by`, `created_at`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(1, 34, 9, 1, 1, '2025-01-03 12:30:12', NULL, NULL, NULL, NULL),
+(2, 35, 10, 1, 1, '2025-01-03 13:01:18', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -478,14 +542,14 @@ CREATE TABLE IF NOT EXISTS `qr_codes` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `table_id` (`table_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `qr_codes`
 --
 
 INSERT INTO `qr_codes` (`id`, `table_id`, `qr_code`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(1, 1, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANQAAADUCAYAAADk3g0YAAAAAklEQVR4AewaftIAAAp2SURBVO3BQY7gRpIAQXei/v9l3z7GKQGCWS1pNszsD9ZaVzysta55WGtd87DWuuZhrXXNw1rrmoe11jUPa61rHtZa1zysta55WGtd87DWuuZhrXXNw1rrmoe11jUPa61rfvhI5W+qOFGZKk5UTiomlTcq3lB5o2JSmSreULmp4kRlqphU/qaKLx7WWtc8rLWueVhrXfPDZRU3qfymiknljYpJZVK5qWJSmSomlanijYpJ5aTiRGWqeKPiJpWbHtZa1zysta55WGtd88MvU3mj4g2VE5WpYlKZKk4qJpUvKr6omFSmihOVqWJSeUNlqvhNKm9U/KaHtdY1D2utax7WWtf88D+uYlJ5Q+WNiknlROWNiknlDZWp4qTiDZU3VKaK/7KHtdY1D2utax7WWtf88D+mYlL5omJSmSomlaniROUNlZOKSWWqOFE5qXhD5f+Th7XWNQ9rrWse1lrX/PDLKv4mlaliUjlROamYVKaKSWWqOKl4Q+Wk4o2KLyr+pop/k4e11jUPa61rHtZa1/xwmco/qWJSmSomlaliUvknqUwVb6hMFZPKVDGpTBWTylQxqUwVk8pUcaLyb/aw1rrmYa11zcNa65ofPqr4L1F5o2JSOVE5UXmj4ouKm1T+por/koe11jUPa61rHtZa19gffKAyVUwqN1X8JpWp4guVqWJSuaniRGWqmFSmii9Upoo3VG6q+E0Pa61rHtZa1zysta754V+uYlKZKr5QuUnlRGWqeEPlb1J5o2KqmFROKqaKSeWkYlKZVE4qvnhYa13zsNa65mGtdY39wUUqX1RMKlPFicpUMalMFZPKScWkMlV8oXJScaLyRsUbKlPFpPJFxaTyRcWkMlXc9LDWuuZhrXXNw1rrmh8+UvmiYlKZKiaVLyq+UJkqTlS+qJhUTipuUpkqJpU3KiaVk4oTlROVqeI3Pay1rnlYa13zsNa65oePKiaVqeJEZaqYVKaKSWWqeEPljYovKiaVqWJSmSomlS9U3lCZKiaVqWJSmSomlTcqvlCZKr54WGtd87DWuuZhrXXNDx+pvKEyVUwqU8VJxaRyU8Wk8kbFpHKiMlVMKlPFpDJVTCpTxRsqk8obFZPKScWJylQxqfxND2utax7WWtc8rLWusT/4F1OZKr5Q+aLiROWkYlI5qThRmSomlaniDZWp4g2VqeINlaniROWk4jc9rLWueVhrXfOw1rrmh8tUpoo3VKaKL1SmikllqjhRmSqmihOVqeJEZao4UZkqJpWTijdUTiomlZOKqWJSuUllqvjiYa11zcNa65qHtdY19ge/SGWqmFS+qJhU3qg4UXmjYlI5qZhUpopJ5aTiC5WpYlKZKk5Upoo3VKaKL1Smipse1lrXPKy1rnlYa11jf/CByknFicpJxaRyUjGpTBWTylTxhcpU8YbKVDGpTBVvqHxR8YXKScWJylRxovJGxRcPa61rHtZa1zysta754bKKSWWqmCpOVE4qvqiYVKaKSeUNlS9UpopJ5YuKSWWqOFF5o2JSmVS+UJkq/qaHtdY1D2utax7WWtfYH/wilS8qTlROKm5SeaPiDZWpYlI5qZhUpopJ5YuKSWWqmFSmii9UpopJ5aTipoe11jUPa61rHtZa1/zwl1VMKicqv0nli4pJZVL5QuWLikllqvibKiaVm1SmiknlNz2sta55WGtd87DWuuaHy1S+qHhDZaqYVKaK31RxonJS8YbKpHJSMam8UfGFyknFGyonKlPFpDJVfPGw1rrmYa11zcNa65ofPlKZKk5U3lCZKk5UTlROKt5QOamYKiaVE5Wp4qTiRGWquKniJpWp4qRiUplUpoqbHtZa1zysta55WGtd88NfVjGpnFS8UfGGyonKVDFV/KaKmyomlaliUvmiYqqYVE4q3lD5Jz2sta55WGtd87DWuuaHjypuUvlNKlPFpHKiMlVMKlPFGyq/SWWqmFROKt5QmSpOVG6qmFR+08Na65qHtdY1D2uta+wPPlCZKv5NVL6omFROKiaVNyomlaliUpkq3lB5o+ImlaliUjmpmFROKiaVqeKLh7XWNQ9rrWse1lrX2B/8g1SmikllqjhRmSomlaniRGWqeENlqphUpoqbVE4qvlD5TRU3qUwVNz2sta55WGtd87DWuuaHX6ZyUjGpTBUnKlPFpHKTyhcqU8UbKicVU8WkMqlMFScqN1WcqEwVb6j8TQ9rrWse1lrXPKy1rvnhMpWp4o2KSeWk4guVqWKqeENlqvhNFZPKScWkcqIyVfwmlTdUTiomld/0sNa65mGtdc3DWuuaH/5hKicVf5PKGxUnKlPFicobKlPFicpUMalMFZPKScWJylTxhspUMalMKlPFpDJVfPGw1rrmYa11zcNa65ofLqs4UZkqJpVJZaqYVE4qTlTeqHij4qaKSWVS+aJiUpkqTlROKk4qTlS+UJkqbnpYa13zsNa65mGtdc0PH6lMFZPKVDGpTBVvVJyoTBVvVJyofKEyVZyoTBUnKicqX6icVEwqJxWTyn/Jw1rrmoe11jUPa61r7A8+UDmp+ELlpGJSmSomlaliUvmi4m9SmSpuUjmpOFGZKm5SmSpOVKaKmx7WWtc8rLWueVhrXWN/8IHKVPGGylTxN6mcVJyo/JtU3KQyVZyoTBVvqLxRMal8UfHFw1rrmoe11jUPa61rfvio4jepnFR8UTGpTCpTxUnFGypTxYnKVDGpvFExqUwVk8pJxaQyVUwqU8UbKm9U/KaHtdY1D2utax7WWtfYH1yk8kXFGyonFb9JZaqYVKaKSeWk4kTlpGJSualiUnmjYlJ5o+JE5aTipoe11jUPa61rHtZa1/zwkcpUcaLyhspUcVLxhcpUMalMFZPKTSpvVJxUnKicVEwqU8UbKl+onFT8TQ9rrWse1lrXPKy1rrE/+A9TmSomlaniDZWp4iaVqeINlX+TihOVk4o3VG6q+OJhrXXNw1rrmoe11jU/fKTyN1VMFW+oTBUnFZPKVHGi8oXKVHFSMamcVHyhMqncpDJVnFRMKlPFb3pYa13zsNa65mGtdc0Pl1XcpHKiMlVMFW+ovKHymyreUDmpmFSmiknli4pJ5Y2KN1TeUJkqvnhYa13zsNa65mGtdc0Pv0zljYovVN6omComlaniDZWpYlKZVH6TylRxUvE3qdxUMalMFTc9rLWueVhrXfOw1rrmh/8xFW+ofKFyUvFGxaRyUvGGyqTyRsVNFV+oTBUnFZPKVPHFw1rrmoe11jUPa61rfvgfo/JGxYnKpDJVTCqTylQxVZxUnKjcVHGiMlVMKicVk8pUMamcVEwqb1Tc9LDWuuZhrXXNw1rrmh9+WcVvqphUpooTlZOKSWVSmSreUHmjYqp4Q2WqmFTeUDmpmFTeqLip4jc9rLWueVhrXfOw1rrG/uADlb+pYlJ5o2JSmSp+k8pU8YbKScWkMlVMKlPFpDJVnKicVEwqX1S8oTJV3PSw1rrmYa11zcNa6xr7g7XWFQ9rrWse1lrXPKy1rnlYa13zsNa65mGtdc3DWuuah7XWNQ9rrWse1lrXPKy1rnlYa13zsNa65mGtdc3DWuua/wNh0IoHehtLNgAAAABJRU5ErkJggg==', '2024-12-18 18:39:22', 1, NULL, NULL, NULL, NULL);
+(2, 2, 'data:image/png;base64,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', '2025-01-03 13:20:22', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -539,7 +603,7 @@ CREATE TABLE IF NOT EXISTS `restaurants_image_map` (
   KEY `image_id` (`image_id`),
   KEY `restaurant_id` (`restaurant_id`),
   KEY `created_by` (`created_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `restaurants_image_map`
@@ -640,8 +704,8 @@ CREATE TABLE IF NOT EXISTS `stock_movements` (
 DROP TABLE IF EXISTS `sub_categories`;
 CREATE TABLE IF NOT EXISTS `sub_categories` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `restaurant_id` int DEFAULT NULL,
   `category_id` int NOT NULL,
-  `image_id` int DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `created_by` int NOT NULL,
@@ -651,16 +715,16 @@ CREATE TABLE IF NOT EXISTS `sub_categories` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `category_id` (`category_id`),
-  KEY `image_id` (`image_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `restaurant_id` (`restaurant_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `sub_categories`
 --
 
-INSERT INTO `sub_categories` (`id`, `category_id`, `image_id`, `name`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(2, 1, NULL, 'tekka', '2024-12-18 21:08:24', 1, NULL, NULL, NULL, NULL),
-(3, 1, NULL, 'tekkaa', '2024-12-23 17:42:16', 1, NULL, NULL, NULL, NULL);
+INSERT INTO `sub_categories` (`id`, `restaurant_id`, `category_id`, `name`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(2, 11, 1, 'Meat', '2024-12-18 21:08:24', 1, NULL, NULL, NULL, NULL),
+(4, 11, 6, 'Cold Juices', '2025-01-03 11:49:17', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -692,7 +756,7 @@ CREATE TABLE IF NOT EXISTS `sub_categories_image_map` (
 
 INSERT INTO `sub_categories_image_map` (`id`, `image_id`, `sub_category_id`, `is_primary`, `created_by`, `created_at`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
 (1, 27, 2, 1, 1, '2024-12-18 21:08:24', NULL, NULL, NULL, NULL),
-(2, 28, 3, 1, 1, '2024-12-23 17:42:16', NULL, NULL, NULL, NULL);
+(2, 28, 4, 1, 1, '2024-12-23 17:42:16', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -727,14 +791,14 @@ CREATE TABLE IF NOT EXISTS `tables` (
   `deleted_by` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `tables`
 --
 
 INSERT INTO `tables` (`id`, `restaurant_id`, `number`, `status`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(1, 11, 1, NULL, '2024-12-18 18:39:22', 1, NULL, NULL, NULL, NULL);
+(2, 11, 1, NULL, '2025-01-03 13:20:22', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -770,6 +834,30 @@ CREATE TABLE IF NOT EXISTS `table_statuses` (
   `id` int NOT NULL,
   `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `units`
+--
+
+DROP TABLE IF EXISTS `units`;
+CREATE TABLE IF NOT EXISTS `units` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `unit_symbol` varchar(25) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `units`
+--
+
+INSERT INTO `units` (`id`, `name`, `unit_symbol`) VALUES
+(1, 'Kilogram', 'kg'),
+(2, 'Liter', 'L'),
+(3, 'Piece', 'pc'),
+(4, 'Box', 'bx');
 
 -- --------------------------------------------------------
 
@@ -873,7 +961,9 @@ ALTER TABLE `ingredients`
 -- Constraints for table `inventory`
 --
 ALTER TABLE `inventory`
-  ADD CONSTRAINT `inventory_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
+  ADD CONSTRAINT `inventory_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
+  ADD CONSTRAINT `inventory_ibfk_2` FOREIGN KEY (`currency_id`) REFERENCES `currencies` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `inventory_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `units` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 --
 -- Constraints for table `invoices`
@@ -976,7 +1066,7 @@ ALTER TABLE `stock_movements`
 --
 ALTER TABLE `sub_categories`
   ADD CONSTRAINT `sub_categories_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`),
-  ADD CONSTRAINT `sub_categories_ibfk_2` FOREIGN KEY (`image_id`) REFERENCES `images` (`id`);
+  ADD CONSTRAINT `sub_categories_ibfk_3` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 --
 -- Constraints for table `sub_categories_image_map`
