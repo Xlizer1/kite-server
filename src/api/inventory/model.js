@@ -1,7 +1,45 @@
 const { executeQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
-const getInventoryItems = (restaurant_id) => {
+const getInventoryItems = () => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let sql = `
+              SELECT
+                i.id,
+                i.restaurant_id,
+                i.name,
+                i.quantity,
+                u.name AS unit_name,
+                i.threshold,
+                i.price,
+                c.code AS currency_code,
+                i.created_at,
+                i.updated_at
+              FROM
+                inventory i
+              LEFT JOIN
+                units u ON i.unit_id = u.id
+              LEFT JOIN
+                currencies c ON i.currency_id = c.id
+              AND
+                i.deleted_at IS NULL
+            `;
+
+            const result = await executeQuery(sql, "getInventoryItems");
+
+            if (Array.isArray(result) && result[0] === false) {
+                return reject(new CustomError(result[1], 400));
+            }
+
+            resolve(result);
+        } catch (error) {
+            reject(new CustomError(error.message, 500));
+        }
+    });
+};
+
+const getInventoryItemsByRestaurantID = (restaurant_id) => {
     return new Promise(async (resolve, reject) => {
         try {
             let sql = `
@@ -68,5 +106,6 @@ const createInventoryItem = (itemData) => {
 
 module.exports = {
     getInventoryItemsModel: getInventoryItems,
+    getInventoryItemsByRestaurantIDModel: getInventoryItemsByRestaurantID,
     createInventoryItemModel: createInventoryItem
 };

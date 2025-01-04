@@ -1,9 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const { getInventoryItemsController, createInventoryItemController } = require("./controller");
+const { getInventoryItemsController, getInventoryItemsByRestaurantIDController, createInventoryItemController } = require("./controller");
 
 router.get("/", (req, res) => {
     getInventoryItemsController(req, (result) => {
+        res.send(result);
+    });
+});
+
+router.get("/:restaurant_id", (req, res) => {
+    getInventoryItemsByRestaurantIDController(req, (result) => {
         res.send(result);
     });
 });
