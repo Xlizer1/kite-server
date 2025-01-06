@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jan 04, 2025 at 08:00 PM
+-- Generation Time: Jan 06, 2025 at 07:32 PM
 -- Server version: 8.3.0
 -- PHP Version: 8.2.18
 
@@ -106,7 +106,7 @@ DROP TABLE IF EXISTS `currencies`;
 CREATE TABLE IF NOT EXISTS `currencies` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-  `currency_symbol` varchar(25) NOT NULL,
+  `code` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS `currencies` (
 -- Dumping data for table `currencies`
 --
 
-INSERT INTO `currencies` (`id`, `name`, `currency_symbol`) VALUES
+INSERT INTO `currencies` (`id`, `name`, `code`) VALUES
 (1, 'United states Dollar', 'USD'),
 (2, 'Iraqi Dinar', 'IQD');
 
@@ -197,10 +197,12 @@ CREATE TABLE IF NOT EXISTS `ingredients` (
   `id` int NOT NULL AUTO_INCREMENT,
   `menu_item_id` int NOT NULL,
   `inv_item_id` int NOT NULL,
+  `unit_id` int NOT NULL,
   `quantity` float DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `menu_item_id` (`menu_item_id`),
-  KEY `inv_item_id` (`inv_item_id`)
+  KEY `inv_item_id` (`inv_item_id`),
+  KEY `unit_id` (`unit_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -229,7 +231,15 @@ CREATE TABLE IF NOT EXISTS `inventory` (
   KEY `restaurant_id` (`restaurant_id`),
   KEY `currency_id` (`currency_id`),
   KEY `unit_id` (`unit_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `inventory`
+--
+
+INSERT INTO `inventory` (`id`, `restaurant_id`, `name`, `quantity`, `unit_id`, `threshold`, `price`, `currency_id`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(1, 11, 'potato', 90, 3, 30, 15.00, 1, '2025-01-04 20:13:43', 1, NULL, NULL, NULL, NULL),
+(2, 11, 'potato', 90, 3, 30, 15.00, 1, '2025-01-04 20:14:39', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -679,7 +689,7 @@ INSERT INTO `roles` (`id`, `name`) VALUES
 DROP TABLE IF EXISTS `stock_movements`;
 CREATE TABLE IF NOT EXISTS `stock_movements` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `ingredient_id` int NOT NULL,
+  `item_id` int NOT NULL,
   `movement_type_id` int NOT NULL,
   `reference_id` int DEFAULT NULL,
   `quantity` float DEFAULT NULL,
@@ -691,7 +701,7 @@ CREATE TABLE IF NOT EXISTS `stock_movements` (
   `deleted_by` int DEFAULT NULL,
   `notes` text,
   PRIMARY KEY (`id`),
-  KEY `ingredient_id` (`ingredient_id`),
+  KEY `ingredient_id` (`item_id`),
   KEY `movement_type_id` (`movement_type_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -955,7 +965,8 @@ ALTER TABLE `images`
 --
 ALTER TABLE `ingredients`
   ADD CONSTRAINT `ingredients_ibfk_1` FOREIGN KEY (`menu_item_id`) REFERENCES `items` (`id`),
-  ADD CONSTRAINT `ingredients_ibfk_2` FOREIGN KEY (`inv_item_id`) REFERENCES `inventory` (`id`);
+  ADD CONSTRAINT `ingredients_ibfk_2` FOREIGN KEY (`inv_item_id`) REFERENCES `inventory` (`id`),
+  ADD CONSTRAINT `ingredients_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `units` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 --
 -- Constraints for table `inventory`
@@ -1058,7 +1069,7 @@ ALTER TABLE `restaurant_settings`
 -- Constraints for table `stock_movements`
 --
 ALTER TABLE `stock_movements`
-  ADD CONSTRAINT `stock_movements_ibfk_1` FOREIGN KEY (`ingredient_id`) REFERENCES `inventory` (`id`),
+  ADD CONSTRAINT `stock_movements_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `inventory` (`id`),
   ADD CONSTRAINT `stock_movements_ibfk_2` FOREIGN KEY (`movement_type_id`) REFERENCES `movement_types` (`id`);
 
 --
