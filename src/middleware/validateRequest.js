@@ -6,7 +6,7 @@ const validateRequest = (schema) => {
             ...req.body,
             ...req.params,
             ...req.query,
-            image: req.file || req.files?.image
+            // image: req.file || req.files?.image
         };
         const { error } = schema.validate(payload);
         if (error) {

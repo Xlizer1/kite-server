@@ -75,13 +75,24 @@ const getIngredientsByRestaurantID = (restaurant_id) => {
 const createIngredient = (itemData) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const { restaurant_id, name, quantity, unit_id, threshold, price, currency_id, created_by } = itemData;
+            const { restaurant_id, menu_item_id, inv_item_id, unit_id, quantity } = itemData;
 
             let sql = `
-              INSERT INTO inventory 
-              (restaurant_id, name, quantity, unit_id, threshold, price, currency_id, created_by)
-              VALUES 
-              (${restaurant_id}, '${name}', ${quantity}, ${unit_id}, ${threshold}, ${price}, ${currency_id}, ${created_by})
+                INSERT INTO 
+                    ingredients (
+                        restaurant_id,
+                        menu_item_id,
+                        inv_item_id,
+                        unit_id,
+                        quantity
+                    )
+                VALUES (
+                    ${restaurant_id}, 
+                    ${menu_item_id}, 
+                    ${inv_item_id}, 
+                    ${unit_id}, 
+                    ${quantity}
+                )
             `;
 
             const result = await executeQuery(sql, "createIngredient");

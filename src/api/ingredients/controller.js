@@ -9,7 +9,8 @@ const getIngredients = async (request, callBack) => {
             return;
         }
 
-        if (authorize?.roles?.includes(1)) { // Assuming role 1 has permission to view inventory
+        if (authorize?.roles?.includes(1)) {
+            // Assuming role 1 has permission to view inventory
             const result = await getIngredientsModel();
 
             if (result) {
@@ -29,7 +30,7 @@ const getIngredients = async (request, callBack) => {
     }
 };
 
-const getIngredientsByRestaurantID  = async (request, callBack) => {
+const getIngredientsByRestaurantID = async (request, callBack) => {
     try {
         const authorize = await verify(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
@@ -39,7 +40,8 @@ const getIngredientsByRestaurantID  = async (request, callBack) => {
 
         const { restaurant_id } = request.params;
 
-        if (authorize?.roles?.includes(1)) { // Assuming role 1 has permission to view inventory
+        if (authorize?.roles?.includes(1)) {
+            // Assuming role 1 has permission to view inventory
             const result = await getIngredientsByRestaurantIDModel(restaurant_id);
 
             if (result) {
@@ -66,23 +68,22 @@ const createIngredient = async (request, callBack) => {
             callBack(resultObject(false, "Token is invalid!"));
             return;
         } else {
-            if (authorize?.roles?.includes(1)) {  // Assuming role 1 is admin or has permission to create inventory items
-                const { restaurant_id, name, quantity, unit_id, threshold, price, currency_id } = request.body;
+            if (authorize?.roles?.includes(1)) {
+                // Assuming role 1 is admin or has permission to create inventory items
+                const { restaurant_id, menu_item_id, inv_item_id, unit_id, quantity } = request.body;
 
-                if (!restaurant_id || !name || !quantity || !unit_id || !price || !currency_id) {
+                if (!restaurant_id ||!menu_item_id ||!inv_item_id ||!unit_id ||!quantity) {
                     callBack(resultObject(false, "Missing required fields"));
                     return;
                 }
 
                 const itemData = {
                     restaurant_id,
-                    name,
-                    quantity,
+                    menu_item_id,
+                    inv_item_id,
                     unit_id,
-                    threshold,
-                    price,
-                    currency_id,
-                    created_by: authorize.id
+                    quantity,
+                    created_by: authorize.id,
                 };
 
                 const result = await createIngredientModel(itemData);
@@ -111,4 +112,3 @@ module.exports = {
     getIngredientsByRestaurantIDController: getIngredientsByRestaurantID,
     createIngredientController: createIngredient,
 };
-

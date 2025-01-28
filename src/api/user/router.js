@@ -29,13 +29,13 @@ router.delete("/:id", (req, res) => {
   });
 });
 
-router.post("/register", validateRequest(registerUserSchema), (req, res) => {
+router.post("/register", (req, res) => {
   registerUserController(req, (result) => {
     res.json(result);
   });
 });
 
-router.post("/", validateRequest(loginUserSchema), (req, res) => {
+router.post("/", (req, res) => {
   loginUserController(req, (result) => {
     res.json(result);
   });
