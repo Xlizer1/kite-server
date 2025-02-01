@@ -1,119 +1,122 @@
-const { executeQuery } = require("../../helpers/common");
+const { executeQuery, executeTransaction, buildInsertQuery, buildUpdateQuery } = require("../../helpers/db");
 const { CustomError } = require("../../middleware/errorHandler");
 
-const getRoles = async (user, callBack) => {
-  let sql = `
-    SELECT
-      *
-    FROM
-      roles
-  `;
+const getRoles = async () => {
+    try {
+        const sql = `
+            SELECT
+                r.id,
+                r.name,
+                r.created_at,
+                r.updated_at
+            FROM
+                roles r
+            WHERE
+                r.deleted_at IS NULL
+        `;
 
-  const result = await executeQuery(sql, "registerUser");
-  if (Array.isArray(result) && !result[0]) {
-    return callBack(new CustomError(result[1], 400));
-  }
-
-  if (Array.isArray(result)) {
-    return callBack(result);
-  }
-
-  return callBack(new CustomError("An unknown error occurred during registration.", 500));
+        return await executeQuery(sql, [], "getRoles");
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
-const createRoles = async (name, callBack) => {
-  let sql = `
-    INSERT INTO
-      roles
-    SET
-      name = "${name}"
-  `;
+const getRolesByID = async (id) => {
+    try {
+        const sql = `
+            SELECT
+                r.id,
+                r.name,
+                r.created_at,
+                r.updated_at
+            FROM
+                roles r
+            WHERE
+                r.id = ?
+            AND
+                r.deleted_at IS NULL
+        `;
 
-  const result = await executeQuery(sql, "registerUser");
-  if (Array.isArray(result) && !result[0]) {
-    return callBack(new CustomError(result[1], 400));
-  }
-
-  if (Array.isArray(result)) {
-    return callBack(true);
-  }
-
-  return callBack(new CustomError("An unknown error occurred during registration.", 500));
+        const result = await executeQuery(sql, [id], "getRolesByID");
+        return result[0];
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
-const updateRoles = (id, name) => {
-  return new Promise(async (resolve, reject) => {
-    let sql = `
-      UPDATE
-        roles
-      SET
-        name = "${name}"
-      WHERE
-        id = ${id}
-    `;
-    const result = await executeQuery(sql, "updateRoles");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
-    }
+const updateRoles = async (obj) => {
+    try {
+        const { id, name, updater_id } = obj;
 
-    if (result && result.affectedRows > 0) {
-      return resolve(true);
-    }
+        const { sql, params } = buildUpdateQuery('roles', 
+            {
+                name,
+                updated_at: new Date(),
+                updated_by: updater_id
+            },
+            { id }
+        );
 
-    return reject(new CustomError("An unknown error occurred during roles update.", 500));
-  });
+        const result = await executeQuery(sql, params, "updateRoles");
+        return result.affectedRows > 0;
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
-const updateUserPermissions = (id, roles) => {
-  return new Promise(async (resolve, reject) => {
-    const deleteResult = await executeQuery(`DELETE FROM permissions WHERE user_id = ${id}`, "deleting user roles");
-    let roleSql = `
-      INSERT INTO
-        permissions (
-          user_id,
-          role_id
-        )
-      VALUES
-        ${roles.map((role) => `(${id}, ${role})`).join(",")}
-    `;
-    const result = await executeQuery(roleSql, "inserting user roles");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
-    }
+const updateUserRoles = async (id, roles, updater_id) => {
+    try {
+        // Start transaction for deleting old roles and inserting new ones
+        const queries = [];
 
-    if (result && result.affectedRows > 0) {
-      return resolve(true);
-    }
+        // Delete existing roles
+        queries.push({
+            sql: 'DELETE FROM permissions WHERE user_id = ?',
+            params: [id]
+        });
 
-    return reject(new CustomError("An unknown error occurred during roles update.", 500));
-  });
+        // Insert new roles
+        for (const role_id of roles) {
+            const roleQuery = buildInsertQuery('permissions', {
+                user_id: id,
+                role_id,
+                created_at: new Date(),
+                created_by: updater_id
+            });
+            queries.push(roleQuery);
+        }
+
+        // Execute transaction
+        await executeTransaction(queries, 'updateUserRoles');
+        return true;
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
-const deleteRoles = (id) => {
-  return new Promise(async (resolve, reject) => {
-    let sql = `
-      DELETE FROM
-        roles
-      WHERE
-        id = ${id}
-    `;
-    const result = await executeQuery(sql, "deleteRoles");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
-    }
+const deleteRoles = async (id, user_id) => {
+    try {
+        const { sql, params } = buildUpdateQuery('roles',
+            {
+                deleted_at: new Date(),
+                deleted_by: user_id,
+                updated_at: new Date(),
+                updated_by: user_id
+            },
+            { id }
+        );
 
-    if (result && result.affectedRows > 0) {
-      return resolve(true);
+        const result = await executeQuery(sql, params, "deleteRoles");
+        return result.affectedRows > 0;
+    } catch (error) {
+        throw new CustomError(error.message, 500);
     }
-
-    return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
-  });
 };
 
 module.exports = {
-  getRolesModel: getRoles,
-  createRolesModel: createRoles,
-  updateRolesModel: updateRoles,
-  updateUserPermissionsModel: updateUserPermissions,
-  deleteRolesModel: deleteRoles,
+    getRolesModel: getRoles,
+    getRolesByIDModel: getRolesByID,
+    updateRolesModel: updateRoles,
+    updateUserRolesModel: updateUserRoles,
+    deleteRolesModel: deleteRoles,
 };

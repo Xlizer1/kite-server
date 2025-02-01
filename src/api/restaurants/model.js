@@ -1,5 +1,5 @@
 const fs = require("fs");
-
+const { executeTransaction, buildInsertQuery, buildUpdateQuery } = require("../../helpers/db");
 const { executeQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 const { IP, PORT } = process.env;
@@ -8,48 +8,45 @@ const ip = IP || "localhost";
 const port = PORT || "8000";
 
 const getRestaurants = async (user) => {
-    return new Promise(async (resolve, reject) => {
+    try {
         let sql = `
-      SELECT
-        r.*,
-        JSON_ARRAYAGG (
-          JSON_OBJECT (
-            'id', i.id,
-            'url', i.url,
-            'primary', rim.is_primary
-          )
-        ) AS images
-      FROM
-        restaurants r
-      LEFT JOIN
-        restaurants_image_map rim ON r.id = rim.restaurant_id
-      LEFT JOIN
-        images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
-      WHERE
-        r.deleted_at IS NULL
-    `;
+            SELECT
+                r.*,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', i.id,
+                        'url', i.url,
+                        'primary', rim.is_primary
+                    )
+                ) AS images
+            FROM
+                restaurants r
+            LEFT JOIN
+                restaurants_image_map rim ON r.id = rim.restaurant_id
+            LEFT JOIN
+                images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
+            WHERE
+                r.deleted_at IS NULL
+        `;
 
+        const params = [];
+        
         if (user.department_id !== 1) {
             if (user.department_id === 2) {
-                sql += `
-          AND r.id = ${user.restaurant_id}
-        `;
+                sql += ' AND r.id = ?';
+                params.push(user.restaurant_id);
             } else {
-                sql += `
-          AND r.parent_rest_id = ${user.restaurant_id}
-        `;
+                sql += ' AND r.parent_rest_id = ?';
+                params.push(user.restaurant_id);
             }
         }
 
-        sql += `
-      GROUP BY
-        r.id;
-    `;
+        sql += ' GROUP BY r.id';
 
-        const result = await executeQuery(sql, "getRestaurants");
+        const result = await executeQuery(sql, params, "getRestaurants");
 
         if (Array.isArray(result) && result[0] === false) {
-            return reject(new CustomError(result[1], 400));
+            return Promise.reject(new CustomError(result[1], 400));
         }
 
         if (Array.isArray(result)) {
@@ -57,57 +54,55 @@ const getRestaurants = async (user) => {
                 ...row,
                 images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
             }));
-            return resolve(parsedResult);
+            return parsedResult;
         }
 
-        return reject(new CustomError("An unknown error occurred during data read.", 500));
-    });
+        return Promise.reject(new CustomError("An unknown error occurred during data read.", 500));
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
 const getRestaurantsByID = async (id, user) => {
-    return new Promise(async (resolve, reject) => {
-        let sql = `
-      SELECT
-        r.*,
-        JSON_ARRAYAGG (
-          JSON_OBJECT (
-            'id', i.id,
-            'url', i.url,
-            'primary', rim.is_primary
-          )
-        ) AS images
-      FROM
-        restaurants r
-      LEFT JOIN
-        restaurants_image_map rim ON r.id = rim.restaurant_id
-      LEFT JOIN
-        images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
-      WHERE
-        r.deleted_at IS NULL
-      AND
-        r.id = ${id}
-    `;
+    try {
+        const sql = `
+            SELECT
+                r.*,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', i.id,
+                        'url', i.url,
+                        'primary', rim.is_primary
+                    )
+                ) AS images
+            FROM
+                restaurants r
+            LEFT JOIN
+                restaurants_image_map rim ON r.id = rim.restaurant_id
+            LEFT JOIN
+                images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
+            WHERE
+                r.id = ? AND r.deleted_at IS NULL
+            GROUP BY
+                r.id
+        `;
+
+        const params = [id];
 
         if (user.department_id !== 1) {
             if (user.department_id === 2) {
-                sql += `
-          AND r.id = ${user.restaurant_id}
-        `;
+                sql += ' AND r.id = ?';
+                params.push(user.restaurant_id);
             } else {
-                sql += `
-          AND r.parent_rest_id = ${user.restaurant_id}
-        `;
+                sql += ' AND r.parent_rest_id = ?';
+                params.push(user.restaurant_id);
             }
         }
 
-        sql += `
-      GROUP BY
-        r.id;
-    `;
+        const result = await executeQuery(sql, params, "getRestaurantsByID");
 
-        const result = await executeQuery(sql, "getRestaurantsByID");
         if (Array.isArray(result) && result[0] === false) {
-            return reject(new CustomError(result[1], 400));
+            return Promise.reject(new CustomError(result[1], 400));
         }
 
         if (Array.isArray(result)) {
@@ -115,120 +110,170 @@ const getRestaurantsByID = async (id, user) => {
                 ...row,
                 images: JSON.parse(row.images || "[]")?.filter((i) => i.id), // Ensure valid JSON for `images`
             }));
-            return resolve(parsedResult[0]);
+            return parsedResult[0];
         }
 
-        return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+        return Promise.reject(new CustomError("An unknown error occurred during registration.", 500));
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
 const createRestaurants = async (obj) => {
-    return new Promise(async (resolve, reject) => {
-        const { name, description, tagline, images, creator_id } = obj;
-        let sql = `
-          INSERT INTO
-            restaurants
-          SET
-            name = "${name}",
-            description = "${description}",
-            tagline = "${tagline}",
-            created_at = NOW(),
-            created_by = ${creator_id}
-        `;
+    const { name, description, tagline, images, creator_id } = obj;
+    
+    try {
+        // Prepare the restaurant insert query
+        const restaurantQuery = buildInsertQuery('restaurants', {
+            name,
+            description,
+            tagline,
+            created_at: new Date(),
+            created_by: creator_id
+        });
 
-        const result = await executeQuery(sql, "registerUser");
-        if (result?.insertId) {
-            if (images?.length) {
-                let index = 0;
-                for (const image of images) {
-                    var tmp_path = image.path;
-                    var image_ext = image.originalname.split(".").pop();
-                    var image_name = "restaurant_" + result?.insertId + "_" + Date.now();
-                    var target_path = "uploads/restaurarnts/" + image_name + "." + image_ext;
-                    var src = fs.createReadStream(tmp_path);
-                    var dest = fs.createWriteStream(target_path);
-                    src.pipe(dest);
+        // Prepare array to hold all queries
+        const queries = [restaurantQuery];
 
-                    let sql = `
-                      INSERT INTO
-                        images
-                      SET
-                        url = "http://${ip}:${port}/${target_path}",
-                        created_at = NOW(),
-                        created_by = ${creator_id}
-                    `;
-                    const imageResult = await executeQuery(sql, "registerUser");
-                    if (imageResult?.insertId) {
-                        let sql = `
-                        INSERT INTO
-                          restaurants_image_map
-                        SET
-                          image_id = ${imageResult?.insertId},
-                          restaurant_id = ${result?.insertId},
-                          is_primary = ${index === 0},
-                          created_at = NOW(),
-                          created_by = ${creator_id}
-                      `;
-                        await executeQuery(sql, "registerUser");
-                        index++;
-                    }
+        // Process images if they exist
+        if (images?.length) {
+            for (const [index, image] of images.entries()) {
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+                if (!allowedTypes.includes(image.mimetype)) {
+                    throw new CustomError(`Invalid file type for image: ${image.originalname}`, 400);
                 }
+
+                // Generate safe filename
+                const ext = image.originalname.split('.').pop().toLowerCase();
+                const imageName = `restaurant_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+                const targetPath = `uploads/restaurants/${imageName}`;
+
+                // Move file with proper error handling
+                await fs.promises.rename(image.path, targetPath);
+
+                // Prepare image insert query
+                const imageQuery = buildInsertQuery('images', {
+                    url: `/uploads/restaurants/${imageName}`,
+                    created_at: new Date(),
+                    created_by: creator_id
+                });
+
+                // Add image query to transaction
+                queries.push(imageQuery);
+
+                // This will be filled with the image ID from the previous query
+                queries.push({
+                    sql: 'INSERT INTO restaurants_image_map (image_id, restaurant_id, is_primary, created_at, created_by) VALUES (LAST_INSERT_ID(), LAST_INSERT_ID(), ?, NOW(), ?)',
+                    params: [index === 0, creator_id]
+                });
             }
-            return resolve(true);
         }
 
-        return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+        // Execute all queries in a transaction
+        await executeTransaction(queries, 'createRestaurants');
+        return true;
+
+    } catch (error) {
+        // Clean up any uploaded files in case of error
+        if (images?.length) {
+            for (const image of images) {
+                if (image.path) {
+                    await fs.promises.unlink(image.path).catch(console.error);
+                }
+            }
+        }
+        throw error;
+    }
 };
 
 const updateRestaurants = async (obj) => {
-    return new Promise(async (resolve, reject) => {
-        const { id, name, tagline, description, updater_id } = obj;
-        let sql = `
-      UPDATE
-        restaurants
-      SET
-        name = "${name}",
-        tagline = "${tagline}",
-        description = "${description}",
-        updated_at = NOW(),
-        updated_by = ${updater_id}
-      WHERE
-        id = ${id}
-    `;
-        const result = await executeQuery(sql, "updateRestaurants");
-        if (result && result.affectedRows > 0) {
-            return resolve(true);
+    try {
+        const { id, name, description, tagline, images, updater_id } = obj;
+
+        // Prepare the restaurant update query
+        const updateData = {
+            name,
+            description,
+            tagline,
+            updated_at: new Date(),
+            updated_by: updater_id
+        };
+
+        const { sql: updateSql, params: updateParams } = buildUpdateQuery('restaurants', updateData, { id });
+        
+        // Prepare array to hold all queries
+        const queries = [{ sql: updateSql, params: updateParams }];
+
+        // Process images if they exist
+        if (images?.length) {
+            for (const [index, image] of images.entries()) {
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+                if (!allowedTypes.includes(image.mimetype)) {
+                    throw new CustomError(`Invalid file type for image: ${image.originalname}`, 400);
+                }
+
+                // Generate safe filename
+                const ext = image.originalname.split('.').pop().toLowerCase();
+                const imageName = `restaurant_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+                const targetPath = `uploads/restaurants/${imageName}`;
+
+                // Move file with proper error handling
+                await fs.promises.rename(image.path, targetPath);
+
+                // Prepare image insert query
+                const imageQuery = buildInsertQuery('images', {
+                    url: `/uploads/restaurants/${imageName}`,
+                    created_at: new Date(),
+                    created_by: updater_id
+                });
+
+                // Add image query to transaction
+                queries.push(imageQuery);
+
+                // This will be filled with the image ID from the previous query
+                queries.push({
+                    sql: 'INSERT INTO restaurants_image_map (image_id, restaurant_id, is_primary, created_at, created_by) VALUES (LAST_INSERT_ID(), ?, ?, NOW(), ?)',
+                    params: [id, index === 0, updater_id]
+                });
+            }
         }
 
-        return reject(new CustomError("An unknown error occurred during roles update.", 500));
-    });
+        // Execute all queries in a transaction
+        await executeTransaction(queries, 'updateRestaurants');
+        return true;
+
+    } catch (error) {
+        // Clean up any uploaded files in case of error
+        if (images?.length) {
+            for (const image of images) {
+                if (image.path) {
+                    await fs.promises.unlink(image.path).catch(console.error);
+                }
+            }
+        }
+        throw error;
+    }
 };
 
 const deleteRestaurants = async (id, user_id) => {
-    return new Promise(async (resolve, reject) => {
-        let sql = `
-      UPDATE
-        restaurants
-      SET
-        deleted_at = Now(),
-        deleted_by = ${user_id}
-      WHERE
-        id = ${id}
-    `;
+    try {
+        const { sql, params } = buildUpdateQuery('restaurants', 
+            {
+                deleted_at: new Date(),
+                deleted_by: user_id,
+                updated_at: new Date(),
+                updated_by: user_id
+            },
+            { id }
+        );
 
-        const result = await executeQuery(sql, "deleteRestaurants");
-
-        if (Array.isArray(result) && !result[0]) {
-            return reject(new CustomError(result[1], 400));
-        }
-
-        if (result && result.affectedRows > 0) {
-            return resolve(true);
-        }
-
-        return reject(new CustomError("An unknown error occurred during roles deletion.", 500));
-    });
+        const result = await executeQuery(sql, params, "deleteRestaurants");
+        return result.affectedRows > 0;
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
 module.exports = {

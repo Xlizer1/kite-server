@@ -1,122 +1,177 @@
 const fs = require("fs");
-const { executeQuery } = require("../../helpers/common");
+const { executeQuery, executeTransaction, buildInsertQuery } = require("../../helpers/db");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getItems = async (restaurant_id) => {
-    return new Promise(async (resolve, reject) => {
-        let sql = `
+    try {
+        const sql = `
             SELECT
-                i.*
+                i.id,
+                i.name,
+                i.description,
+                i.price,
+                i.is_shisha,
+                c.code AS currency_code,
+                im.url AS image_url,
+                sc.name AS sub_category_name,
+                cat.name AS category_name
             FROM
                 items i
+            LEFT JOIN
+                items_image_map iim ON iim.item_id = i.id
+            LEFT JOIN
+                images im ON iim.image_id = im.id AND iim.is_primary = 1
+            LEFT JOIN
+                sub_categories sc ON i.sub_category_id = sc.id
+            LEFT JOIN
+                categories cat ON sc.category_id = cat.id
+            LEFT JOIN
+                currencies c ON i.currency_id = c.id
             WHERE
-                i.restaurant_id = ${restaurant_id}
+                i.restaurant_id = ?
+            AND
+                i.deleted_at IS NULL
+            GROUP BY
+                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, sc.name, cat.name
         `;
-        const result = await executeQuery(sql, "getItems");
-        if (result && result.length) {
-            resolve(result);
-        } else {
-            reject(new CustomError("No items found for the given sub-category", 404));
-        }
 
-        return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
-}
+        const result = await executeQuery(sql, [restaurant_id], "getItems");
+        if (!result.length) {
+            throw new CustomError("No items found for the given restaurant", 404);
+        }
+        return result;
+    } catch (error) {
+        if (error instanceof CustomError) throw error;
+        throw new CustomError(error.message, 500);
+    }
+};
 
 const getItemsBySubCategoryID = async (restaurant_id, sub_category_id) => {
-    return new Promise(async (resolve, reject) => {
-        let sql = `
+    try {
+        const sql = `
             SELECT
-                i.*
+                i.id,
+                i.name,
+                i.description,
+                i.price,
+                i.is_shisha,
+                c.code AS currency_code,
+                im.url AS image_url,
+                sc.name AS sub_category_name,
+                cat.name AS category_name
             FROM
                 items i
+            LEFT JOIN
+                items_image_map iim ON iim.item_id = i.id
+            LEFT JOIN
+                images im ON iim.image_id = im.id AND iim.is_primary = 1
+            LEFT JOIN
+                sub_categories sc ON i.sub_category_id = sc.id
+            LEFT JOIN
+                categories cat ON sc.category_id = cat.id
+            LEFT JOIN
+                currencies c ON i.currency_id = c.id
             WHERE
-                i.restaurant_id = ${restaurant_id}
-            AND 
-                i.sub_category_id = ${sub_category_id}
+                i.restaurant_id = ?
+            AND
+                i.sub_category_id = ?
+            AND
+                i.deleted_at IS NULL
+            GROUP BY
+                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, sc.name, cat.name
         `;
-        const result = await executeQuery(sql, "getItems");
-        if (result && result.length) {
-            resolve(result);
-        } else {
-            reject(new CustomError("No items found for the given sub-category", 404));
-        }
 
-        return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
-}
+        const result = await executeQuery(sql, [restaurant_id, sub_category_id], "getItemsBySubCategoryID");
+        if (!result.length) {
+            throw new CustomError("No items found for the given sub-category", 404);
+        }
+        return result;
+    } catch (error) {
+        if (error instanceof CustomError) throw error;
+        throw new CustomError(error.message, 500);
+    }
+};
 
 const createItem = async (data) => {
-    return new Promise(async (resolve, reject) => {
-        const { name, description, price, restaurant_id, sub_category_id, is_shisha, images, creator_id } = data;
-        let sql = `
-            INSERT INTO 
-                items (
-                    name,
-                    description,
-                    price,
-                    restaurant_id, 
-                    sub_category_id,
-                    is_shisha,
-                    created_at,
-                    created_by
-                )
-            VALUES (
-                "${name}",
-                "${description}",
-                ${price},
-                ${restaurant_id},
-                ${sub_category_id},
-                ${JSON.parse(is_shisha) ? true : false},
-                NOW(),
-                ${creator_id}
-            )
-        `;
+    try {
+        const { 
+            name, 
+            description, 
+            price,
+            currency_id,
+            restaurant_id,
+            sub_category_id,
+            is_shisha,
+            images,
+            creator_id 
+        } = data;
 
-        const result = await executeQuery(sql, "createItem");
+        // Prepare queries array for transaction
+        const queries = [];
 
-        if (result?.insertId) {
-            if (images?.length) {
-                let index = 0;
-                for (const image of images) {
-                    var tmp_path = image.path;
-                    var image_ext = image.originalname.split(".").pop();
-                    var image_name = "items_" + result?.insertId + "_" + Date.now();
-                    var target_path = "uploads/items/" + image_name + "." + image_ext;
-                    var src = fs.createReadStream(tmp_path);
-                    var dest = fs.createWriteStream(target_path);
-                    src.pipe(dest);
+        // Add item insert query
+        const itemQuery = buildInsertQuery('items', {
+            name,
+            description,
+            price,
+            currency_id,
+            restaurant_id,
+            sub_category_id,
+            is_shisha: is_shisha ? 1 : 0,
+            created_at: new Date(),
+            created_by: creator_id
+        });
+        queries.push(itemQuery);
 
-                    let sql = `
-                      INSERT INTO
-                        images
-                      SET
-                        url = "/${target_path}",
-                        created_at = NOW(),
-                        created_by = ${creator_id}
-                    `;
-                    const imageResult = await executeQuery(sql, "item image");
-                    if (imageResult?.insertId) {
-                        let sql = `
-                        INSERT INTO
-                          items_image_map
-                        SET
-                          image_id = ${imageResult?.insertId},
-                          item_id = ${result?.insertId},
-                          is_primary = ${index === 0},
-                          created_at = NOW(),
-                          created_by = ${creator_id}
-                      `;
-                        await executeQuery(sql, "registerUser");
-                        index++;
-                    }
+        // Handle images if provided
+        if (images?.length) {
+            for (const image of images) {
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+                if (!allowedTypes.includes(image.mimetype)) {
+                    throw new CustomError(`Invalid file type for image: ${image.originalname}. Allowed types: ${allowedTypes.join(', ')}`, 400);
                 }
+
+                // Generate safe filename
+                const ext = image.originalname.split('.').pop().toLowerCase();
+                const imageName = `item_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+                const targetPath = `uploads/items/${imageName}`;
+
+                // Move file with proper error handling
+                await fs.promises.rename(image.path, targetPath);
+
+                // Add image insert query
+                const imageQuery = buildInsertQuery('images', {
+                    url: `/uploads/items/${imageName}`,
+                    created_at: new Date(),
+                    created_by: creator_id
+                });
+                queries.push(imageQuery);
+
+                // Add image mapping query
+                queries.push({
+                    sql: 'INSERT INTO items_image_map (image_id, item_id, is_primary, created_at, created_by) VALUES (LAST_INSERT_ID(), LAST_INSERT_ID(), ?, NOW(), ?)',
+                    params: [images.indexOf(image) === 0, creator_id]
+                });
             }
-            return resolve(true);
         }
 
-        return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+        // Execute all queries in transaction
+        await executeTransaction(queries, 'createItem');
+        return true;
+
+    } catch (error) {
+        // Clean up uploaded files if exists
+        if (images?.length) {
+            for (const image of images) {
+                if (image?.path) {
+                    await fs.promises.unlink(image.path).catch(console.error);
+                }
+            }
+        }
+        if (error instanceof CustomError) throw error;
+        throw new CustomError(error.message, 500);
+    }
 };
 
 module.exports = {

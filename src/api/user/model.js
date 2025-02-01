@@ -1,223 +1,146 @@
-const { hash, executeQuery } = require("../../helpers/common");
+const { hash, executeQuery, buildInsertQuery, buildUpdateQuery } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
-const getUsers = (id) => {
-  return new Promise(async (resolve, reject) => {
-    let sql = `
-      SELECT
+const getUserById = async (id) => {
+  try {
+    const sql = `
+      SELECT 
         u.*,
-        u.password AS hashedPassword, 
-        r.id,
-        r.name AS role_name,
-        rest.name AS restaurant_name
-      FROM
+        JSON_ARRAYAGG(p.role_id) as roles
+      FROM 
         users u
-      LEFT JOIN
-        roles r ON r.id = u.role_id
-      LEFT JOIN
-        restaurant rest ON rest.id = u.restaurant_id
-      WHERE
-        u.id = ${id}
+      LEFT JOIN 
+        permissions p ON u.id = p.user_id
+      WHERE 
+        u.id = ? AND u.deleted_at IS NULL
+      GROUP BY 
+        u.id
     `;
-
-    const result = await executeQuery(sql, "getUserById");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
-    }
-
-    if (result && result.length > 0) {
-      return resolve(result[0]);
-    }
-
-    return reject(new CustomError("User not found.", 404));
-  });
+    
+    const result = await executeQuery(sql, [id], "getUserById");
+    return result?.[0] || null;
+  } catch (error) {
+    throw new CustomError(error.message, 500);
+  }
 };
 
-const getUserById = (id) => {
-  return new Promise(async (resolve, reject) => {
-    let sql = `
-      SELECT
+const getUserByUsername = async (username) => {
+  try {
+    const sql = `
+      SELECT 
         u.*,
-        u.password AS hashedPassword, 
-        r.id,
-        r.name AS role_name,
-        rest.name AS restaurant_name
-      FROM
+        JSON_ARRAYAGG(p.role_id) as roles
+      FROM 
         users u
-      LEFT JOIN
-        roles r ON r.id = u.role_id
-      LEFT JOIN
-        restaurant rest ON rest.id = u.restaurant_id
-      WHERE
-        u.id = ${id}
+      LEFT JOIN 
+        permissions p ON u.id = p.user_id
+      WHERE 
+        u.username = ? AND u.deleted_at IS NULL
+      GROUP BY 
+        u.id
     `;
-
-    const result = await executeQuery(sql, "getUserById");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
-    }
-
-    if (result && result.length > 0) {
-      return resolve(result[0]);
-    }
-
-    return reject(new CustomError("User not found.", 404));
-  });
+    
+    const result = await executeQuery(sql, [username], "getUserById");
+    return result?.[0] || null;
+  } catch (error) {
+    throw new CustomError(error.message, 500);
+  }
 };
 
-const updateUser = (obj) => {
-  return new Promise(async (resolve, reject) => {
-    var passwordHash = await hash(obj.newPassword);
+const updateUser = async (obj) => {
+  try {
+    const { id, username, email, phone, password, roles } = obj;
+    
+    // Update user data
+    const updateData = {
+      username,
+      email,
+      phone,
+      ...(password && { password: await hash(password) }),
+      updated_at: new Date()
+    };
+    
+    const { sql, params } = buildUpdateQuery('users', updateData, { id });
+    const result = await executeQuery(sql, params, "updateUser");
 
-    let sql = `
-      UPDATE
-        users
-      SET
-        name = "${obj.name}",
-        username = "${obj.username}",
-        email = "${obj.email}",
-        phone = "${obj.phone}",
-        password = "${passwordHash}",
-        department_id = ${obj.department_id},
-        parent_restaurant_id = ${obj.parent_restaurant_id ? obj.parent_restaurant_id : "NULL"},
-        restaurant_id = ${obj.restaurant_id},
-        updated_at = NOW(),
-        updated_by = ${obj.updated_id}
-      WHERE
-        id = ${obj.id}
-    `;
+    if (result.affectedRows > 0 && roles?.length) {
+      // Delete existing roles
+      await executeQuery(
+        'DELETE FROM permissions WHERE user_id = ?',
+        [id],
+        "deleting user roles"
+      );
 
-    const result = await executeQuery(sql, "updateUser");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
+      // Insert new roles
+      const roleValues = roles.map(roleId => [id, roleId]);
+      await executeQuery(
+        'INSERT INTO permissions (user_id, role_id) VALUES ?',
+        [roleValues],
+        "inserting user roles"
+      );
     }
 
-    if (result && result.affectedRows > 0) {
-      if (obj?.roles && obj?.roles.length > 0 && obj?.roles.every((role) => typeof role === "number")) {
-        const deleteResult = await executeQuery(`DELETE FROM permissions WHERE user_id = ${obj.id}`, "deleting user roles");
-        let roleSql = `
-            INSERT INTO
-              permissions (
-                user_id,
-                role_id
-              )
-            VALUES
-              ${obj?.roles.map((role) => `(${obj.id}, ${role})`).join(",")}
-          `;
-        const result = await executeQuery(roleSql, "inserting user roles");
-        return resolve({
-          status: true,
-          message: "Updated Successfully!",
-        });
-      } else {
-        return resolve({
-          status: true,
-          message: "Updated Successfully, couldn't insert user roles!",
-        });
-      }
-    }
-
-    return reject(new CustomError("An unknown error occurred during user update.", 500));
-  });
+    return true;
+  } catch (error) {
+    throw new CustomError(error.message, 500);
+  }
 };
 
-const registerUser = async (user) => {
-  const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, password, roles, created_id } = user;
-  const passwordHash = await hash(password);
+const registerUser = async (obj) => {
+  try {
+    const { username, email, phone, password, roles } = obj;
 
-  let sql = `
-    INSERT INTO
-      users (
-        name,
-        username,
-        email,
-        phone,
-        password,
-        restaurant_id,
-        department_id,
-        enabled,
-        created_at,
-        created_by
-      )
-    VALUES (
-      "${name}",
-      "${username}",
-      "${email}",
-      "${phone}",
-      "${passwordHash}",
-      ${restaurant_id},
-      ${department_id},
-      ${1},
-      Now(),
-      ${created_id}
-    )
-  `;
+    // Insert user
+    const userData = {
+      username,
+      email,
+      phone,
+      password: await hash(password),
+      created_at: new Date()
+    };
 
-  return new Promise(async (resolve, reject) => {
-    const result = await executeQuery(sql, "registerUser");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
+    const { sql, params } = buildInsertQuery('users', userData);
+    const result = await executeQuery(sql, params, "registerUser");
+
+    if (result?.insertId && roles?.length) {
+      // Insert roles
+      const roleValues = roles.map(roleId => [result.insertId, roleId]);
+      await executeQuery(
+        'INSERT INTO permissions (user_id, role_id) VALUES ?',
+        [roleValues],
+        "inserting user roles"
+      );
     }
 
-    if (result && result?.insertId) {
-      if (roles && roles.length > 0 && roles.every((role) => typeof role === "number")) {
-        let roleSql = `
-            INSERT INTO
-              permissions (
-                user_id,
-                role_id
-              )
-            VALUES
-              ${roles.map((role) => `(${result.insertId}, ${role})`).join(",")}
-          `;
-        const rolesResult = await executeQuery(roleSql, "inserting userr roles");
-        return resolve({
-          status: true,
-          message: "Registered Successfully!",
-        });
-      } else {
-        return resolve({
-          status: true,
-          message: "Registered Successfully, couldn't insert user roles!",
-        });
-      }
-    }
-
-    return reject(new CustomError("An unknown error occurred during registration.", 500));
-  });
+    return true;
+  } catch (error) {
+    throw new CustomError(error.message, 500);
+  }
 };
 
-const deleteUser = (obj) => {
-  return new Promise(async (resolve, reject) => {
-    let sql = `
-      UPDATE
-        users
-      SET
+const deleteUser = async (id, user_id) => {
+  try {
+    const sql = `
+      UPDATE users 
+      SET 
         deleted_at = NOW(),
-        deleted_by = ${obj.deleted_id}
-      WHERE
-        id = ${obj.id}
+        deleted_by = ?,
+        updated_at = NOW(),
+        updated_by = ?
+      WHERE id = ?
     `;
-    const result = await executeQuery(sql, "deleteUser");
-    if (Array.isArray(result) && !result[0]) {
-      return reject(new CustomError(result[1], 400));
-    }
-
-    if (result && result.affectedRows > 0) {
-      return resolve({
-        status: true,
-        message: "User deleted successfully!",
-      });
-    }
-
-    return reject(new CustomError("An unknown error occurred during user deletion.", 500));
-  });
+    
+    const result = await executeQuery(sql, [user_id, user_id, id], "deleteUser");
+    return result.affectedRows > 0;
+  } catch (error) {
+    throw new CustomError(error.message, 500);
+  }
 };
 
 module.exports = {
-  getUsersModel: getUsers,
   getUserByIdModel: getUserById,
-  registerUserModel: registerUser,
+  getUserByUsernameModel: getUserByUsername,
   updateUserModel: updateUser,
+  registerUserModel: registerUser,
   deleteUserModel: deleteUser,
 };

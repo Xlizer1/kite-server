@@ -1,143 +1,125 @@
 const fs = require("fs");
-const { executeQuery } = require("../../helpers/common");
+const { executeQuery, executeTransaction, buildInsertQuery } = require("../../helpers/db");
 const { CustomError } = require("../../middleware/errorHandler");
 
-const { IP, PORT } = process.env;
+const getRestaurantSubCategory = async (restaurant_id, category_id) => {
+    try {
+        const sql = `
+            SELECT
+                sc.id,
+                sc.name,
+                isc.url AS image_url
+            FROM
+                sub_categories AS sc
+            LEFT JOIN
+                sub_categories_image_map AS scim ON scim.sub_category_id = sc.id
+            LEFT JOIN
+                images AS isc ON scim.image_id = isc.id AND scim.is_primary = 1
+            WHERE
+                sc.restaurant_id = ?
+            AND
+                sc.category_id = ?
+            AND
+                sc.deleted_at IS NULL
+            GROUP BY
+                sc.id, sc.name, isc.url
+        `;
 
-const ip = IP || "localhost";
-const port = PORT || "8000";
-
-const getSubCategories = (restaurant_id) => {
-    return new Promise(async (resolve, reject) => {
-      let sql = `
-        SELECT
-          sc.id,
-          sc.category_id,
-          sc.name,
-          isc.url AS image_url
-        FROM
-          sub_categories AS sc
-        LEFT JOIN
-          sub_categories_image_map AS scim ON scim.sub_category_id = sc.id
-        LEFT JOIN
-          images AS isc ON scim.image_id = isc.id AND scim.is_primary = 1
-        WHERE
-          sc.restaurant_id = ${restaurant_id}
-        GROUP BY
-          sc.id, sc.name, isc.url;
-      `;
-
-      const result = await executeQuery(sql, "getRestaurantSettings");
-
-      if (Array.isArray(result) && result[0] === false) {
-          return reject(new CustomError(result[1], 400));
-      }
-
-      if (Array.isArray(result)) {
-          return resolve(result);
-      }
-
-      return reject(new CustomError("An unknown error occurred during registration.", 500));
-    });
+        return await executeQuery(sql, [restaurant_id, category_id], "getRestaurantSubCategory");
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
 };
 
-const getSubCategoriesByCategoryID = (restaurant_id, category_id) => {
-  return new Promise(async (resolve, reject) => {
-    let sql = `
-      SELECT
-        sc.id,
-        sc.category_id,
-        sc.name,
-        isc.url AS image_url
-      FROM
-        sub_categories AS sc
-      LEFT JOIN
-        sub_categories_image_map AS scim ON scim.sub_category_id = sc.id
-      LEFT JOIN
-        images AS isc ON scim.image_id = isc.id AND scim.is_primary = 1
-      WHERE
-        sc.restaurant_id = ${restaurant_id}
-      AND 
-        sc.category_id = ${category_id}
-      GROUP BY
-        sc.id, sc.name, isc.url;
-    `;
+const getRestaurantSubCategoryByID = async (id) => {
+    try {
+        const sql = `
+            SELECT
+                sc.id,
+                sc.name,
+                isc.url AS image_url
+            FROM
+                sub_categories AS sc
+            LEFT JOIN
+                sub_categories_image_map AS scim ON scim.sub_category_id = sc.id
+            LEFT JOIN
+                images AS isc ON scim.image_id = isc.id AND scim.is_primary = 1
+            WHERE
+                sc.id = ?
+            AND
+                sc.deleted_at IS NULL
+            GROUP BY
+                sc.id, sc.name, isc.url
+        `;
 
-    const result = await executeQuery(sql, "getRestaurantSettings");
-
-    if (Array.isArray(result) && result[0] === false) {
-        return reject(new CustomError(result[1], 400));
+        const result = await executeQuery(sql, [id], "getRestaurantSubCategoryByID");
+        return result[0];
+    } catch (error) {
+        throw new CustomError(error.message, 500);
     }
-
-    if (Array.isArray(result)) {
-        return resolve(result);
-    }
-
-    return reject(new CustomError("An unknown error occurred during registration.", 500));
-  });
 };
 
-const createSubRestaurantCategory = (name, category_id, image, creator_id) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let sql = `
-              INSERT INTO
-                sub_categories
-              SET
-                name = "${name}",
-                category_id = ${category_id},
-                created_at = NOW(),
-                created_by = ${creator_id}
-            `;
+const createRestaurantSubCategory = async (name, restaurant_id, category_id, image, creator_id) => {
+    try {
+        // Prepare queries array for transaction
+        const queries = [];
 
-            const result = await executeQuery(sql, "createSubRestaurantCategory");
+        // Add sub-category insert query
+        const categoryQuery = buildInsertQuery('sub_categories', {
+            name,
+            restaurant_id,
+            category_id,
+            created_at: new Date(),
+            created_by: creator_id
+        });
+        queries.push(categoryQuery);
 
-            if (result?.insertId) {
-                var tmp_path = image.path;
-                var image_ext = image.originalname.split(".").pop();
-                var image_name = "sub_categories_" + result?.insertId + "_" + Date.now();
-                var target_path = "uploads/sub_categories/" + image_name + "." + image_ext;
-                var src = fs.createReadStream(tmp_path);
-                var dest = fs.createWriteStream(target_path);
-                src.pipe(dest);
-
-                let sql = `
-                  INSERT INTO
-                    images
-                  SET
-                    url = "http://${ip}:${port}/${target_path}",
-                    created_at = NOW(),
-                    created_by = ${creator_id}
-                `;
-
-                const imageResult = await executeQuery(sql, "images");
-
-                if (imageResult?.insertId) {
-                    let sql = `
-                      INSERT INTO
-                        sub_categories_image_map
-                      SET
-                        image_id = ${imageResult?.insertId},
-                        sub_category_id = ${result?.insertId},
-                        is_primary = 1,
-                        created_at = NOW(),
-                        created_by = ${creator_id}
-                    `;
-                    await executeQuery(sql, "sub_categories_image_map");
-                }
-                return resolve(result);
-            } else {
-                return resolve(false);
+        // Handle image if provided
+        if (image) {
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+            if (!allowedTypes.includes(image.mimetype)) {
+                throw new CustomError(`Invalid file type for image: ${image.originalname}`, 400);
             }
-        } catch (error) {
-            console.log(error);
-            return reject(new CustomError("An unknown error occurred during registration.", 500));
+
+            // Generate safe filename
+            const ext = image.originalname.split('.').pop().toLowerCase();
+            const imageName = `subcategory_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+            const targetPath = `uploads/subcategories/${imageName}`;
+
+            // Move file with proper error handling
+            await fs.promises.rename(image.path, targetPath);
+
+            // Add image insert query
+            const imageQuery = buildInsertQuery('images', {
+                url: `/uploads/subcategories/${imageName}`,
+                created_at: new Date(),
+                created_by: creator_id
+            });
+            queries.push(imageQuery);
+
+            // Add image mapping query
+            queries.push({
+                sql: 'INSERT INTO sub_categories_image_map (image_id, sub_category_id, is_primary, created_at, created_by) VALUES (LAST_INSERT_ID(), LAST_INSERT_ID(), true, NOW(), ?)',
+                params: [creator_id]
+            });
         }
-    });
+
+        // Execute all queries in transaction
+        await executeTransaction(queries, 'createRestaurantSubCategory');
+        return true;
+
+    } catch (error) {
+        // Clean up uploaded file if exists
+        if (image?.path) {
+            await fs.promises.unlink(image.path).catch(console.error);
+        }
+        throw error;
+    }
 };
 
 module.exports = {
-    getSubRestaurantCategoriesModel: getSubCategories,
-    getSubCategoriesByCategoryIDModel: getSubCategoriesByCategoryID,
-    createSubRestaurantCategoryModel: createSubRestaurantCategory,
+    getRestaurantSubCategoryModel: getRestaurantSubCategory,
+    getRestaurantSubCategoryByIDModel: getRestaurantSubCategoryByID,
+    createRestaurantSubCategoryModel: createRestaurantSubCategory,
 };

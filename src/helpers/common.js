@@ -92,47 +92,27 @@ const resultObject = (status, message, data) => {
   };
 };
 
-const executeQuery = async (sql, logName) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      await db.query(
-        {
-          sql: sql,
-          timeout: 40000,
-        },
-        (error, result) => {
-          if (!error) {
-            resolve(result);
-          } else {
-            console.error(`${logName}sql: ${sql}`);
-            console.error(logName + ": " + error);
-            resolve([false, error?.message]);
-          }
-        }
-      );
-    } catch (e) {
-      console.log("Error in common.js -> executeQuery: " + e);
-    }
-  });
-};
+const { executeQuery, executeTransaction, buildInsertQuery, buildUpdateQuery } = require('./db');
 
-const userExists = (username, email, phone) => {
-  return new Promise(async (resolve) => {
+const userExists = async (username, email, phone) => {
+  try {
     let sql = `
       SELECT
         *
       FROM
         users
       WHERE
-        (username = "${username}" OR email = "${email}" OR phone = "${phone}")
+        (username = ? OR email = ? OR phone = ?)
     `;
-    const result = await executeQuery(sql, "userExists");
+    const result = await executeQuery(sql, [username, email, phone], "userExists");
     if (result && result?.length) {
-      resolve(true);
+      return true;
     } else {
-      resolve(false);
+      return false;
     }
-  });
+  } catch (error) {
+    throw new Error(`An error occurred while checking if user exists: ${error.message}`);
+  }
 };
 
 const verify = (token) => {
@@ -153,18 +133,22 @@ const verify = (token) => {
 };
 
 async function checkDataTokenValidation(data, callback) {
-  var sql = `
-    SELECT 
-      enabled 
-    FROM 
-      users 
-    WHERE 
-      id = ${data.id} 
-    AND 
-      deleted_at IS NULL`;
-  const result = await executeQuery(sql, "checkDataTokenValidation");
-  if (result && result.length > 0 && result[0].enabled) callback(true);
-  else callback(false);
+  try {
+    var sql = `
+      SELECT 
+        enabled 
+      FROM 
+        users 
+      WHERE 
+        id = ?
+      AND
+        deleted_at IS NULL`;
+    const result = await executeQuery(sql, [data.id], "checkDataTokenValidation");
+    if (result && result.length > 0 && result[0].enabled) callback(true);
+    else callback(false);
+  } catch (error) {
+    throw new Error(`An error occurred while checking data token validation: ${error.message}`);
+  }
 }
 
 const getUserPermissions = (user_id) => {
@@ -179,9 +163,9 @@ const getUserPermissions = (user_id) => {
       LEFT JOIN
         users u ON u.id = p.user_id
       WHERE
-        u.id = ${user_id}
+        u.id = ?
     `;
-    const result = await executeQuery(sql, "getUser");
+    const result = await executeQuery(sql, [user_id], "getUser");
     if (result && result?.length) {
       resolve(result?.map((r) => r?.id));
     } else {
@@ -190,8 +174,8 @@ const getUserPermissions = (user_id) => {
   });
 };
 
-const getUser = (username) => {
-  return new Promise(async (resolve) => {
+const getUser = async (username) => {
+  try {
     let sql = `
       SELECT
         u.*,
@@ -205,59 +189,86 @@ const getUser = (username) => {
       LEFT JOIN
         restaurants rest ON rest.id = u.restaurant_id
       WHERE
-        u.username = "${username}"
+        u.username = ?
     `;
-    const result = await executeQuery(sql, "getUser");
+    const result = await executeQuery(sql, [username], "getUser");
     if (result && result?.length && result[0]) {
       let user = result[0];
       const permissions = await getUserPermissions(user?.id);
-      resolve({ ...user, roles: permissions });
+      return { ...user, roles: permissions };
     } else {
-      resolve(null);
+      return null;
     }
-  });
+  } catch (error) {
+    throw new Error(`An error occurred while getting user: ${error.message}`);
+  }
 };
 
-const checkCategoryForRestaurant = (restaurant_id, category_id) => {
-  return new Promise(async (resolve) => {
+const checkCategoryForRestaurant = async (restaurant_id, category_id) => {
+  try {
     let sql = `
       SELECT
         id
       FROM
         categories
       WHERE
-        restaurant_id = ${restaurant_id}
+        restaurant_id = ?
       AND
-        id = ${category_id}
+        id = ?
+      AND
+        deleted_at IS NULL
     `;
-    const result = await executeQuery(sql, "checkCategoryForRestaurant");
+    const result = await executeQuery(sql, [restaurant_id, category_id], "checkCategoryForRestaurant");
     if (result && result?.length) {
-      resolve(true);
+      return true;
     } else {
-      resolve(false);
+      return false;
     }
-  });
+  } catch (error) {
+    throw new Error(`An error occurred while checking category for restaurant: ${error.message}`);
+  }
 }
 
-const checkSubCategoryForRestaurant = (restaurant_id, category_id) => {
-  return new Promise(async (resolve) => {
+const checkSubCategoryForRestaurant = async (restaurant_id, category_id) => {
+  try {
     let sql = `
       SELECT
         id
       FROM
         sub_categories
       WHERE
-        restaurant_id = ${restaurant_id}
+        restaurant_id = ?
       AND
-        id = ${category_id}
+        id = ?
+      AND
+        deleted_at IS NULL
     `;
-    const result = await executeQuery(sql, "checkSubCategoryForRestaurant");
+    const result = await executeQuery(sql, [restaurant_id, category_id], "checkSubCategoryForRestaurant");
     if (result && result?.length) {
-      resolve(true);
+      return true;
     } else {
-      resolve(false);
+      return false;
     }
-  });
+  } catch (error) {
+    throw new Error(`An error occurred while checking sub category for restaurant: ${error.message}`);
+  }
 }
 
-module.exports = { hash, executeQuery, userExists, getUser, verifyPassword, resultObject, createToken, verify, encryptObject, decryptObject, processTableEncryptedKey, checkCategoryForRestaurant, checkSubCategoryForRestaurant };
+module.exports = { 
+    hash, 
+    executeQuery,
+    executeTransaction,
+    buildInsertQuery,
+    buildUpdateQuery,
+    userExists, 
+    getUser, 
+    verifyPassword, 
+    resultObject, 
+    createToken, 
+    verify, 
+    encryptObject, 
+    decryptObject, 
+    processTableEncryptedKey, 
+    checkCategoryForRestaurant, 
+    checkSubCategoryForRestaurant 
+};
