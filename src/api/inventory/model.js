@@ -1,5 +1,10 @@
 const { executeQuery, executeTransaction, buildInsertQuery, buildUpdateQuery } = require("../../helpers/db");
-const { CustomError } = require("../../middleware/errorHandler");
+const { 
+    DatabaseError, 
+    NotFoundError, 
+    ConflictError, 
+    BusinessLogicError 
+} = require("../../middleware/errorHandler");
 
 const getInventoryItems = async () => {
     try {
@@ -39,7 +44,7 @@ const getInventoryItems = async () => {
 
         return await executeQuery(sql, [], "getInventoryItems");
     } catch (error) {
-        throw new CustomError(error.message, 500);
+        throw new DatabaseError("Failed to fetch inventory items", error);
     }
 };
 
@@ -83,12 +88,12 @@ const getInventoryItemsByRestaurantID = async (restaurant_id) => {
 
         const result = await executeQuery(sql, [restaurant_id], "getInventoryItemsByRestaurantID");
         if (!result.length) {
-            throw new CustomError("No inventory items found for this restaurant", 404);
+            throw new NotFoundError("No inventory items found for this restaurant");
         }
         return result;
     } catch (error) {
-        if (error instanceof CustomError) throw error;
-        throw new CustomError(error.message, 500);
+        if (error instanceof NotFoundError) throw error;
+        throw new DatabaseError("Failed to fetch inventory items", error);
     }
 };
 
@@ -121,9 +126,14 @@ const getLowStockItems = async (restaurant_id) => {
                 (i.threshold - i.quantity) DESC
         `;
 
-        return await executeQuery(sql, [restaurant_id], "getLowStockItems");
+        const result = await executeQuery(sql, [restaurant_id], "getLowStockItems");
+        if (!result.length) {
+            throw new NotFoundError("No low stock items found for this restaurant");
+        }
+        return result;
     } catch (error) {
-        throw new CustomError(error.message, 500);
+        if (error instanceof NotFoundError) throw error;
+        throw new DatabaseError("Failed to fetch low stock items", error);
     }
 };
 
@@ -144,14 +154,14 @@ const createInventoryItem = async (itemData) => {
         const unitCheckSql = `SELECT id FROM units WHERE id = ? AND deleted_at IS NULL`;
         const unitResult = await executeQuery(unitCheckSql, [unit_id], "checkUnit");
         if (!unitResult.length) {
-            throw new CustomError("Invalid unit", 400);
+            throw new BusinessLogicError("Invalid unit specified");
         }
 
         // Validate if currency exists
         const currencyCheckSql = `SELECT id FROM currencies WHERE id = ? AND deleted_at IS NULL`;
         const currencyResult = await executeQuery(currencyCheckSql, [currency_id], "checkCurrency");
         if (!currencyResult.length) {
-            throw new CustomError("Invalid currency", 400);
+            throw new BusinessLogicError("Invalid currency specified");
         }
 
         // Check for duplicate item name in the same restaurant
@@ -161,7 +171,7 @@ const createInventoryItem = async (itemData) => {
         `;
         const duplicateResult = await executeQuery(duplicateCheckSql, [restaurant_id, name], "checkDuplicate");
         if (duplicateResult.length) {
-            throw new CustomError("An item with this name already exists in this restaurant", 400);
+            throw new ConflictError("An item with this name already exists in this restaurant");
         }
 
         // Create inventory item and its first history record
@@ -197,8 +207,10 @@ const createInventoryItem = async (itemData) => {
         await executeTransaction(queries, 'createInventoryItem');
         return true;
     } catch (error) {
-        if (error instanceof CustomError) throw error;
-        throw new CustomError(error.message, 500);
+        if (error instanceof ConflictError || error instanceof BusinessLogicError) {
+            throw error;
+        }
+        throw new DatabaseError("Failed to create inventory item", error);
     }
 };
 
@@ -221,7 +233,7 @@ const updateInventoryItem = async (id, itemData) => {
         `;
         const checkResult = await executeQuery(checkSql, [id], "checkInventoryItem");
         if (!checkResult.length) {
-            throw new CustomError("Inventory item not found", 404);
+            throw new NotFoundError("Inventory item not found");
         }
 
         const oldQuantity = checkResult[0].quantity;
@@ -264,8 +276,8 @@ const updateInventoryItem = async (id, itemData) => {
         await executeTransaction(queries, 'updateInventoryItem');
         return true;
     } catch (error) {
-        if (error instanceof CustomError) throw error;
-        throw new CustomError(error.message, 500);
+        if (error instanceof NotFoundError) throw error;
+        throw new DatabaseError("Failed to update inventory item", error);
     }
 };
 
@@ -284,12 +296,12 @@ const deleteInventoryItem = async (id, user_id) => {
 
         const result = await executeQuery(sql, [user_id, id], "deleteInventoryItem");
         if (result.affectedRows === 0) {
-            throw new CustomError("Inventory item not found", 404);
+            throw new NotFoundError("Inventory item not found");
         }
         return true;
     } catch (error) {
-        if (error instanceof CustomError) throw error;
-        throw new CustomError(error.message, 500);
+        if (error instanceof NotFoundError) throw error;
+        throw new DatabaseError("Failed to delete inventory item", error);
     }
 };
 
@@ -316,7 +328,7 @@ const getInventoryHistory = async (inventory_id) => {
 
         return await executeQuery(sql, [inventory_id], "getInventoryHistory");
     } catch (error) {
-        throw new CustomError(error.message, 500);
+        throw new DatabaseError("Failed to fetch inventory history", error);
     }
 };
 
