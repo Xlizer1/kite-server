@@ -1,13 +1,5 @@
 const { resultObject } = require("../helpers/common");
-
-class AppError extends Error {
-    constructor(message, statusCode) {
-        super(message);
-        this.statusCode = statusCode;
-        this.isOperational = true;
-        Error.captureStackTrace(this, this.constructor);
-    }
-}
+const { AppError, DatabaseError } = require("../errors/customErrors");
 
 class ValidationError extends AppError {
     constructor(message) {
@@ -44,14 +36,6 @@ class ConflictError extends AppError {
     }
 }
 
-class DatabaseError extends AppError {
-    constructor(message = 'Database operation failed', originalError = null) {
-        super(message, 500);
-        this.name = "DatabaseError";
-        this.originalError = originalError;
-    }
-}
-
 class BusinessLogicError extends AppError {
     constructor(message) {
         super(message, 422);
@@ -69,72 +53,62 @@ class CustomError extends AppError {
 }
 
 const logError = (err) => {
-    const errorLog = {
-        timestamp: new Date().toISOString(),
+    console.error('Error:', {
         name: err.name,
         message: err.message,
+        statusCode: err.statusCode,
         stack: err.stack,
-        isOperational: err.isOperational || false
-    };
-
-    if (err.originalError) {
-        errorLog.originalError = {
-            name: err.originalError.name,
-            message: err.originalError.message,
-            stack: err.originalError.stack
-        };
-    }
-
-    // Log error details
-    console.error('Error occurred:', JSON.stringify(errorLog, null, 2));
+        isOperational: err.isOperational
+    });
 };
 
 const handleError = (err, res) => {
-    // Log all errors
     logError(err);
 
-    // Handle known errors
-    if (err.isOperational) {
-        return res.status(err.statusCode).json(
-            resultObject(
-                false,
-                err.message,
-                null,
-                err.statusCode
-            )
-        );
+    // Handle specific error types
+    if (err instanceof ValidationError) {
+        return res.status(400).json(resultObject(null, err.message, false));
+    }
+    if (err instanceof AuthenticationError) {
+        return res.status(401).json(resultObject(null, err.message, false));
+    }
+    if (err instanceof AuthorizationError) {
+        return res.status(403).json(resultObject(null, err.message, false));
+    }
+    if (err instanceof NotFoundError) {
+        return res.status(404).json(resultObject(null, err.message, false));
+    }
+    if (err instanceof ConflictError) {
+        return res.status(409).json(resultObject(null, err.message, false));
+    }
+    if (err instanceof BusinessLogicError) {
+        return res.status(422).json(resultObject(null, err.message, false));
+    }
+    if (err instanceof DatabaseError) {
+        return res.status(500).json(resultObject(null, err.message, false));
+    }
+    if (err instanceof CustomError) {
+        return res.status(err.statusCode).json(resultObject(null, err.message, false));
     }
 
     // Handle unknown errors
-    return res.status(500).json(
-        resultObject(
-            false,
-            process.env.NODE_ENV === 'production' 
-                ? 'An unexpected error occurred' 
-                : err.message,
-            null,
-            500
-        )
-    );
+    return res.status(500).json(resultObject(null, 'Internal Server Error', false));
 };
 
 const asyncHandler = (fn) => {
     return (req, res, next) => {
-        Promise.resolve(fn(req, res, next)).catch((err) => {
-            handleError(err, res);
-        });
+        Promise.resolve(fn(req, res, next)).catch((err) => handleError(err, res));
     };
 };
 
 module.exports = {
-    AppError,
     ValidationError,
     AuthenticationError,
     AuthorizationError,
     NotFoundError,
     ConflictError,
-    DatabaseError,
     BusinessLogicError,
+    DatabaseError,
     CustomError,
     handleError,
     asyncHandler

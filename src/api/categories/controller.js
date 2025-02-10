@@ -1,5 +1,6 @@
-const { createRestaurantCategoryModel, getRestaurantCategoryModel } = require("./model");
-const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
+const { createRestaurantCategoryModel, getRestaurantCategoryModel, updateCategoryImageModel } = require("./model");
+const { resultObject, verify } = require("../../helpers/common");
+const { CustomError } = require("../../middleware/errorHandler");
 
 const getRestaurantCategory = async (request, callBack) => {
     try {
@@ -69,7 +70,42 @@ const createRestaurantCategory = async (request, callBack) => {
     }
 };
 
+const updateCategoryImage = async (request, callBack) => {
+    try {
+        const authorize = await verify(request?.headers["jwt"]);
+        if (!authorize?.id || !authorize?.email) {
+            callBack(resultObject(false, "Token is invalid!"));
+            return;
+        }
+
+        if (!authorize?.roles?.includes(1)) {
+            callBack(resultObject(false, "You don't have permission to update category images!"));
+            return;
+        }
+
+        const { id } = request.params;
+        
+        if (!request.file) {
+            callBack(resultObject(false, "No image file provided"));
+            return;
+        }
+
+        const result = await updateCategoryImageModel(id, request.file, authorize.id);
+        callBack(resultObject(true, "Category image updated successfully", result));
+    } catch (error) {
+        console.error("Error in updateCategoryImage:", error);
+        
+        if (error instanceof CustomError) {
+            callBack(resultObject(false, error.message));
+            return;
+        }
+        
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
 module.exports = {
-    getRestaurantCategoryController: getRestaurantCategory,
     createRestaurantCategoryController: createRestaurantCategory,
+    getRestaurantCategoryController: getRestaurantCategory,
+    updateCategoryImageController: updateCategoryImage
 };

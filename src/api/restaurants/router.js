@@ -1,5 +1,5 @@
 const express = require("express");
-const { getRestaurantsController, getRestaurantsByIDController, createRestaurantsController, updateRestaurantsController, deleteRestaurantsController } = require("./controller");
+const { getRestaurantsController, getRestaurantsByIDController, createRestaurantsController, updateRestaurantsController, deleteRestaurantsController, updateRestaurantImageController } = require("./controller");
 const { restaurantSchema } = require("../../validators/restaurantValidator");
 const validateRequest = require("../../middleware/validateRequest");
 const multer = require("../../middleware/multer");
@@ -26,6 +26,12 @@ router.post("/", multer.upload.array("logo_file"), (req, res) => {
 
 router.put("/:id", validateRequest(restaurantSchema), (req, res) => {
   updateRestaurantsController(req, (result) => {
+    res.json(result);
+  });
+});
+
+router.put("/:id/image", multer.upload.single("image"), (req, res) => {
+  updateRestaurantImageController(req, (result) => {
     res.json(result);
   });
 });

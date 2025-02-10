@@ -1,10 +1,11 @@
 const { executeQuery, executeTransaction, buildInsertQuery } = require("../../helpers/db");
-const { CustomError } = require("../../middleware/errorHandler");
+const { DatabaseError } = require("../../errors/customErrors");
 
 const getRestaurantInfo = async (restaurant_id) => {
     try {
         const sql = `
             SELECT
+                r.id,
                 r.name,
                 r.description,
                 r.tagline,
@@ -19,9 +20,23 @@ const getRestaurantInfo = async (restaurant_id) => {
                 r.id = ?
         `;
 
-        return await executeQuery(sql, [restaurant_id], "getRestaurantInfo");
+        const results = await executeQuery(sql, [restaurant_id], "getRestaurantInfo");
+        
+        if (!results || results.length === 0) {
+            throw new DatabaseError(`Restaurant not found with ID: ${restaurant_id}`);
+        }
+
+        const restaurantInfo = results[0];
+        if (!restaurantInfo.name) {
+            throw new DatabaseError(`Restaurant name is missing for ID: ${restaurant_id}`);
+        }
+
+        return restaurantInfo;
     } catch (error) {
-        throw new CustomError(error.message, 500);
+        if (error instanceof DatabaseError) {
+            throw error;
+        }
+        throw new DatabaseError("Failed to fetch restaurant info data", error);
     }
 };
 
@@ -37,9 +52,10 @@ const getRestaurantSettings = async (restaurant_id) => {
                 restaurant_id = ?
         `;
 
-        return await executeQuery(sql, [restaurant_id], "getRestaurantSettings");
+        const result = await executeQuery(sql, [restaurant_id], "getRestaurantSettings");
+        return result[0];
     } catch (error) {
-        throw new CustomError(error.message, 500);
+        throw new DatabaseError("Failed to fetch restaurant settings data", error);
     }
 };
 
@@ -78,7 +94,7 @@ const getRestaurantCategories = async (restaurant_id) => {
         const result = await executeQuery(sql, [restaurant_id], "getRestaurantCategories");
         return result?.map((r) => ({ ...r, sub_categories: JSON.parse(r.sub_categories) }));
     } catch (error) {
-        throw new CustomError(error.message, 500);
+        throw new DatabaseError("Failed to fetch restaurant categories data", error);
     }
 };
 
@@ -88,13 +104,41 @@ const getRestaurantMainMenu = async (restaurant_id, number) => {
         const restaurantSettings = await getRestaurantSettings(restaurant_id);
         const restaurantCategories = await getRestaurantCategories(restaurant_id);
 
-        if (restaurantInfo?.name && restaurantSettings?.primary_color) {
-            return { ...restaurantInfo, ...restaurantSettings, categories: restaurantCategories };
+        // Log the retrieved data for debugging
+        console.log('Restaurant data retrieved:', {
+            info: { id: restaurantInfo.id, hasName: !!restaurantInfo.name },
+            settings: restaurantSettings ? { hasColor: !!restaurantSettings.primary_color } : null,
+            categoriesCount: Array.isArray(restaurantCategories) ? restaurantCategories.length : 0
+        });
+
+        console.log('\n\n\n\n\n\n\n\n\n\n');
+        console.log('Restaurant info:', restaurantInfo);
+        console.log('Restaurant settings:', restaurantSettings);
+        console.log('Restaurant categories:', restaurantCategories);
+        console.log('\n\n\n\n\n\n\n\n\n\n');
+
+        if (!restaurantSettings) {
+            throw new DatabaseError(`Restaurant settings not found for ID: ${restaurant_id}`);
         }
 
-        throw new CustomError("An unknown error occurred during registration.", 500);
+        if (!restaurantSettings.primary_color) {
+            throw new DatabaseError(`Restaurant primary color setting is missing for ID: ${restaurant_id}`);
+        }
+
+        if (!Array.isArray(restaurantCategories)) {
+            throw new DatabaseError(`Invalid categories data for restaurant ID: ${restaurant_id}`);
+        }
+
+        return {
+            ...restaurantInfo,
+            ...restaurantSettings,
+            categories: restaurantCategories
+        };
     } catch (error) {
-        throw error;
+        if (error instanceof DatabaseError) {
+            throw error;
+        }
+        throw new DatabaseError("Failed to fetch restaurant menu", error);
     }
 };
 

@@ -1,4 +1,4 @@
-const { getItemsModel, getItemsBySubCategoryIDModel, createItemModel } = require("./model");
+const { getItemsModel, getItemsBySubCategoryIDModel, getPaginatedItemsBySubCategoryIDModel, createItemModel, updateItemImageModel } = require("./model");
 const { resultObject, verify, processTableEncryptedKey, checkSubCategoryForRestaurant } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
@@ -53,15 +53,57 @@ const getItemsBySubCategoryID = async (request, callBack) => {
     }
 };
 
+const getPaginatedItemsBySubCategoryID = async (request, callBack) => {
+    try {
+        const { sub_cat_id, page = 0, key } = request.query;
+        const limit = 5;
+        const offset = parseInt(page) * limit;
+
+        if (!sub_cat_id || !key) {
+            callBack(resultObject(false, "Missing required parameters: sub_cat_id and key"));
+            return;
+        }
+
+        // Decrypt the key to get restaurant_id only
+        const { restaurant_id } = await processTableEncryptedKey(key);
+        
+        const result = await getPaginatedItemsBySubCategoryIDModel(
+            parseInt(sub_cat_id), 
+            parseInt(restaurant_id),
+            limit,
+            offset
+        );
+        
+        callBack(resultObject(true, "Items retrieved successfully", result));
+    } catch (error) {
+        console.error("Error in getPaginatedItemsBySubCategoryID:", error);
+        callBack(resultObject(false, error.message));
+    }
+};
+
 const createItem = async (request, callBack) => {
     try {
         const authorize = await verify(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
+            callBack(resultObject(false, "Token is invalid!"));
+            return;
         }
 
         if (!authorize?.roles?.includes(1)) {
-            throw new CustomError("You don't have permission to create items!", 403);
+            callBack(resultObject(false, "You don't have permission to create items!"));
+            return;
+        }
+
+        // Validate image
+        if (!request.file) {
+            callBack(resultObject(false, "Image is required"));
+            return;
+        }
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+        if (!allowedTypes.includes(request.file.mimetype)) {
+            callBack(resultObject(false, `Invalid file type for image: ${request.file.originalname}`));
+            return;
         }
 
         const { 
@@ -74,17 +116,17 @@ const createItem = async (request, callBack) => {
             is_shisha 
         } = request.body;
 
-        const image = request.file;
-
         if (!restaurant_id || !sub_category_id || !name || !price || !currency_id) {
-            throw new CustomError("Missing required fields!", 400);
+            callBack(resultObject(false, "Missing required fields!"));
+            return;
         }
 
         if (!(await checkSubCategoryForRestaurant(restaurant_id, sub_category_id))) {
-            throw new CustomError("Invalid sub-category for this restaurant!", 400);
+            callBack(resultObject(false, "Invalid sub-category for this restaurant!"));
+            return;
         }
 
-        await createItemModel({ 
+        const result = await createItemModel({ 
             restaurant_id, 
             sub_category_id, 
             name, 
@@ -92,20 +134,55 @@ const createItem = async (request, callBack) => {
             price,
             currency_id,
             is_shisha, 
-            images: image ? [image] : [], 
+            images: [request.file], 
             creator_id: authorize?.id 
         });
 
-        callBack(resultObject(true, "Item created successfully"));
+        callBack(resultObject(true, "Item created successfully", result));
 
     } catch (error) {
         console.error("Error in createItem:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        
+        if (error instanceof CustomError) {
+            callBack(resultObject(false, error.message));
+            return;
+        }
+        
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
+const updateItemImage = async (request, callBack) => {
+    try {
+        const authorize = await verify(request?.headers["jwt"]);
+        if (!authorize?.id || !authorize?.email) {
+            callBack(resultObject(false, "Token is invalid!"));
+            return;
+        }
+
+        if (!authorize?.roles?.includes(1)) {
+            callBack(resultObject(false, "You don't have permission to update item images!"));
+            return;
+        }
+
+        const { id } = request.params;
+        
+        if (!request.file) {
+            callBack(resultObject(false, "No image file provided"));
+            return;
+        }
+
+        const result = await updateItemImageModel(id, request.file, authorize.id);
+        callBack(resultObject(true, "Item image updated successfully", result));
+    } catch (error) {
+        console.error("Error in updateItemImage:", error);
+        
+        if (error instanceof CustomError) {
+            callBack(resultObject(false, error.message));
+            return;
+        }
+        
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
 
@@ -113,4 +190,6 @@ module.exports = {
     getItemsController: getItems,
     getItemsBySubCategoryIDController: getItemsBySubCategoryID,
     createItemController: createItem,
+    updateItemImageController: updateItemImage,
+    getPaginatedItemsBySubCategoryIDController: getPaginatedItemsBySubCategoryID
 };

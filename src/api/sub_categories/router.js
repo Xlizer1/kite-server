@@ -1,5 +1,5 @@
 const express = require("express");
-const { createSubRestaurantCategoryController, getSubCategoriesController, getSubCategoriesByCategoryIDController } = require("./controller");
+const { createSubRestaurantCategoryController, getSubCategoriesController, getSubCategoriesByCategoryIDController, updateSubCategoryImageController } = require("./controller");
 const multer = require("../../middleware/multer");
 
 const router = express.Router();
@@ -18,6 +18,12 @@ router.get("/get_by_category_id", (req, res) => {
 
 router.post("/", multer.upload.single("image"), (req, res) => {
   createSubRestaurantCategoryController(req, (result) => {
+    res.json(result);
+  });
+});
+
+router.put("/:id/image", multer.upload.single("image"), (req, res) => {
+  updateSubCategoryImageController(req, (result) => {
     res.json(result);
   });
 });

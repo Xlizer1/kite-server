@@ -86,7 +86,99 @@ const createRestaurantCategory = async (name, restaurant_id, image, creator_id) 
     }
 };
 
+const updateCategoryImage = async (category_id, image, user_id) => {
+    try {
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+        if (!allowedTypes.includes(image.mimetype)) {
+            throw new CustomError(`Invalid file type for image: ${image.originalname}`, 400);
+        }
+
+        // Generate safe filename
+        const ext = image.originalname.split('.').pop().toLowerCase();
+        const imageName = `category_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+        const targetPath = `${__dirname}/../../../uploads/categories/${imageName}`;
+
+        // Create categories directory if it doesn't exist
+        const dir = `${__dirname}/../../../uploads/categories`;
+        if (!fs.existsSync(dir)) {
+            await fs.promises.mkdir(dir, { recursive: true });
+        }
+
+        // Copy file with proper error handling
+        await fs.promises.copyFile(image.path, targetPath);
+        // Clean up temp file after successful copy
+        if (fs.existsSync(image.path)) {
+            await fs.promises.unlink(image.path).catch(console.error);
+        }
+
+        // Insert new image
+        const imageQuery = `
+            INSERT INTO images (url, created_by)
+            VALUES (?, ?)
+        `;
+        const imageResult = await executeQuery(imageQuery, [`/uploads/categories/${imageName}`, user_id], "insertCategoryImage");
+        const image_id = imageResult.insertId;
+
+        // Update existing primary images to non-primary
+        await executeQuery(
+            'UPDATE categories_image_map SET is_primary = 0 WHERE category_id = ? AND is_primary = 1',
+            [category_id],
+            "updateOldPrimaryCategoryImage"
+        );
+
+        // Insert new image mapping
+        await executeQuery(
+            'INSERT INTO categories_image_map (image_id, category_id, is_primary, created_at, created_by) VALUES (?, ?, 1, NOW(), ?)',
+            [image_id, category_id, user_id],
+            "insertCategoryImageMap"
+        );
+        
+        // Fetch and return updated category info
+        const selectSql = `
+            SELECT
+                c.*,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', i.id,
+                        'url', i.url,
+                        'primary', cim.is_primary
+                    )
+                ) AS images
+            FROM
+                categories c
+            LEFT JOIN
+                categories_image_map cim ON c.id = cim.category_id
+            LEFT JOIN
+                images i ON cim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
+            WHERE
+                c.id = ?
+            GROUP BY
+                c.id
+        `;
+
+        const result = await executeQuery(selectSql, [category_id], "getUpdatedCategoryInfo");
+        
+        if (!result || result.length === 0) {
+            throw new CustomError("Category not found", 404);
+        }
+
+        return result[0];
+
+    } catch (error) {
+        // Clean up uploaded file in case of error
+        if (image?.path && fs.existsSync(image.path)) {
+            await fs.promises.unlink(image.path).catch(console.error);
+        }
+        if (error instanceof CustomError) {
+            throw error;
+        }
+        throw new CustomError("Failed to update category image", 500);
+    }
+};
+
 module.exports = {
     getRestaurantCategoryModel: getRestaurantCategory,
     createRestaurantCategoryModel: createRestaurantCategory,
+    updateCategoryImageModel: updateCategoryImage
 };

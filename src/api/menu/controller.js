@@ -1,5 +1,6 @@
-const { getRestaurantMainMenuModel } = require("./model");
+const { getRestaurantMainMenuModel, listAvailableRestaurantsModel } = require("./model");
 const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
+const { DatabaseError } = require("../../errors/customErrors");
 
 const getRestaurantMainMenu = async (request, callBack) => {
     try {
@@ -23,14 +24,28 @@ const getRestaurantMainMenu = async (request, callBack) => {
             callBack(resultObject(false, "Restaurant not found."));
         }
     } catch (error) {
-        callBack({
-            status: false,
-            message: "Something went wrong. Please try again later.",
-        });
-        console.log(error);
+        console.error("Error in getRestaurantMainMenu:", error);
+        
+        if (error instanceof DatabaseError) {
+            callBack(resultObject(false, error.message));
+            return;
+        }
+        
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
+const listAvailableRestaurants = async (request, callBack) => {
+    try {
+        const restaurants = await listAvailableRestaurantsModel();
+        callBack(resultObject(true, "success", restaurants));
+    } catch (error) {
+        console.error("Error in listAvailableRestaurants:", error);
+        callBack(resultObject(false, "Failed to fetch available restaurants"));
     }
 };
 
 module.exports = {
     getRestaurantMainMenuController: getRestaurantMainMenu,
+    listAvailableRestaurantsController: listAvailableRestaurants,
 };

@@ -276,10 +276,96 @@ const deleteRestaurants = async (id, user_id) => {
     }
 };
 
+const updateRestaurantImage = async (restaurant_id, image, user_id) => {
+    try {
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+        if (!allowedTypes.includes(image.mimetype)) {
+            throw new CustomError(`Invalid file type for image: ${image.originalname}`, 400);
+        }
+
+        // Generate safe filename
+        const ext = image.originalname.split('.').pop().toLowerCase();
+        const imageName = `restaurant_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+        const targetPath = `${__dirname}/../../../uploads/restaurants/${imageName}`;
+
+        // Copy file with proper error handling
+        await fs.promises.copyFile(image.path, targetPath);
+        // Clean up temp file after successful copy
+        if (fs.existsSync(image.path)) {
+            await fs.promises.unlink(image.path).catch(console.error);
+        }
+
+        // Insert new image
+        const imageQuery = `
+            INSERT INTO images (url, created_by)
+            VALUES (?, ?)
+        `;
+        const imageResult = await executeQuery(imageQuery, [`/uploads/restaurants/${imageName}`, user_id], "insertRestaurantImage");
+        const image_id = imageResult.insertId;
+
+        // Update existing primary images to non-primary
+        await executeQuery(
+            'UPDATE restaurants_image_map SET is_primary = 0 WHERE restaurant_id = ? AND is_primary = 1',
+            [restaurant_id],
+            "updateOldPrimaryImage"
+        );
+
+        // Insert new image mapping
+        await executeQuery(
+            'INSERT INTO restaurants_image_map (image_id, restaurant_id, is_primary, created_at, created_by) VALUES (?, ?, 1, NOW(), ?)',
+            [image_id, restaurant_id, user_id],
+            "insertRestaurantImageMap"
+        );
+        
+        // Fetch and return updated restaurant info
+        const selectSql = `
+            SELECT
+                r.*,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', i.id,
+                        'url', i.url,
+                        'primary', rim.is_primary
+                    )
+                ) AS images
+            FROM
+                restaurants r
+            LEFT JOIN
+                restaurants_image_map rim ON r.id = rim.restaurant_id
+            LEFT JOIN
+                images i ON rim.image_id = i.id AND i.id IS NOT NULL AND i.url IS NOT NULL
+            WHERE
+                r.id = ?
+            GROUP BY
+                r.id
+        `;
+
+        const result = await executeQuery(selectSql, [restaurant_id], "getUpdatedRestaurantInfo");
+        
+        if (!result || result.length === 0) {
+            throw new CustomError("Restaurant not found", 404);
+        }
+
+        return result[0];
+
+    } catch (error) {
+        // Clean up uploaded file in case of error
+        if (image?.path && fs.existsSync(image.path)) {
+            await fs.promises.unlink(image.path).catch(console.error);
+        }
+        if (error instanceof CustomError) {
+            throw error;
+        }
+        throw new CustomError("Failed to update restaurant image", 500);
+    }
+};
+
 module.exports = {
     getRestaurantsModel: getRestaurants,
     getRestaurantsByIDModel: getRestaurantsByID,
     createRestaurantsModel: createRestaurants,
     updateRestaurantsModel: updateRestaurants,
     deleteRestaurantsModel: deleteRestaurants,
+    updateRestaurantImageModel: updateRestaurantImage
 };

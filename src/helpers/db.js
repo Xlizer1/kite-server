@@ -1,5 +1,5 @@
 const db = require("../config/db");
-const { CustomError } = require("../middleware/errorHandler");
+const { DatabaseError } = require("../errors/customErrors");
 
 /**
  * Execute a parameterized query safely
@@ -24,13 +24,13 @@ const executeQuery = async (sql, params = [], logName = 'DB Query') => {
                         console.error(`${logName} SQL: ${sql}`);
                         console.error(`${logName} Params:`, params);
                         console.error(`${logName} Error:`, error);
-                        reject(new CustomError(error.message, 500));
+                        reject(new DatabaseError(error.message, error));
                     }
                 }
             );
         } catch (e) {
             console.error(`Error in db.js -> executeQuery: ${e}`);
-            reject(new CustomError('Database error occurred', 500));
+            reject(new DatabaseError('Database error occurred', e));
         }
     });
 };
@@ -46,7 +46,7 @@ const executeTransaction = async (queries, logName = 'Transaction') => {
         db.mysqlConnection.getConnection((err, conn) => {
             if (err) {
                 console.error(`${logName} Connection Error:`, err);
-                reject(new CustomError('Failed to get database connection', 500));
+                reject(new DatabaseError('Failed to get database connection', err));
                 return;
             }
             resolve(conn);
@@ -57,7 +57,7 @@ const executeTransaction = async (queries, logName = 'Transaction') => {
         await new Promise((resolve, reject) => {
             connection.beginTransaction(err => {
                 if (err) {
-                    reject(new CustomError('Failed to start transaction', 500));
+                    reject(new DatabaseError('Failed to start transaction', err));
                     return;
                 }
                 resolve();
@@ -78,7 +78,7 @@ const executeTransaction = async (queries, logName = 'Transaction') => {
                             console.error(`${logName} SQL: ${query.sql}`);
                             console.error(`${logName} Params:`, query.params);
                             console.error(`${logName} Error:`, error);
-                            reject(error);
+                            reject(new DatabaseError(error.message, error));
                             return;
                         }
                         resolve(result);
@@ -91,7 +91,7 @@ const executeTransaction = async (queries, logName = 'Transaction') => {
         await new Promise((resolve, reject) => {
             connection.commit(err => {
                 if (err) {
-                    reject(new CustomError('Failed to commit transaction', 500));
+                    reject(new DatabaseError('Failed to commit transaction', err));
                     return;
                 }
                 resolve();
@@ -103,7 +103,7 @@ const executeTransaction = async (queries, logName = 'Transaction') => {
         await new Promise(resolve => {
             connection.rollback(() => resolve());
         });
-        throw new CustomError(error.message || 'Transaction failed', 500);
+        throw new DatabaseError(error.message || 'Transaction failed', error);
     } finally {
         connection.release();
     }

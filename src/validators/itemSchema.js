@@ -7,6 +7,7 @@ const itemSchema = Joi.object({
     description: Joi.string().required(),
     price: Joi.number().required(),
     is_shisha: Joi.number().valid(0, 1).required(),
+    currency_id: Joi.number().required(),
     image: Joi.object({
         fieldname: Joi.string(),
         originalname: Joi.string(),
@@ -16,7 +17,7 @@ const itemSchema = Joi.object({
         filename: Joi.string(),
         path: Joi.string(),
         size: Joi.number()
-    }).required()
+    }).optional()
 });
 
 module.exports = {

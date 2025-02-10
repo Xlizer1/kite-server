@@ -1,5 +1,6 @@
-const { createSubRestaurantCategoryModel, getSubRestaurantCategoriesModel, getSubCategoriesByCategoryIDModel } = require("./model");
+const { createSubRestaurantCategoryModel, getSubRestaurantCategoriesModel, getSubCategoriesByCategoryIDModel, updateSubCategoryImageModel } = require("./model");
 const { resultObject, verify, checkCategoryForRestaurant, processTableEncryptedKey } = require("../../helpers/common");
+const { CustomError } = require("../../middleware/errorHandler");
 
 const getSubCategories = async (request, callBack) => {
     try {
@@ -105,8 +106,43 @@ const createSubRestaurantCategory = async (request, callBack) => {
     }
 };
 
+const updateSubCategoryImage = async (request, callBack) => {
+    try {
+        const authorize = await verify(request?.headers["jwt"]);
+        if (!authorize?.id || !authorize?.email) {
+            callBack(resultObject(false, "Token is invalid!"));
+            return;
+        }
+
+        if (!authorize?.roles?.includes(1)) {
+            callBack(resultObject(false, "You don't have permission to update sub-category images!"));
+            return;
+        }
+
+        const { id } = request.params;
+        
+        if (!request.file) {
+            callBack(resultObject(false, "No image file provided"));
+            return;
+        }
+
+        const result = await updateSubCategoryImageModel(id, request.file, authorize.id);
+        callBack(resultObject(true, "Sub-category image updated successfully", result));
+    } catch (error) {
+        console.error("Error in updateSubCategoryImage:", error);
+        
+        if (error instanceof CustomError) {
+            callBack(resultObject(false, error.message));
+            return;
+        }
+        
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
 module.exports = {
+    createSubRestaurantCategoryController: createSubRestaurantCategory,
     getSubCategoriesController: getSubCategories,
     getSubCategoriesByCategoryIDController: getSubCategoriesByCategoryID,
-    createSubRestaurantCategoryController: createSubRestaurantCategory,
+    updateSubCategoryImageController: updateSubCategoryImage
 };
