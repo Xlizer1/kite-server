@@ -64,12 +64,22 @@ const getPaginatedItemsBySubCategoryID = async (request, callBack) => {
             return;
         }
 
-        // Decrypt the key to get restaurant_id only
-        const { restaurant_id } = await processTableEncryptedKey(key);
+        // Process the key and validate restaurant_id - add await here
+        const decryptedData = await processTableEncryptedKey(key);
+        if (!decryptedData || !decryptedData.restaurant_id) {
+            callBack(resultObject(false, "Invalid key: could not get restaurant_id"));
+            return;
+        }
+
+        const restaurant_id = parseInt(decryptedData.restaurant_id);
+        if (isNaN(restaurant_id)) {
+            callBack(resultObject(false, "Invalid restaurant_id from key"));
+            return;
+        }
         
         const result = await getPaginatedItemsBySubCategoryIDModel(
-            parseInt(sub_cat_id), 
-            parseInt(restaurant_id),
+            parseInt(sub_cat_id),
+            restaurant_id,
             limit,
             offset
         );
