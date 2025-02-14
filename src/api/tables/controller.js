@@ -9,7 +9,7 @@ const getTables = async (request, callBack) => {
       return;
     } else {
       if (authorize?.roles?.includes(1)) {
-        const result = await getTablesModel(authorize);
+        const result = await getTablesModel(authorize.restaurant_id);
         if (result && result[0] && result?.length > 0) {
           callBack(resultObject(true, "success", result));
         } else {

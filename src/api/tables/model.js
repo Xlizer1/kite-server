@@ -3,15 +3,13 @@ const qr = require("qrcode");
 const { executeQuery, executeTransaction, buildInsertQuery, buildUpdateQuery } = require("../../helpers/db");
 const { CustomError } = require("../../middleware/errorHandler");
 
-const getTables = async (restaurant_id) => {
+const getTables = async (restaurant_id = 1) => {
+    console.log(restaurant_id)
     try {
         const sql = `
             SELECT
                 t.id,
                 t.restaurant_id,
-                t.name,
-                t.seats,
-                t.qr_code,
                 t.created_at,
                 t.updated_at
             FROM
@@ -22,7 +20,7 @@ const getTables = async (restaurant_id) => {
                 t.deleted_at IS NULL
         `;
 
-        return await executeQuery(sql, [restaurant_id], "getTables");
+        return await executeQuery(sql, [1], "getTables");
     } catch (error) {
         throw new CustomError(error.message, 500);
     }

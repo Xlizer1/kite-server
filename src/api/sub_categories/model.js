@@ -37,19 +37,19 @@ const getRestaurantSubCategoryByID = async (restaurant_id, id) => {
             SELECT
                 sc.id,
                 sc.name,
-                isc.url AS image_url
+                MAX(isc.url) AS image_url
             FROM
                 sub_categories AS sc
             LEFT JOIN
-                sub_categories_image_map AS scim ON scim.sub_category_id = sc.id
+                sub_categories_image_map AS scim ON scim.sub_category_id = sc.id AND scim.is_primary = 1
             LEFT JOIN
-                images AS isc ON scim.image_id = isc.id AND scim.is_primary = 1
+                images AS isc ON scim.image_id = isc.id
             WHERE
                 sc.id = ?
             AND
                 sc.deleted_at IS NULL
             GROUP BY
-                sc.id, sc.name, isc.url
+                sc.id, sc.name
         `;
 
         const result = await executeQuery(sql, [id], "getRestaurantSubCategoryByID");
