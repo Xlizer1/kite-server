@@ -31,7 +31,7 @@ const getRestaurantSubCategory = async (restaurant_id, category_id) => {
     }
 };
 
-const getRestaurantSubCategoryByID = async (id) => {
+const getRestaurantSubCategoryByID = async (restaurant_id, id) => {
     try {
         const sql = `
             SELECT
@@ -53,7 +53,7 @@ const getRestaurantSubCategoryByID = async (id) => {
         `;
 
         const result = await executeQuery(sql, [id], "getRestaurantSubCategoryByID");
-        return result[0];
+        return result;
     } catch (error) {
         throw new CustomError(error.message, 500);
     }

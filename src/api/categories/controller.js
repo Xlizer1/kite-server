@@ -1,5 +1,5 @@
 const { createRestaurantCategoryModel, getRestaurantCategoryModel, updateCategoryImageModel } = require("./model");
-const { resultObject, verify } = require("../../helpers/common");
+const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getRestaurantCategory = async (request, callBack) => {

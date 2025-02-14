@@ -1,4 +1,4 @@
-const { createSubRestaurantCategoryModel, getSubRestaurantCategoriesModel, getSubCategoriesByCategoryIDModel, updateSubCategoryImageModel } = require("./model");
+const { createSubRestaurantCategoryModel, getRestaurantSubCategoryModel, getRestaurantSubCategoryByIDModel, updateSubCategoryImageModel } = require("./model");
 const { resultObject, verify, checkCategoryForRestaurant, processTableEncryptedKey } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
@@ -13,7 +13,7 @@ const getSubCategories = async (request, callBack) => {
 
         const { restaurant_id } = await processTableEncryptedKey(key);
 
-        const result = await getSubRestaurantCategoriesModel(restaurant_id);
+        const result = await getRestaurantSubCategoryModel(restaurant_id);
 
         if (result) {
             callBack(resultObject(true, "success", result));
@@ -45,7 +45,7 @@ const getSubCategoriesByCategoryID = async (request, callBack) => {
             return;
         }
 
-        const result = await getSubCategoriesByCategoryIDModel(restaurant_id, category_id);
+        const result = await getRestaurantSubCategoryByIDModel(restaurant_id, category_id);
 
         if (result) {
             callBack(resultObject(true, "success", result));
