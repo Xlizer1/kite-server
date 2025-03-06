@@ -1,5 +1,16 @@
-const { getItemsModel, getItemsBySubCategoryIDModel, getPaginatedItemsBySubCategoryIDModel, createItemModel, updateItemImageModel } = require("./model");
-const { resultObject, verify, processTableEncryptedKey, checkSubCategoryForRestaurant } = require("../../helpers/common");
+const {
+    getItemsModel,
+    getItemsBySubCategoryIDModel,
+    getPaginatedItemsBySubCategoryIDModel,
+    createItemModel,
+    updateItemImageModel,
+} = require("./model");
+const {
+    resultObject,
+    verify,
+    processTableEncryptedKey,
+    checkSubCategoryForRestaurant,
+} = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getItems = async (request, callBack) => {
@@ -13,15 +24,16 @@ const getItems = async (request, callBack) => {
         const { restaurant_id } = await processTableEncryptedKey(key);
         const result = await getItemsModel(restaurant_id);
         callBack(resultObject(true, "Items retrieved successfully", result));
-
     } catch (error) {
         console.error("Error in getItems:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
@@ -41,15 +53,16 @@ const getItemsBySubCategoryID = async (request, callBack) => {
 
         const result = await getItemsBySubCategoryIDModel(restaurant_id, sub_cat_id);
         callBack(resultObject(true, "Items retrieved successfully", result));
-
     } catch (error) {
         console.error("Error in getItemsBySubCategoryID:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
@@ -64,17 +77,16 @@ const getPaginatedItemsBySubCategoryID = async (request, callBack) => {
             return;
         }
 
-        // Decrypt the key to get restaurant_id only
         const { restaurant_id } = await processTableEncryptedKey(key);
-        
+
         const result = await getPaginatedItemsBySubCategoryIDModel(
-            parseInt(sub_cat_id), 
+            parseInt(sub_cat_id),
             parseInt(restaurant_id),
             limit,
             offset
         );
-        
-        callBack(resultObject(true, "Items retrieved successfully", result));
+
+        callBack(resultObject(true, result?.length ? "Items retrieved successfully" : "No items were found!", result));
     } catch (error) {
         console.error("Error in getPaginatedItemsBySubCategoryID:", error);
         callBack(resultObject(false, error.message));
@@ -100,21 +112,13 @@ const createItem = async (request, callBack) => {
             return;
         }
 
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
         if (!allowedTypes.includes(request.file.mimetype)) {
             callBack(resultObject(false, `Invalid file type for image: ${request.file.originalname}`));
             return;
         }
 
-        const { 
-            restaurant_id, 
-            sub_category_id, 
-            name, 
-            description, 
-            price,
-            currency_id,
-            is_shisha 
-        } = request.body;
+        const { restaurant_id, sub_category_id, name, description, price, currency_id, is_shisha } = request.body;
 
         if (!restaurant_id || !sub_category_id || !name || !price || !currency_id) {
             callBack(resultObject(false, "Missing required fields!"));
@@ -126,28 +130,27 @@ const createItem = async (request, callBack) => {
             return;
         }
 
-        const result = await createItemModel({ 
-            restaurant_id, 
-            sub_category_id, 
-            name, 
-            description, 
+        const result = await createItemModel({
+            restaurant_id,
+            sub_category_id,
+            name,
+            description,
             price,
             currency_id,
-            is_shisha, 
-            images: [request.file], 
-            creator_id: authorize?.id 
+            is_shisha,
+            images: [request.file],
+            creator_id: authorize?.id,
         });
 
         callBack(resultObject(true, "Item created successfully", result));
-
     } catch (error) {
         console.error("Error in createItem:", error);
-        
+
         if (error instanceof CustomError) {
             callBack(resultObject(false, error.message));
             return;
         }
-        
+
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
@@ -166,7 +169,7 @@ const updateItemImage = async (request, callBack) => {
         }
 
         const { id } = request.params;
-        
+
         if (!request.file) {
             callBack(resultObject(false, "No image file provided"));
             return;
@@ -176,12 +179,12 @@ const updateItemImage = async (request, callBack) => {
         callBack(resultObject(true, "Item image updated successfully", result));
     } catch (error) {
         console.error("Error in updateItemImage:", error);
-        
+
         if (error instanceof CustomError) {
             callBack(resultObject(false, error.message));
             return;
         }
-        
+
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
@@ -191,5 +194,5 @@ module.exports = {
     getItemsBySubCategoryIDController: getItemsBySubCategoryID,
     createItemController: createItem,
     updateItemImageController: updateItemImage,
-    getPaginatedItemsBySubCategoryIDController: getPaginatedItemsBySubCategoryID
+    getPaginatedItemsBySubCategoryIDController: getPaginatedItemsBySubCategoryID,
 };

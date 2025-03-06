@@ -21,7 +21,7 @@ const getRestaurantInfo = async (restaurant_id) => {
         `;
 
         const results = await executeQuery(sql, [restaurant_id], "getRestaurantInfo");
-        
+
         if (!results || results.length === 0) {
             throw new DatabaseError(`Restaurant not found with ID: ${restaurant_id}`);
         }
@@ -92,7 +92,7 @@ const getRestaurantCategories = async (restaurant_id) => {
         `;
 
         const result = await executeQuery(sql, [restaurant_id], "getRestaurantCategories");
-        return result?.map((r) => ({ ...r, sub_categories: JSON.parse(r.sub_categories) }));
+        return result;
     } catch (error) {
         throw new DatabaseError("Failed to fetch restaurant categories data", error);
     }
@@ -103,19 +103,6 @@ const getRestaurantMainMenu = async (restaurant_id, number) => {
         const restaurantInfo = await getRestaurantInfo(restaurant_id);
         const restaurantSettings = await getRestaurantSettings(restaurant_id);
         const restaurantCategories = await getRestaurantCategories(restaurant_id);
-
-        // Log the retrieved data for debugging
-        console.log('Restaurant data retrieved:', {
-            info: { id: restaurantInfo.id, hasName: !!restaurantInfo.name },
-            settings: restaurantSettings ? { hasColor: !!restaurantSettings.primary_color } : null,
-            categoriesCount: Array.isArray(restaurantCategories) ? restaurantCategories.length : 0
-        });
-
-        console.log('\n\n\n\n\n\n\n\n\n\n');
-        console.log('Restaurant info:', restaurantInfo);
-        console.log('Restaurant settings:', restaurantSettings);
-        console.log('Restaurant categories:', restaurantCategories);
-        console.log('\n\n\n\n\n\n\n\n\n\n');
 
         if (!restaurantSettings) {
             throw new DatabaseError(`Restaurant settings not found for ID: ${restaurant_id}`);
@@ -132,7 +119,7 @@ const getRestaurantMainMenu = async (restaurant_id, number) => {
         return {
             ...restaurantInfo,
             ...restaurantSettings,
-            categories: restaurantCategories
+            categories: restaurantCategories,
         };
     } catch (error) {
         if (error instanceof DatabaseError) {

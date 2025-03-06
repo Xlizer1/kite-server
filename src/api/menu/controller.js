@@ -1,18 +1,27 @@
 const { getRestaurantMainMenuModel, listAvailableRestaurantsModel } = require("./model");
-const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
+const { resultObject, verify, processTableEncryptedKey, getRestaurantLocation } = require("../../helpers/common");
 const { DatabaseError } = require("../../errors/customErrors");
+const { isWithinRange } = require("../../helpers/geoUtils");
 
 const getRestaurantMainMenu = async (request, callBack) => {
     try {
         const { key } = request.query;
+        const { latitude, longitude } = request.body;
+
         if (!key || typeof key !== "string") {
-            callBack(resultObject(false, "Invalid Table Key!"));
+            callBack(resultObject(false, "Please provide a key!"));
             return;
         }
         const { restaurant_id, number } = await processTableEncryptedKey(key);
-
         if (!number || !restaurant_id) {
-            callBack(resultObject(false, "Invalid Table"));
+            callBack(resultObject(false, "Invalid Table Key!"));
+            return;
+        }
+
+        const restaurantLocation = await getRestaurantLocation(restaurant_id);
+
+        if (!isWithinRange(latitude, longitude, restaurantLocation, 2000000)) {
+            callBack(resultObject(false, "Menu only available within restaurant."));
             return;
         }
 
@@ -25,12 +34,12 @@ const getRestaurantMainMenu = async (request, callBack) => {
         }
     } catch (error) {
         console.error("Error in getRestaurantMainMenu:", error);
-        
+
         if (error instanceof DatabaseError) {
             callBack(resultObject(false, error.message));
             return;
         }
-        
+
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };

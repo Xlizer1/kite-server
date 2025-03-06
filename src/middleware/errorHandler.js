@@ -9,14 +9,14 @@ class ValidationError extends AppError {
 }
 
 class AuthenticationError extends AppError {
-    constructor(message = 'Authentication failed') {
+    constructor(message = "Authentication failed") {
         super(message, 401);
         this.name = "AuthenticationError";
     }
 }
 
 class AuthorizationError extends AppError {
-    constructor(message = 'Not authorized') {
+    constructor(message = "Not authorized") {
         super(message, 403);
         this.name = "AuthorizationError";
     }
@@ -43,22 +43,20 @@ class BusinessLogicError extends AppError {
     }
 }
 
-// For backward compatibility
 class CustomError extends AppError {
     constructor(message, statusCode = 500) {
         super(message, statusCode);
         this.name = "CustomError";
-        console.warn('CustomError is deprecated. Please use specific error types.');
     }
 }
 
 const logError = (err) => {
-    console.error('Error:', {
+    console.error("Error:", {
         name: err.name,
         message: err.message,
         statusCode: err.statusCode,
         stack: err.stack,
-        isOperational: err.isOperational
+        isOperational: err.isOperational,
     });
 };
 
@@ -92,7 +90,7 @@ const handleError = (err, res) => {
     }
 
     // Handle unknown errors
-    return res.status(500).json(resultObject(null, 'Internal Server Error', false));
+    return res.status(500).json(resultObject(null, "Internal Server Error", false));
 };
 
 const asyncHandler = (fn) => {
@@ -111,5 +109,5 @@ module.exports = {
     DatabaseError,
     CustomError,
     handleError,
-    asyncHandler
+    asyncHandler,
 };
