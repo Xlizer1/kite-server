@@ -12,7 +12,7 @@ const {
 } = require("./model");
 const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
 const { v4: uuidv4 } = require('uuid');
-const { executeQuery } = require("../../database/connection");
+const { executeQuery } = require("../../helpers/db");
 
 // Helper function to calculate distance between two coordinates using Haversine formula
 const calculateDistance = (lat1, lon1, lat2, lon2) => {

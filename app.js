@@ -2,8 +2,32 @@ const { handleError } = require("./src/middleware/errorHandler");
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
 const app = express();
+
+// Swagger configuration
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Restaurant Management API',
+            version: '1.0.0',
+            description: 'API documentation for the Restaurant Management System',
+        },
+        servers: [
+            {
+                url: 'http://localhost:3000',
+                description: 'Development server',
+            },
+        ],
+    },
+    apis: ['./src/api/**/router.js'], // Path to the API routes files
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.use(
     cors({

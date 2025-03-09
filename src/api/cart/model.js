@@ -1,4 +1,4 @@
-const { executeQuery } = require("../../database/connection");
+const { executeQuery } = require("../../helpers/db");
 const { resultObject } = require("../../helpers/common");
 
 // Get cart by session ID
