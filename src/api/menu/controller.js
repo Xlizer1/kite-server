@@ -54,7 +54,10 @@ const listAvailableRestaurants = async (request, callBack) => {
     }
 };
 
+const getCartItems = async () => {};
+
 module.exports = {
     getRestaurantMainMenuController: getRestaurantMainMenu,
     listAvailableRestaurantsController: listAvailableRestaurants,
+    getCartItemsController: getCartItems,
 };

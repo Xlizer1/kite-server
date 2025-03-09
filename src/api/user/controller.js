@@ -12,11 +12,25 @@ const loginUser = async (request, callBack) => {
 
         const { username, password } = request.body;
 
+        if (!username || !password) {
+            callBack(resultObject(false, "Please provide username/password!"));
+        }
+
         const user = await getUser(username);
         if (user && user?.id) {
             const isPasswordCorrect = await verifyPassword(password, user?.password);
             if (isPasswordCorrect) {
-                callBack(resultObject(true, "success", { token: await createToken(user) }));
+                callBack(
+                    resultObject(true, "success", {
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
+                        phone: user.phone,
+                        department_id: user.department_id,
+                        roles: user.roles,
+                        token: await createToken(user),
+                    })
+                );
             } else {
                 callBack(resultObject(false, "Wrong Password!"));
             }
@@ -92,7 +106,19 @@ const updateUser = async (request, callBack) => {
         } else {
             if (authorize?.roles?.includes(7)) {
                 const id = request.params.id;
-                const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, password, newPassword, enabled, roles } = request.body;
+                const {
+                    department_id,
+                    restaurant_id,
+                    parent_restaurant_id,
+                    name,
+                    username,
+                    email,
+                    phone,
+                    password,
+                    newPassword,
+                    enabled,
+                    roles,
+                } = request.body;
 
                 const user = await getUser(username);
 
@@ -201,14 +227,35 @@ const registerUser = async (request, callBack) => {
                     throw new ValidationError(error.details[0].message);
                 }
 
-                const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, password, roles } = request.body;
+                const {
+                    department_id,
+                    restaurant_id,
+                    parent_restaurant_id,
+                    name,
+                    username,
+                    email,
+                    phone,
+                    password,
+                    roles,
+                } = request.body;
 
                 const checkUserExists = await userExists(username, email, phone);
                 if (checkUserExists) {
                     throw new ValidationError("User already exists.");
                 }
 
-                const result = await registerUserModel({ name, email, username, phone, password, restaurant_id, parent_restaurant_id, department_id, roles, created_id: 0 });
+                const result = await registerUserModel({
+                    name,
+                    email,
+                    username,
+                    phone,
+                    password,
+                    restaurant_id,
+                    parent_restaurant_id,
+                    department_id,
+                    roles,
+                    created_id: 0,
+                });
                 if (result?.status === true) {
                     callBack(resultObject(true, "User created successfully."));
                     return;
