@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 09, 2025 at 08:14 AM
+-- Generation Time: Mar 09, 2025 at 11:08 AM
 -- Server version: 9.1.0
 -- PHP Version: 8.3.14
 
@@ -32,6 +32,68 @@ CREATE TABLE IF NOT EXISTS `attributes` (
   `id` int NOT NULL AUTO_INCREMENT,
   `item_id` int NOT NULL,
   PRIMARY KEY (`id`),
+  KEY `item_id` (`item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `captain_calls`
+--
+
+DROP TABLE IF EXISTS `captain_calls`;
+CREATE TABLE IF NOT EXISTS `captain_calls` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `table_id` int NOT NULL,
+  `restaurant_id` int NOT NULL,
+  `status` enum('pending','in_progress','completed','cancelled') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `completed_at` timestamp NULL DEFAULT NULL,
+  `completed_by` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `table_id` (`table_id`),
+  KEY `restaurant_id` (`restaurant_id`),
+  KEY `completed_by` (`completed_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `carts`
+--
+
+DROP TABLE IF EXISTS `carts`;
+CREATE TABLE IF NOT EXISTS `carts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `table_id` int NOT NULL,
+  `restaurant_id` int NOT NULL,
+  `session_id` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `session_id` (`session_id`),
+  KEY `table_id` (`table_id`),
+  KEY `restaurant_id` (`restaurant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `cart_items`
+--
+
+DROP TABLE IF EXISTS `cart_items`;
+CREATE TABLE IF NOT EXISTS `cart_items` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `cart_id` int NOT NULL,
+  `item_id` int NOT NULL,
+  `quantity` int NOT NULL DEFAULT '1',
+  `special_instructions` text,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `cart_id` (`cart_id`),
   KEY `item_id` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -598,7 +660,7 @@ CREATE TABLE IF NOT EXISTS `qr_codes` (
 --
 
 INSERT INTO `qr_codes` (`id`, `table_id`, `qr_code`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(5, 3, 'data:image/png;base64,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', '2025-03-06 09:22:33', 1, NULL, NULL, NULL, NULL);
+(5, 3, 'data:image/png;base64,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', '2025-03-06 09:22:33', 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -714,6 +776,27 @@ INSERT INTO `roles` (`id`, `name`) VALUES
 (11, 'Update Roles'),
 (12, 'Delete Roles'),
 (13, 'Update User Permissions');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sessions`
+--
+
+DROP TABLE IF EXISTS `sessions`;
+CREATE TABLE IF NOT EXISTS `sessions` (
+  `id` varchar(255) NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `data` JSON DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text,
+  `last_activity` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `expires_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `expires_at` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -988,6 +1071,28 @@ CREATE TABLE IF NOT EXISTS `users_image_map` (
 --
 ALTER TABLE `attributes`
   ADD CONSTRAINT `attributes_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`);
+
+--
+-- Constraints for table `captain_calls`
+--
+ALTER TABLE `captain_calls`
+  ADD CONSTRAINT `captain_calls_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`),
+  ADD CONSTRAINT `captain_calls_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
+  ADD CONSTRAINT `captain_calls_ibfk_3` FOREIGN KEY (`completed_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `carts`
+--
+ALTER TABLE `carts`
+  ADD CONSTRAINT `carts_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`),
+  ADD CONSTRAINT `carts_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
+
+--
+-- Constraints for table `cart_items`
+--
+ALTER TABLE `cart_items`
+  ADD CONSTRAINT `cart_items_ibfk_1` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`id`),
+  ADD CONSTRAINT `cart_items_ibfk_2` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`);
 
 --
 -- Constraints for table `categories`

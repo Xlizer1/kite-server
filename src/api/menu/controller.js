@@ -2,6 +2,8 @@ const { getRestaurantMainMenuModel, listAvailableRestaurantsModel } = require(".
 const { resultObject, verify, processTableEncryptedKey, getRestaurantLocation } = require("../../helpers/common");
 const { DatabaseError } = require("../../errors/customErrors");
 const { isWithinRange } = require("../../helpers/geoUtils");
+const { v4: uuidv4 } = require("uuid");
+const { executeQuery } = require("../../helpers/db");
 
 const getRestaurantMainMenu = async (request, callBack) => {
     try {
@@ -28,7 +30,75 @@ const getRestaurantMainMenu = async (request, callBack) => {
         const result = await getRestaurantMainMenuModel(restaurant_id, number);
 
         if (result) {
-            callBack(resultObject(true, "success", result));
+            // Get session ID from cookies if it exists
+            let sessionId = request.cookies?.cartSessionId;
+            let needsNewSession = true;
+
+            // Check if the session exists and is still valid
+            if (sessionId) {
+                const checkSessionQuery = `
+                    SELECT id, updated_at 
+                    FROM carts 
+                    WHERE session_id = ? AND table_id = ? AND restaurant_id = ?
+                `;
+
+                const sessionResult = await executeQuery(checkSessionQuery, [sessionId, number, restaurant_id]);
+
+                if (sessionResult && sessionResult.length > 0) {
+                    const sessionData = sessionResult[0];
+                    const updatedAt = new Date(sessionData.updated_at);
+                    const currentTime = new Date();
+
+                    // Check if session hasn't expired (2 hours = 7200000 milliseconds)
+                    const sessionAge = currentTime - updatedAt;
+                    if (sessionAge < 7200000) {
+                        needsNewSession = false;
+
+                        // Update the timestamp to extend the session
+                        const updateTimestampQuery = `
+                            UPDATE carts 
+                            SET updated_at = CURRENT_TIMESTAMP 
+                            WHERE session_id = ?
+                        `;
+                        await executeQuery(updateTimestampQuery, [sessionId]);
+                    }
+                }
+            }
+
+            // Create a new session if needed
+            if (needsNewSession) {
+                console.log("cds");
+                sessionId = uuidv4();
+
+                // Create a new cart entry or update existing one
+                const upsertCartQuery = `
+                    INSERT INTO carts (table_id, restaurant_id, session_id)
+                    VALUES (?, ?, ?)
+                    ON DUPLICATE KEY UPDATE 
+                    table_id = VALUES(table_id), 
+                    restaurant_id = VALUES(restaurant_id),
+                    updated_at = CURRENT_TIMESTAMP
+                `;
+
+                await executeQuery(upsertCartQuery, [number, restaurant_id, sessionId]);
+
+                // Set the cookie in the response
+                if (request.res) {
+                    request.res.cookie("cartSessionId", sessionId, {
+                        maxAge: 2 * 60 * 60 * 1000,
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === "production",
+                    });
+                }
+            }
+
+            // Add the session ID to the response
+            callBack(
+                resultObject(true, "success", {
+                    ...result,
+                    sessionId,
+                })
+            );
         } else {
             callBack(resultObject(false, "Restaurant not found."));
         }
