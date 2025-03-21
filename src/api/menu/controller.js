@@ -22,7 +22,7 @@ const getRestaurantMainMenu = async (request, callBack) => {
 
         const restaurantLocation = await getRestaurantLocation(restaurant_id);
 
-        if (!isWithinRange(latitude, longitude, restaurantLocation, 2000000)) {
+        if (!isWithinRange(latitude, longitude, restaurantLocation, 20000000)) {
             callBack(resultObject(false, "Menu only available within restaurant."));
             return;
         }
