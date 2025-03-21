@@ -1,6 +1,6 @@
 const {
     getCartModel,
-    upsertCartModel,
+    // upsertCartModel,
     addCartItemModel,
     updateCartItemModel,
     removeCartItemModel,
@@ -11,8 +11,8 @@ const {
     createOrderFromCartModel,
 } = require("./model");
 const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
-const { v4: uuidv4 } = require("uuid");
-const { executeQuery } = require("../../helpers/db");
+// const { v4: uuidv4 } = require("uuid");
+// const { executeQuery } = require("../../helpers/db");
 
 // Helper function to calculate distance between two coordinates using Haversine formula
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -50,80 +50,80 @@ const getCart = async (request, callBack) => {
 };
 
 // Initialize cart
-const initializeCart = async (request, callBack) => {
-    try {
-        const { key, latitude, longitude } = request.body;
+// const initializeCart = async (request, callBack) => {
+//     try {
+//         const { key, latitude, longitude } = request.body;
 
-        if (!key) {
-            return callBack(resultObject(false, "Encrypted key is required"));
-        }
+//         if (!key) {
+//             return callBack(resultObject(false, "Encrypted key is required"));
+//         }
 
-        // Process the encrypted key to get table_id and restaurant_id
-        const tableData = await processTableEncryptedKey(key);
+//         // Process the encrypted key to get table_id and restaurant_id
+//         const tableData = await processTableEncryptedKey(key);
 
-        if (!tableData || !tableData.table_id || !tableData.restaurant_id) {
-            return callBack(resultObject(false, "Invalid encrypted key"));
-        }
+//         if (!tableData || !tableData.table_id || !tableData.restaurant_id) {
+//             return callBack(resultObject(false, "Invalid encrypted key"));
+//         }
 
-        const tableId = tableData.table_id;
-        const restaurantId = tableData.restaurant_id;
+//         const tableId = tableData.table_id;
+//         const restaurantId = tableData.restaurant_id;
 
-        // Verify restaurant location if coordinates are provided
-        if (latitude && longitude) {
-            // Get restaurant coordinates
-            const restaurantQuery = `
-              SELECT lat, \`long\` FROM restaurants WHERE id = ?
-            `;
+//         // Verify restaurant location if coordinates are provided
+//         if (latitude && longitude) {
+//             // Get restaurant coordinates
+//             const restaurantQuery = `
+//               SELECT lat, \`long\` FROM restaurants WHERE id = ?
+//             `;
 
-            const restaurant = await executeQuery(restaurantQuery, [restaurantId]);
+//             const restaurant = await executeQuery(restaurantQuery, [restaurantId]);
 
-            if (!restaurant || restaurant.length === 0) {
-                return callBack(resultObject(false, "Restaurant not found"));
-            }
+//             if (!restaurant || restaurant.length === 0) {
+//                 return callBack(resultObject(false, "Restaurant not found"));
+//             }
 
-            // Calculate distance between user and restaurant (using Haversine formula)
-            const distance = calculateDistance(latitude, longitude, restaurant[0].lat, restaurant[0].long);
+//             // Calculate distance between user and restaurant (using Haversine formula)
+//             const distance = calculateDistance(latitude, longitude, restaurant[0].lat, restaurant[0].long);
 
-            // If distance is greater than 100 meters (can be adjusted as needed)
-            if (distance > 0.1) {
-                return callBack(resultObject(false, "You must be at the restaurant to access the menu"));
-            }
-        }
+//             // If distance is greater than 100 meters (can be adjusted as needed)
+//             if (distance > 0.1) {
+//                 return callBack(resultObject(false, "You must be at the restaurant to access the menu"));
+//             }
+//         }
 
-        // Generate session ID if not provided
-        let sessionId = request.cookies.cartSessionId;
-        if (!sessionId) {
-            sessionId = uuidv4();
-        }
+//         // Generate session ID if not provided
+//         let sessionId = request.cookies.cartSessionId;
+//         if (!sessionId) {
+//             sessionId = uuidv4();
+//         }
 
-        const result = await upsertCartModel({ tableId, restaurantId, sessionId });
+//         const result = await upsertCartModel({ tableId, restaurantId, sessionId });
 
-        if (result.status) {
-            // Set cookie with session ID
-            if (!request.cookies.cartSessionId) {
-                request.res.cookie("cartSessionId", sessionId, {
-                    maxAge: 2 * 60 * 60 * 1000, // 24 hours
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === "production",
-                });
-            }
+//         if (result.status) {
+//             // Set cookie with session ID
+//             if (!request.cookies.cartSessionId) {
+//                 request.res.cookie("cartSessionId", sessionId, {
+//                     maxAge: 2 * 60 * 60 * 1000, // 24 hours
+//                     httpOnly: true,
+//                     secure: process.env.NODE_ENV === "production",
+//                 });
+//             }
 
-            return callBack(
-                resultObject(true, "Cart initialized successfully", {
-                    cartId: result.id,
-                    sessionId,
-                    tableId,
-                    restaurantId,
-                })
-            );
-        } else {
-            return callBack(resultObject(false, result.message || "Failed to initialize cart"));
-        }
-    } catch (error) {
-        console.error("Error in initializeCart controller:", error);
-        return callBack(resultObject(false, "Something went wrong. Please try again later."));
-    }
-};
+//             return callBack(
+//                 resultObject(true, "Cart initialized successfully", {
+//                     cartId: result.id,
+//                     sessionId,
+//                     tableId,
+//                     restaurantId,
+//                 })
+//             );
+//         } else {
+//             return callBack(resultObject(false, result.message || "Failed to initialize cart"));
+//         }
+//     } catch (error) {
+//         console.error("Error in initializeCart controller:", error);
+//         return callBack(resultObject(false, "Something went wrong. Please try again later."));
+//     }
+// };
 
 // Add item to cart
 const addCartItem = async (request, callBack) => {
@@ -417,7 +417,7 @@ const createOrderFromCart = async (request, callBack) => {
 
 module.exports = {
     getCartController: getCart,
-    initializeCartController: initializeCart,
+    // initializeCartController: initializeCart,
     addCartItemController: addCartItem,
     updateCartItemController: updateCartItem,
     removeCartItemController: removeCartItem,

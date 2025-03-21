@@ -22,11 +22,11 @@ router.get("/", (req, res) => {
     });
 });
 
-router.post("/initialize", validateRequest(cartSchema), (req, res) => {
-    initializeCartController(req, (result) => {
-        res.json(result);
-    });
-});
+// router.post("/initialize", validateRequest(cartSchema), (req, res) => {
+//     initializeCartController(req, (result) => {
+//         res.json(result);
+//     });
+// });
 
 router.post("/items", validateRequest(cartItemSchema), (req, res) => {
     addCartItemController(req, (result) => {

@@ -2,8 +2,9 @@ const { handleError } = require("./src/middleware/errorHandler");
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const cookieParser = require('cookie-parser');
-const { setupSwagger } = require('./src/config/swagger/config');
+const cookieParser = require("cookie-parser");
+const { setupSwagger } = require("./src/config/swagger/config");
+const { resultObject } = require("./src/helpers/common");
 
 const app = express();
 
@@ -60,6 +61,9 @@ apiRouter.use("/inventory", inventoryItemsRouter);
 apiRouter.use("/ingredients", IngredientsRouter);
 apiRouter.use("/setting", settingRouter);
 apiRouter.use("/cart", cartRouter);
+app.use((req, res, next) => {
+    res.status(404).json(resultObject(false, "Endpoint was not found"));
+});
 
 app.use(handleError);
 

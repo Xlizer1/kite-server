@@ -28,7 +28,8 @@ const cartItemSchema = Joi.object({
     specialInstructions: Joi.string().allow("", null).optional().messages({
         "string.base": "Special instructions must be a string",
     }),
-    key: Joi.string().required(),
+    cartItemId: Joi.string().allow("", null).optional(),
+    // key: Joi.string().required(),
 });
 
 // Schema for updating captain call status

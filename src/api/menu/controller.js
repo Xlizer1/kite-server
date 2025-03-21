@@ -67,7 +67,6 @@ const getRestaurantMainMenu = async (request, callBack) => {
 
             // Create a new session if needed
             if (needsNewSession) {
-                console.log("cds");
                 sessionId = uuidv4();
 
                 // Create a new cart entry or update existing one
