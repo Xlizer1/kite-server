@@ -7,8 +7,12 @@ const { executeQuery } = require("../../helpers/db");
 
 const getRestaurantMainMenu = async (request, callBack) => {
     try {
-        const { key } = request.query;
-        const { latitude, longitude } = request.body;
+        const { key, latitude, longitude } = request.query;
+
+        if (!latitude || !longitude) {
+            callBack(resultObject(false, "Please provide the latitude and the longitude!"));
+            return;
+        }
 
         if (!key || typeof key !== "string") {
             callBack(resultObject(false, "Please provide a key!"));
