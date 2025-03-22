@@ -5,25 +5,25 @@ const { resultObject } = require("../../helpers/common");
 const getCartModel = async (sessionId) => {
     try {
         const cartQuery = `
-      SELECT c.id, c.table_id, c.restaurant_id, c.session_id, c.created_at, c.updated_at
-      FROM carts c
-      WHERE c.session_id = ?
-    `;
+            SELECT c.id, c.table_id, c.restaurant_id, c.session_id, c.created_at, c.updated_at
+            FROM carts c
+            WHERE c.session_id = ?
+        `;
 
         const cart = await executeQuery(cartQuery, [sessionId]);
 
         if (cart && cart.length > 0) {
             const cartItemsQuery = `
-        SELECT ci.id, ci.item_id, ci.quantity, ci.special_instructions, 
-               i.name as item_name, i.price, i.description,
-               (SELECT url FROM images img 
-                JOIN items_image_map iim ON img.id = iim.image_id 
-                WHERE iim.item_id = i.id AND iim.is_primary = 1 
-                LIMIT 1) as image_url
-        FROM cart_items ci
-        JOIN items i ON ci.item_id = i.id
-        WHERE ci.cart_id = ?
-      `;
+                SELECT ci.id, ci.item_id, ci.quantity, ci.special_instructions, 
+                    i.name as item_name, i.price, i.description,
+                    (SELECT url FROM images img 
+                        JOIN items_image_map iim ON img.id = iim.image_id 
+                        WHERE iim.item_id = i.id AND iim.is_primary = 1 
+                        LIMIT 1) as image_url
+                FROM cart_items ci
+                JOIN items i ON ci.item_id = i.id
+                WHERE ci.cart_id = ?
+            `;
 
             const cartItems = await executeQuery(cartItemsQuery, [cart[0].id]);
 
