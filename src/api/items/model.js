@@ -46,6 +46,50 @@ const getItems = async (restaurant_id) => {
     }
 };
 
+const getItemByID = async (item_id) => {
+    try {
+        const sql = `
+            SELECT
+                i.id,
+                i.name,
+                i.description,
+                i.price,
+                i.is_shisha,
+                c.code AS currency_code,
+                im.url AS image_url,
+                sc.name AS sub_category_name,
+                cat.name AS category_name
+            FROM
+                items i
+            LEFT JOIN
+                items_image_map iim ON iim.item_id = i.id
+            LEFT JOIN
+                images im ON iim.image_id = im.id AND iim.is_primary = 1
+            LEFT JOIN
+                sub_categories sc ON i.sub_category_id = sc.id
+            LEFT JOIN
+                categories cat ON sc.category_id = cat.id
+            LEFT JOIN
+                currencies c ON i.currency_id = c.id
+            WHERE
+                i.id = ?
+            AND
+                i.deleted_at IS NULL
+            GROUP BY
+                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, sc.name, cat.name
+        `;
+
+        const result = await executeQuery(sql, [item_id], "getItemByID");
+        if (!result.length) {
+            throw new CustomError("No items found for the given restaurant", 404);
+        }
+        return result;
+    } catch (error) {
+        if (error instanceof CustomError) throw error;
+        throw new CustomError(error.message, 500);
+    }
+};
+
 const getItemsBySubCategoryID = async (restaurant_id, sub_category_id) => {
     try {
         const sql = `
@@ -330,6 +374,7 @@ const updateItemImage = async (item_id, image, user_id) => {
 
 module.exports = {
     getItemsModel: getItems,
+    getItemByIDModel: getItemByID,
     getItemsBySubCategoryIDModel: getItemsBySubCategoryID,
     createItemModel: createItem,
     updateItemImageModel: updateItemImage,

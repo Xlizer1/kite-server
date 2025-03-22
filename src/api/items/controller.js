@@ -1,5 +1,6 @@
 const {
     getItemsModel,
+    getItemByIDModel,
     getItemsBySubCategoryIDModel,
     getPaginatedItemsBySubCategoryIDModel,
     createItemModel,
@@ -23,6 +24,26 @@ const getItems = async (request, callBack) => {
 
         const { restaurant_id } = await processTableEncryptedKey(key);
         const result = await getItemsModel(restaurant_id);
+        callBack(resultObject(true, "Items retrieved successfully", result));
+    } catch (error) {
+        console.error("Error in getItems:", error);
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
+    }
+};
+
+const getItemByID = async (request, callBack) => {
+    try {
+        const { item_id } = request.params;
+        // const sessionId = request.query.sessionId || request.cookies.cartSessionId;
+
+        const result = await getItemByIDModel(item_id);
         callBack(resultObject(true, "Items retrieved successfully", result));
     } catch (error) {
         console.error("Error in getItems:", error);
@@ -191,6 +212,7 @@ const updateItemImage = async (request, callBack) => {
 
 module.exports = {
     getItemsController: getItems,
+    getItemByIDController: getItemByID,
     getItemsBySubCategoryIDController: getItemsBySubCategoryID,
     createItemController: createItem,
     updateItemImageController: updateItemImage,
