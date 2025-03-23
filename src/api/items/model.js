@@ -81,9 +81,9 @@ const getItemByID = async (item_id) => {
 
         const result = await executeQuery(sql, [item_id], "getItemByID");
         if (!result.length) {
-            throw new CustomError("No items found for the given restaurant", 404);
+            throw new CustomError("No items found for the given restaurant", 200);
         }
-        return result;
+        return result[0];
     } catch (error) {
         if (error instanceof CustomError) throw error;
         throw new CustomError(error.message, 500);
