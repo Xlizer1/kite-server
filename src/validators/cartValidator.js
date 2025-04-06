@@ -29,6 +29,7 @@ const cartItemSchema = Joi.object({
         "string.base": "Special instructions must be a string",
     }),
     cartItemId: Joi.string().allow("", null).optional(),
+    sessionId: Joi.string().allow("", null).optional(),
     // key: Joi.string().required(),
 });
 
