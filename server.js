@@ -10,9 +10,11 @@ const ip = IP || "localhost";
 const port = PORT || "8000";
 
 try {
-  const server = http.createServer(app);
-  server.listen(port);
-  console.log("**********" + ip + ":" + port + "**********");
+    const server = http.createServer(app);
+    server.listen(port).on("error", (e) => {
+        console.log(e);
+    });
+    console.log("**********" + ip + ":" + port + "**********");
 } catch (error) {
-  console.log("Error: ", error);
+    console.log("Error: ", error);
 }

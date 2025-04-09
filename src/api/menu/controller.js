@@ -35,7 +35,7 @@ const getRestaurantMainMenu = async (request, callBack) => {
 
         if (result) {
             // Get session ID from cookies if it exists
-            let sessionId = request.cookies?.cartSessionId;
+            let sessionId = request.query.sessionId || request.cookies.cartSessionId;
             let needsNewSession = true;
 
             // Check if the session exists and is still valid
