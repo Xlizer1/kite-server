@@ -107,16 +107,21 @@ const userExists = async (username, email, phone) => {
     }
 };
 
-const verify = (token) => {
+const verify = (token, callBack) => {
     return new Promise((resolve, reject) => {
         try {
-            var data = jwt.verify(token, tokenKey).data;
-            if (data) {
-                checkDataTokenValidation(data, (result) => {
-                    if (result) resolve(data);
-                    else resolve(null);
-                });
-            } else resolve(data);
+            if (token) {
+                var data = jwt.verify(token, tokenKey).data;
+                if (data) {
+                    checkDataTokenValidation(data, (result) => {
+                        if (result) resolve(data);
+                        else resolve(null);
+                    });
+                } else resolve(data);
+            } else {
+                callBack(resultObject(false, "Token must be provided!"));
+                resolve(false);
+            }
         } catch (e) {
             resolve(null);
             console.log(e);

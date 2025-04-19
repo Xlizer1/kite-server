@@ -85,6 +85,17 @@ const getRestaurantMainMenu = async (request, callBack) => {
 
                 await executeQuery(upsertCartQuery, [number, restaurant_id, sessionId]);
 
+                //Update table status
+
+                const updateTableStatusQuery = `
+                    UPDATE 
+                        tables
+                    SET
+                        status = 2
+                `;
+
+                await executeQuery(updateTableStatusQuery);
+
                 // Set the cookie in the response
                 if (request.res) {
                     request.res.cookie("cartSessionId", sessionId, {

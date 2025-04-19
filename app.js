@@ -46,6 +46,7 @@ const inventoryItemsRouter = require("./src/api/inventory/router");
 const IngredientsRouter = require("./src/api/ingredients/router");
 const settingRouter = require("./src/api/setting/router");
 const cartRouter = require("./src/api/cart/router");
+const captainRouter = require("./src/api/captain/router");
 
 // Mount all routers to the API router without repeating /api
 apiRouter.use("/", homeRouter);
@@ -61,6 +62,7 @@ apiRouter.use("/inventory", inventoryItemsRouter);
 apiRouter.use("/ingredients", IngredientsRouter);
 apiRouter.use("/setting", settingRouter);
 apiRouter.use("/cart", cartRouter);
+apiRouter.use("/captain", captainRouter);
 app.use((req, res, next) => {
     res.status(404).json(resultObject(false, "Endpoint was not found"));
 });

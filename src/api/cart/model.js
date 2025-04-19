@@ -208,13 +208,25 @@ const createCaptainCallModel = async ({ tableId, restaurantId }) => {
 const getCaptainCallsModel = async (restaurantId) => {
     try {
         const callsQuery = `
-      SELECT cc.id, cc.table_id, cc.restaurant_id, cc.status, cc.created_at, cc.updated_at, 
-             t.number as table_number
-      FROM captain_calls cc
-      JOIN tables t ON cc.table_id = t.id
-      WHERE cc.restaurant_id = ? AND cc.status IN ('pending', 'in_progress')
-      ORDER BY cc.created_at ASC
-    `;
+            SELECT 
+                cc.id, 
+                cc.table_id, 
+                cc.restaurant_id, 
+                cc.status, 
+                cc.created_at, 
+                cc.updated_at, 
+                t.number as table_number
+            FROM 
+                captain_calls cc
+            JOIN 
+                tables t ON cc.table_id = t.id
+            WHERE 
+                cc.restaurant_id = ? 
+            AND 
+                cc.status IN ('pending', 'in_progress')
+            ORDER BY 
+                cc.created_at ASC
+        `;
 
         const calls = await executeQuery(callsQuery, [restaurantId]);
         return calls || [];
