@@ -48,11 +48,12 @@ const updateRoles = async (obj) => {
     try {
         const { id, name, updater_id } = obj;
 
-        const { sql, params } = buildUpdateQuery('roles', 
+        const { sql, params } = buildUpdateQuery(
+            "roles",
             {
                 name,
                 updated_at: new Date(),
-                updated_by: updater_id
+                updated_by: updater_id,
             },
             { id }
         );
@@ -71,23 +72,23 @@ const updateUserRoles = async (id, roles, updater_id) => {
 
         // Delete existing roles
         queries.push({
-            sql: 'DELETE FROM permissions WHERE user_id = ?',
-            params: [id]
+            sql: "DELETE FROM permissions WHERE user_id = ?",
+            params: [id],
         });
 
         // Insert new roles
         for (const role_id of roles) {
-            const roleQuery = buildInsertQuery('permissions', {
+            const roleQuery = buildInsertQuery("permissions", {
                 user_id: id,
                 role_id,
                 created_at: new Date(),
-                created_by: updater_id
+                created_by: updater_id,
             });
             queries.push(roleQuery);
         }
 
         // Execute transaction
-        await executeTransaction(queries, 'updateUserRoles');
+        await executeTransaction(queries, "updateUserRoles");
         return true;
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -96,12 +97,13 @@ const updateUserRoles = async (id, roles, updater_id) => {
 
 const deleteRoles = async (id, user_id) => {
     try {
-        const { sql, params } = buildUpdateQuery('roles',
+        const { sql, params } = buildUpdateQuery(
+            "roles",
             {
                 deleted_at: new Date(),
                 deleted_by: user_id,
                 updated_at: new Date(),
-                updated_by: user_id
+                updated_by: user_id,
             },
             { id }
         );

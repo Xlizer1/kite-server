@@ -1,5 +1,12 @@
-const { registerUserModel, updateUserModel, getUserByIdModel, deleteUserModel } = require("./model");
-const { userExists, getUser, verifyPassword, resultObject, createToken, verify } = require("../../helpers/common");
+const { registerUserModel, updateUserModel, getUsersModel, getUserByIdModel, deleteUserModel } = require("./model");
+const {
+    userExists,
+    getUser,
+    verifyPassword,
+    resultObject,
+    createToken,
+    verifyUserToken,
+} = require("../../helpers/common");
 const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
 const { ValidationError } = require("../../helpers/errors");
 
@@ -54,7 +61,7 @@ const loginUser = async (request, callBack) => {
 
 const getUserById = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;
@@ -99,7 +106,7 @@ const getUserById = async (request, callBack) => {
 
 const updateUser = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;
@@ -114,41 +121,30 @@ const updateUser = async (request, callBack) => {
                     username,
                     email,
                     phone,
-                    password,
-                    newPassword,
                     enabled,
                     roles,
                 } = request.body;
 
-                const user = await getUser(username);
+                const result = await updateUserModel({
+                    department_id,
+                    restaurant_id,
+                    parent_restaurant_id,
+                    name,
+                    username,
+                    email,
+                    phone,
+                    enabled,
+                    roles,
+                    id,
+                    updated_id: authorize?.id,
+                });
 
-                const isPasswordCorrect = await verifyPassword(request.body.password, user?.password);
-
-                if (isPasswordCorrect) {
-                    const result = await updateUserModel({
-                        department_id,
-                        restaurant_id,
-                        parent_restaurant_id,
-                        name,
-                        username,
-                        email,
-                        phone,
-                        newPassword: newPassword ? newPassword : password,
-                        enabled,
-                        roles,
-                        id,
-                        updated_id: authorize?.id,
-                    });
-
-                    if (result?.status === true) {
-                        callBack(resultObject(true, "User updated successfully."));
-                        return;
-                    } else {
-                        callBack(resultObject(false, "Failed to update user."));
-                        return;
-                    }
+                if (result?.status === true) {
+                    callBack(resultObject(true, "User updated successfully.", result.user));
+                    return;
                 } else {
-                    callBack(resultObject(false, "Wrong Password!"));
+                    callBack(resultObject(false, "Failed to update user."));
+                    return;
                 }
             } else {
                 callBack(resultObject(false, "You don't have the permission to update a user!"));
@@ -156,6 +152,7 @@ const updateUser = async (request, callBack) => {
             }
         }
     } catch (error) {
+        console.log(error);
         if (error instanceof ValidationError) {
             callBack(resultObject(false, error.message));
         } else {
@@ -166,44 +163,17 @@ const updateUser = async (request, callBack) => {
 
 const getUsers = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
-            return;
-        } else {
-            if (authorize?.roles?.includes(5)) {
-                const { id } = request.params;
-
-                if (!id || isNaN(id)) {
-                    throw new ValidationError("Invalid user ID provided.");
-                }
-
-                getUserByIdModel(id, (user) => {
-                    if (user && user?.id) {
-                        const object = {
-                            id: user?.id,
-                            name: user?.name,
-                            username: user?.username,
-                            email: user?.email,
-                            phone: user?.phone,
-                            role: {
-                                id: user?.role_id,
-                                name: user?.role_name,
-                            },
-                            restaurant: {
-                                id: user?.restaurant_id,
-                                id: user?.restaurant_name,
-                            },
-                        };
-                        callBack(resultObject(true, "success", object));
-                    } else {
-                        throw new ValidationError("User doesn't exist.");
-                    }
-                });
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        if (authorize?.roles?.includes(5)) {
+            const result = await getUsersModel();
+            if (Array.isArray(result)) {
+                callBack(resultObject(true, "success", result));
             } else {
-                callBack(resultObject(false, "You don't have the permission to see users!"));
-                return;
+                callBack(resultObject(false, "no users were found!"));
             }
+        } else {
+            callBack(resultObject(false, "You don't have the permission to see users!"));
+            return;
         }
     } catch (error) {
         if (error instanceof ValidationError) {
@@ -216,7 +186,7 @@ const getUsers = async (request, callBack) => {
 
 const registerUser = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;
@@ -280,7 +250,7 @@ const registerUser = async (request, callBack) => {
 
 const deleteUser = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;

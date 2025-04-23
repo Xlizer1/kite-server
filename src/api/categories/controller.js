@@ -1,5 +1,5 @@
 const { createRestaurantCategoryModel, getRestaurantCategoryModel, updateCategoryImageModel } = require("./model");
-const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
+const { resultObject, verifyUserToken, processTableEncryptedKey } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getRestaurantCategory = async (request, callBack) => {
@@ -35,31 +35,26 @@ const getRestaurantCategory = async (request, callBack) => {
 
 const createRestaurantCategory = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
-            return;
-        } else {
-            if (authorize?.roles?.includes(1)) {
-                const { name, restaurant_id } = request.body;
-                const image = request.file;
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        if (authorize?.roles?.includes(1)) {
+            const { name, restaurant_id } = request.body;
+            const image = request.file;
 
-                if (!name || !restaurant_id || !image) {
-                    callBack(resultObject(false, "Invalid category"));
-                    return;
-                }
-
-                const result = await createRestaurantCategoryModel(name, restaurant_id, image, authorize?.id);
-
-                if (result) {
-                    callBack(resultObject(true, "success"));
-                } else {
-                    callBack(resultObject(false, "Could not create category."));
-                }
-            } else {
-                callBack(resultObject(false, "You don't have the permission to view restaurants!"));
+            if (!name || !restaurant_id || !image) {
+                callBack(resultObject(false, "Invalid category"));
                 return;
             }
+
+            const result = await createRestaurantCategoryModel(name, restaurant_id, image, authorize?.id);
+
+            if (result) {
+                callBack(resultObject(true, "success"));
+            } else {
+                callBack(resultObject(false, "Could not create category."));
+            }
+        } else {
+            callBack(resultObject(false, "You don't have the permission to view restaurants!"));
+            return;
         }
     } catch (error) {
         callBack({
@@ -72,11 +67,7 @@ const createRestaurantCategory = async (request, callBack) => {
 
 const updateCategoryImage = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
-            return;
-        }
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.roles?.includes(1)) {
             callBack(resultObject(false, "You don't have permission to update category images!"));
@@ -84,7 +75,7 @@ const updateCategoryImage = async (request, callBack) => {
         }
 
         const { id } = request.params;
-        
+
         if (!request.file) {
             callBack(resultObject(false, "No image file provided"));
             return;
@@ -94,12 +85,12 @@ const updateCategoryImage = async (request, callBack) => {
         callBack(resultObject(true, "Category image updated successfully", result));
     } catch (error) {
         console.error("Error in updateCategoryImage:", error);
-        
+
         if (error instanceof CustomError) {
             callBack(resultObject(false, error.message));
             return;
         }
-        
+
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
@@ -107,5 +98,5 @@ const updateCategoryImage = async (request, callBack) => {
 module.exports = {
     createRestaurantCategoryController: createRestaurantCategory,
     getRestaurantCategoryController: getRestaurantCategory,
-    updateCategoryImageController: updateCategoryImage
+    updateCategoryImageController: updateCategoryImage,
 };

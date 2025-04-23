@@ -8,7 +8,7 @@ const {
 } = require("./model");
 const {
     resultObject,
-    verify,
+    verifyUserToken,
     processTableEncryptedKey,
     checkSubCategoryForRestaurant,
 } = require("../../helpers/common");
@@ -116,12 +116,7 @@ const getPaginatedItemsBySubCategoryID = async (request, callBack) => {
 
 const createItem = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
-            return;
-        }
-
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.roles?.includes(1)) {
             callBack(resultObject(false, "You don't have permission to create items!"));
             return;
@@ -178,11 +173,7 @@ const createItem = async (request, callBack) => {
 
 const updateItemImage = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
-            return;
-        }
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.roles?.includes(1)) {
             callBack(resultObject(false, "You don't have permission to update item images!"));

@@ -10,7 +10,7 @@ const {
     updateCaptainCallModel,
     createOrderFromCartModel,
 } = require("./model");
-const { resultObject, verify, processTableEncryptedKey } = require("../../helpers/common");
+const { resultObject, verifyUserToken, processTableEncryptedKey } = require("../../helpers/common");
 // const { v4: uuidv4 } = require("uuid");
 // const { executeQuery } = require("../../helpers/db");
 
@@ -311,7 +311,7 @@ const callCaptain = async (request, callBack) => {
 // Get captain calls (for staff)
 const getCaptainCalls = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.id || !authorize?.email) {
             return callBack(resultObject(false, "Token is invalid!"));
@@ -340,7 +340,7 @@ const getCaptainCalls = async (request, callBack) => {
 // Update captain call status (for staff)
 const updateCaptainCall = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.id || !authorize?.email) {
             return callBack(resultObject(false, "Token is invalid!"));
@@ -382,7 +382,7 @@ const updateCaptainCall = async (request, callBack) => {
 // Create order from cart (for staff)
 const createOrderFromCart = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.id || !authorize?.email) {
             return callBack(resultObject(false, "Token is invalid!"));

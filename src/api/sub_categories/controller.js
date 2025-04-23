@@ -1,5 +1,15 @@
-const { createSubRestaurantCategoryModel, getRestaurantSubCategoryModel, getRestaurantSubCategoryByIDModel, updateSubCategoryImageModel } = require("./model");
-const { resultObject, verify, checkCategoryForRestaurant, processTableEncryptedKey } = require("../../helpers/common");
+const {
+    createSubRestaurantCategoryModel,
+    getRestaurantSubCategoryModel,
+    getRestaurantSubCategoryByIDModel,
+    updateSubCategoryImageModel,
+} = require("./model");
+const {
+    resultObject,
+    verifyUserToken,
+    checkCategoryForRestaurant,
+    processTableEncryptedKey,
+} = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getSubCategories = async (request, callBack) => {
@@ -63,39 +73,34 @@ const getSubCategoriesByCategoryID = async (request, callBack) => {
 
 const createSubRestaurantCategory = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
-            return;
-        } else {
-            if (authorize?.roles?.includes(1)) {
-                const { name, category_id } = request.body;
-                const image = request.file;
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        if (authorize?.roles?.includes(1)) {
+            const { name, category_id } = request.body;
+            const image = request.file;
 
-                if (!name || !category_id || !image) {
-                    if (!image) {
-                        callBack(resultObject(false, "Image is required."));
-                        return;
-                    } else if (!name) {
-                        callBack(resultObject(false, "Name is required."));
-                        return;
-                    } else {
-                        callBack(resultObject(false, "Category ID is required."));
-                        return;
-                    }
-                }
-
-                const result = await createSubRestaurantCategoryModel(name, category_id, image, authorize?.id);
-
-                if (result) {
-                    callBack(resultObject(true, "success"));
+            if (!name || !category_id || !image) {
+                if (!image) {
+                    callBack(resultObject(false, "Image is required."));
+                    return;
+                } else if (!name) {
+                    callBack(resultObject(false, "Name is required."));
+                    return;
                 } else {
-                    callBack(resultObject(false, "Could not create category."));
+                    callBack(resultObject(false, "Category ID is required."));
+                    return;
                 }
-            } else {
-                callBack(resultObject(false, "You don't have the permission to view restaurants!"));
-                return;
             }
+
+            const result = await createSubRestaurantCategoryModel(name, category_id, image, authorize?.id);
+
+            if (result) {
+                callBack(resultObject(true, "success"));
+            } else {
+                callBack(resultObject(false, "Could not create category."));
+            }
+        } else {
+            callBack(resultObject(false, "You don't have the permission to view restaurants!"));
+            return;
         }
     } catch (error) {
         callBack({
@@ -108,7 +113,7 @@ const createSubRestaurantCategory = async (request, callBack) => {
 
 const updateSubCategoryImage = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;
@@ -120,7 +125,7 @@ const updateSubCategoryImage = async (request, callBack) => {
         }
 
         const { id } = request.params;
-        
+
         if (!request.file) {
             callBack(resultObject(false, "No image file provided"));
             return;
@@ -130,12 +135,12 @@ const updateSubCategoryImage = async (request, callBack) => {
         callBack(resultObject(true, "Sub-category image updated successfully", result));
     } catch (error) {
         console.error("Error in updateSubCategoryImage:", error);
-        
+
         if (error instanceof CustomError) {
             callBack(resultObject(false, error.message));
             return;
         }
-        
+
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
@@ -144,5 +149,5 @@ module.exports = {
     createSubRestaurantCategoryController: createSubRestaurantCategory,
     getSubCategoriesController: getSubCategories,
     getSubCategoriesByCategoryIDController: getSubCategoriesByCategoryID,
-    updateSubCategoryImageController: updateSubCategoryImage
+    updateSubCategoryImageController: updateSubCategoryImage,
 };

@@ -1,42 +1,37 @@
 const { getUserByIdModel } = require("./model");
-const { resultObject, verify } = require("../../helpers/common");
+const { resultObject, verifyUserToken } = require("../../helpers/common");
 const { ValidationError } = require("../../helpers/errors");
 
 const getUserById = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!", {}));
-            return;
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const { id } = request.params;
+
+        if (!id || isNaN(id)) {
+            throw new ValidationError("Invalid user ID provided.");
+        }
+
+        const user = await getUserByIdModel(id); // Assuming getUserByIdModel returns a Promise
+
+        if (user && user?.id) {
+            const object = {
+                id: user?.id,
+                name: user?.name,
+                username: user?.username,
+                email: user?.email,
+                phone: user?.phone,
+                role: {
+                    id: user?.role_id,
+                    name: user?.role_name,
+                },
+                restaurant: {
+                    id: user?.restaurant_id,
+                    name: user?.restaurant_name, // Corrected `id` to `name`
+                },
+            };
+            callBack(resultObject(true, "success", object));
         } else {
-            const { id } = request.params;
-
-            if (!id || isNaN(id)) {
-                throw new ValidationError("Invalid user ID provided.");
-            }
-
-            const user = await getUserByIdModel(id); // Assuming getUserByIdModel returns a Promise
-
-            if (user && user?.id) {
-                const object = {
-                    id: user?.id,
-                    name: user?.name,
-                    username: user?.username,
-                    email: user?.email,
-                    phone: user?.phone,
-                    role: {
-                        id: user?.role_id,
-                        name: user?.role_name,
-                    },
-                    restaurant: {
-                        id: user?.restaurant_id,
-                        name: user?.restaurant_name, // Corrected `id` to `name`
-                    },
-                };
-                callBack(resultObject(true, "success", object));
-            } else {
-                throw new ValidationError("User doesn't exist.");
-            }
+            throw new ValidationError("User doesn't exist.");
         }
     } catch (error) {
         if (error instanceof ValidationError) {

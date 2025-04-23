@@ -107,24 +107,36 @@ const userExists = async (username, email, phone) => {
     }
 };
 
-const verify = (token, callBack) => {
-    return new Promise((resolve, reject) => {
+const checkUserAuthorized = () => {
+    return async (req, res, next) => {
         try {
-            if (token) {
-                var data = jwt.verify(token, tokenKey).data;
-                if (data) {
-                    checkDataTokenValidation(data, (result) => {
-                        if (result) resolve(data);
-                        else resolve(null);
-                    });
-                } else resolve(data);
+            const authorize = await verifyUserToken(req?.headers["jwt"]);
+            if (!authorize?.id || !authorize?.email) {
+                res.json(resultObject(false, "Token is invalid!"));
+                return;
             } else {
-                callBack(resultObject(false, "Token must be provided!"));
-                resolve(false);
+                next();
             }
-        } catch (e) {
-            resolve(null);
-            console.log(e);
+        } catch (error) {
+            console.log(error);
+            res.json(resultObject(false, "Token is invalid!"));
+        }
+    };
+};
+
+const verifyUserToken = (token, callBack) => {
+    return new Promise((resolve, reject) => {
+        if (token) {
+            var data = jwt.verify(token, tokenKey);
+            if (data?.data) {
+                checkDataTokenValidation(data?.data, (result) => {
+                    if (result) resolve(data?.data);
+                    else resolve(null);
+                });
+            } else resolve(data?.data);
+        } else {
+            callBack(resultObject(false, "Token must be provided!"));
+            resolve(false);
         }
     });
 };
@@ -132,14 +144,15 @@ const verify = (token, callBack) => {
 async function checkDataTokenValidation(data, callback) {
     try {
         var sql = `
-      SELECT 
-        enabled 
-      FROM 
-        users 
-      WHERE 
-        id = ?
-      AND
-        deleted_at IS NULL`;
+            SELECT 
+                enabled 
+            FROM 
+                users 
+            WHERE 
+                id = ?
+            AND
+                deleted_at IS NULL
+        `;
         const result = await executeQuery(sql, [data.id], "checkDataTokenValidation");
         if (result && result.length > 0 && result[0].enabled) callback(true);
         else callback(false);
@@ -285,11 +298,12 @@ module.exports = {
     verifyPassword,
     resultObject,
     createToken,
-    verify,
+    verifyUserToken,
     encryptObject,
     decryptObject,
     processTableEncryptedKey,
     checkCategoryForRestaurant,
     checkSubCategoryForRestaurant,
     getRestaurantLocation,
+    checkUserAuthorized,
 };

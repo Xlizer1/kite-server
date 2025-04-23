@@ -1,5 +1,10 @@
 const { getRestaurantMainMenuModel, listAvailableRestaurantsModel } = require("./model");
-const { resultObject, verify, processTableEncryptedKey, getRestaurantLocation } = require("../../helpers/common");
+const {
+    resultObject,
+    verifyUserToken,
+    processTableEncryptedKey,
+    getRestaurantLocation,
+} = require("../../helpers/common");
 const { DatabaseError } = require("../../errors/customErrors");
 const { isWithinRange } = require("../../helpers/geoUtils");
 const { v4: uuidv4 } = require("uuid");

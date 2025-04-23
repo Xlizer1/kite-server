@@ -1,21 +1,18 @@
-const { 
-    getInventoryItemsModel, 
-    getInventoryItemsByRestaurantIDModel, 
+const {
+    getInventoryItemsModel,
+    getInventoryItemsByRestaurantIDModel,
     getLowStockItemsModel,
     createInventoryItemModel,
     updateInventoryItemModel,
     deleteInventoryItemModel,
-    getInventoryHistoryModel
+    getInventoryHistoryModel,
 } = require("./model");
-const { resultObject, verify } = require("../../helpers/common");
+const { resultObject, verifyUserToken } = require("../../helpers/common");
 const { CustomError } = require("../../middleware/errorHandler");
 
 const getInventoryItems = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
-        }
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory items!", 403);
@@ -23,24 +20,22 @@ const getInventoryItems = async (request, callBack) => {
 
         const result = await getInventoryItemsModel();
         callBack(resultObject(true, "Inventory items retrieved successfully", result));
-
     } catch (error) {
         console.error("Error in getInventoryItems:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
 const getInventoryItemsByRestaurantID = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
-        }
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory items!", 403);
@@ -53,24 +48,22 @@ const getInventoryItemsByRestaurantID = async (request, callBack) => {
 
         const result = await getInventoryItemsByRestaurantIDModel(restaurant_id);
         callBack(resultObject(true, "Inventory items retrieved successfully", result));
-
     } catch (error) {
         console.error("Error in getInventoryItemsByRestaurantID:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
 const getLowStockItems = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
-        }
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory items!", 403);
@@ -83,38 +76,27 @@ const getLowStockItems = async (request, callBack) => {
 
         const result = await getLowStockItemsModel(restaurant_id);
         callBack(resultObject(true, "Low stock items retrieved successfully", result));
-
     } catch (error) {
         console.error("Error in getLowStockItems:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
 const createInventoryItem = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
-        }
-
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to create inventory items!", 403);
         }
 
-        const { 
-            restaurant_id, 
-            name, 
-            quantity, 
-            unit_id, 
-            threshold, 
-            price, 
-            currency_id 
-        } = request.body;
+        const { restaurant_id, name, quantity, unit_id, threshold, price, currency_id } = request.body;
 
         // Validate required fields
         if (!restaurant_id || !name || !quantity || !unit_id || !price || !currency_id) {
@@ -142,29 +124,27 @@ const createInventoryItem = async (request, callBack) => {
             threshold: threshold || 0,
             price,
             currency_id,
-            created_by: authorize.id
+            created_by: authorize.id,
         };
 
         await createInventoryItemModel(itemData);
         callBack(resultObject(true, "Inventory item created successfully"));
-
     } catch (error) {
         console.error("Error in createInventoryItem:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
 const updateInventoryItem = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
-        }
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to update inventory items!", 403);
@@ -175,14 +155,7 @@ const updateInventoryItem = async (request, callBack) => {
             throw new CustomError("Item ID is required", 400);
         }
 
-        const { 
-            name, 
-            quantity, 
-            unit_id, 
-            threshold, 
-            price, 
-            currency_id 
-        } = request.body;
+        const { name, quantity, unit_id, threshold, price, currency_id } = request.body;
 
         // Validate required fields
         if (!name || !quantity || !unit_id || !price || !currency_id) {
@@ -209,30 +182,27 @@ const updateInventoryItem = async (request, callBack) => {
             threshold: threshold || 0,
             price,
             currency_id,
-            updated_by: authorize.id
+            updated_by: authorize.id,
         };
 
         await updateInventoryItemModel(id, itemData);
         callBack(resultObject(true, "Inventory item updated successfully"));
-
     } catch (error) {
         console.error("Error in updateInventoryItem:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
 const deleteInventoryItem = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
-        }
-
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to delete inventory items!", 403);
         }
@@ -244,25 +214,22 @@ const deleteInventoryItem = async (request, callBack) => {
 
         await deleteInventoryItemModel(id, authorize.id);
         callBack(resultObject(true, "Inventory item deleted successfully"));
-
     } catch (error) {
         console.error("Error in deleteInventoryItem:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
 const getInventoryHistory = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"]);
-        if (!authorize?.id || !authorize?.email) {
-            throw new CustomError("Token is invalid!", 401);
-        }
-
+        const authorize = await verifyUserToken(request?.headers["jwt"]);
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory history!", 403);
         }
@@ -274,15 +241,16 @@ const getInventoryHistory = async (request, callBack) => {
 
         const result = await getInventoryHistoryModel(id);
         callBack(resultObject(true, "Inventory history retrieved successfully", result));
-
     } catch (error) {
         console.error("Error in getInventoryHistory:", error);
-        callBack(resultObject(
-            false, 
-            error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
-            null,
-            error instanceof CustomError ? error.statusCode : 500
-        ));
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
     }
 };
 
@@ -293,5 +261,5 @@ module.exports = {
     createInventoryItemController: createInventoryItem,
     updateInventoryItemController: updateInventoryItem,
     deleteInventoryItemController: deleteInventoryItem,
-    getInventoryHistoryController: getInventoryHistory
+    getInventoryHistoryController: getInventoryHistory,
 };

@@ -1,14 +1,10 @@
 const { DatabaseError } = require("../../errors/customErrors");
-const { resultObject, verify } = require("../../helpers/common");
+const { resultObject, verifyUserToken } = require("../../helpers/common");
 const { getRestaurantTablesModel } = require("./model");
 
 const getRestaurantTablesController = async (request, callBack) => {
     try {
-        const authorize = await verify(request?.headers["jwt"], callBack);
-        if (!authorize?.id && !authorize?.email) {
-            callBack(false, "User is not authorized");
-            return;
-        }
+        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
         if (authorize?.roles?.includes(1)) {
             const result = await getRestaurantTablesModel(request);
             if (Array.isArray(result)) {
