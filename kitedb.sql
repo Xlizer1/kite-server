@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1:3306
--- Generation Time: Mar 09, 2025 at 11:08 AM
--- Server version: 9.1.0
--- PHP Version: 8.3.14
+-- Host: localhost
+-- Generation Time: May 20, 2025 at 07:06 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -27,12 +27,9 @@ SET time_zone = "+00:00";
 -- Table structure for table `attributes`
 --
 
-DROP TABLE IF EXISTS `attributes`;
-CREATE TABLE IF NOT EXISTS `attributes` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `item_id` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `item_id` (`item_id`)
+CREATE TABLE `attributes` (
+  `id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -41,20 +38,15 @@ CREATE TABLE IF NOT EXISTS `attributes` (
 -- Table structure for table `captain_calls`
 --
 
-DROP TABLE IF EXISTS `captain_calls`;
-CREATE TABLE IF NOT EXISTS `captain_calls` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `table_id` int NOT NULL,
-  `restaurant_id` int NOT NULL,
+CREATE TABLE `captain_calls` (
+  `id` int(11) NOT NULL,
+  `table_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
   `status` enum('pending','in_progress','completed','cancelled') NOT NULL DEFAULT 'pending',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `completed_at` timestamp NULL DEFAULT NULL,
-  `completed_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `table_id` (`table_id`),
-  KEY `restaurant_id` (`restaurant_id`),
-  KEY `completed_by` (`completed_by`)
+  `completed_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -63,18 +55,13 @@ CREATE TABLE IF NOT EXISTS `captain_calls` (
 -- Table structure for table `carts`
 --
 
-DROP TABLE IF EXISTS `carts`;
-CREATE TABLE IF NOT EXISTS `carts` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `table_id` int NOT NULL,
-  `restaurant_id` int NOT NULL,
+CREATE TABLE `carts` (
+  `id` int(11) NOT NULL,
+  `table_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
   `session_id` varchar(255) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `session_id` (`session_id`),
-  KEY `table_id` (`table_id`),
-  KEY `restaurant_id` (`restaurant_id`)
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -83,18 +70,14 @@ CREATE TABLE IF NOT EXISTS `carts` (
 -- Table structure for table `cart_items`
 --
 
-DROP TABLE IF EXISTS `cart_items`;
-CREATE TABLE IF NOT EXISTS `cart_items` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `cart_id` int NOT NULL,
-  `item_id` int NOT NULL,
-  `quantity` int NOT NULL DEFAULT '1',
-  `special_instructions` text,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `cart_id` (`cart_id`),
-  KEY `item_id` (`item_id`)
+CREATE TABLE `cart_items` (
+  `id` int(11) NOT NULL,
+  `cart_id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 1,
+  `special_instructions` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -103,20 +86,17 @@ CREATE TABLE IF NOT EXISTS `cart_items` (
 -- Table structure for table `categories`
 --
 
-DROP TABLE IF EXISTS `categories`;
-CREATE TABLE IF NOT EXISTS `categories` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `restaurant_id` int NOT NULL,
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `categories`
@@ -140,22 +120,17 @@ INSERT INTO `categories` (`id`, `restaurant_id`, `name`, `created_at`, `created_
 -- Table structure for table `categories_image_map`
 --
 
-DROP TABLE IF EXISTS `categories_image_map`;
-CREATE TABLE IF NOT EXISTS `categories_image_map` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `image_id` int NOT NULL,
-  `category_id` int NOT NULL,
-  `is_primary` tinyint(1) DEFAULT '0',
-  `created_by` int NOT NULL,
+CREATE TABLE `categories_image_map` (
+  `id` int(11) NOT NULL,
+  `image_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `image_id` (`image_id`),
-  KEY `category_id` (`category_id`),
-  KEY `created_by` (`created_by`)
+  `deleted_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -164,13 +139,11 @@ CREATE TABLE IF NOT EXISTS `categories_image_map` (
 -- Table structure for table `currencies`
 --
 
-DROP TABLE IF EXISTS `currencies`;
-CREATE TABLE IF NOT EXISTS `currencies` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `currencies` (
+  `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `code` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `code` varchar(25) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `currencies`
@@ -184,15 +157,46 @@ INSERT INTO `currencies` (`id`, `name`, `code`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `customer_feedback`
+--
+
+CREATE TABLE `customer_feedback` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `rating` int(11) NOT NULL COMMENT 'Scale of 1-5',
+  `comments` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_sessions`
+--
+
+CREATE TABLE `customer_sessions` (
+  `id` int(11) NOT NULL,
+  `session_id` varchar(255) NOT NULL,
+  `table_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `device_info` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`device_info`)),
+  `ip_address` varchar(45) DEFAULT NULL,
+  `language_preference` varchar(10) DEFAULT 'en',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `last_activity` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `expires_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `departments`
 --
 
-DROP TABLE IF EXISTS `departments`;
-CREATE TABLE IF NOT EXISTS `departments` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `departments` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `departments`
@@ -211,21 +215,43 @@ INSERT INTO `departments` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `discounts`
+--
+
+CREATE TABLE `discounts` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `discount_type` enum('percentage','fixed') NOT NULL,
+  `discount_value` decimal(10,2) NOT NULL,
+  `applies_to` enum('order','menu_item','category') NOT NULL,
+  `target_id` int(11) DEFAULT NULL COMMENT 'ID of the item/category if applies_to is not order',
+  `min_order_value` decimal(10,2) DEFAULT NULL,
+  `active` tinyint(1) DEFAULT 1,
+  `starts_at` datetime DEFAULT NULL,
+  `ends_at` datetime DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `images`
 --
 
-DROP TABLE IF EXISTS `images`;
-CREATE TABLE IF NOT EXISTS `images` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `images` (
+  `id` int(11) NOT NULL,
   `url` text NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `created_by` (`created_by`)
+  `deleted_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -234,20 +260,14 @@ CREATE TABLE IF NOT EXISTS `images` (
 -- Table structure for table `ingredients`
 --
 
-DROP TABLE IF EXISTS `ingredients`;
-CREATE TABLE IF NOT EXISTS `ingredients` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `restaurant_id` int NOT NULL,
-  `menu_item_id` int NOT NULL,
-  `inv_item_id` int NOT NULL,
-  `unit_id` int NOT NULL,
-  `quantity` float DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `menu_item_id` (`menu_item_id`),
-  KEY `inv_item_id` (`inv_item_id`),
-  KEY `unit_id` (`unit_id`),
-  KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `ingredients` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `menu_item_id` int(11) NOT NULL,
+  `inv_item_id` int(11) NOT NULL,
+  `unit_id` int(11) NOT NULL,
+  `quantity` float DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `ingredients`
@@ -265,27 +285,22 @@ INSERT INTO `ingredients` (`id`, `restaurant_id`, `menu_item_id`, `inv_item_id`,
 -- Table structure for table `inventory`
 --
 
-DROP TABLE IF EXISTS `inventory`;
-CREATE TABLE IF NOT EXISTS `inventory` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `restaurant_id` int NOT NULL,
-  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+CREATE TABLE `inventory` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
   `quantity` float DEFAULT NULL,
-  `unit_id` int DEFAULT NULL,
-  `threshold` int DEFAULT NULL,
+  `unit_id` int(11) DEFAULT NULL,
+  `threshold` int(11) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `currency_id` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `currency_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `restaurant_id` (`restaurant_id`),
-  KEY `currency_id` (`currency_id`),
-  KEY `unit_id` (`unit_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `inventory`
@@ -303,14 +318,11 @@ INSERT INTO `inventory` (`id`, `restaurant_id`, `name`, `quantity`, `unit_id`, `
 -- Table structure for table `inventory_items`
 --
 
-DROP TABLE IF EXISTS `inventory_items`;
-CREATE TABLE IF NOT EXISTS `inventory_items` (
-  `item_id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `inventory_items` (
+  `item_id` int(11) NOT NULL,
   `item_name` varchar(100) NOT NULL,
-  `preferred_unit_id` int DEFAULT NULL,
-  PRIMARY KEY (`item_id`),
-  KEY `preferred_unit_id` (`preferred_unit_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `preferred_unit_id` int(11) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `inventory_items`
@@ -329,17 +341,44 @@ INSERT INTO `inventory_items` (`item_id`, `item_name`, `preferred_unit_id`) VALU
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `inventory_notifications`
+--
+
+CREATE TABLE `inventory_notifications` (
+  `id` int(11) NOT NULL,
+  `inventory_id` int(11) NOT NULL,
+  `notification_type` enum('low_stock','expiry','reorder') NOT NULL,
+  `message` text NOT NULL,
+  `is_resolved` tinyint(1) DEFAULT 0,
+  `resolved_by` int(11) DEFAULT NULL,
+  `resolved_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `invoices`
 --
 
-DROP TABLE IF EXISTS `invoices`;
-CREATE TABLE IF NOT EXISTS `invoices` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `order_id` int NOT NULL,
+CREATE TABLE `invoices` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
   `total_amount` decimal(10,2) DEFAULT NULL,
-  `issued_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `order_id` (`order_id`)
+  `issued_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `invoice_discounts`
+--
+
+CREATE TABLE `invoice_discounts` (
+  `id` int(11) NOT NULL,
+  `invoice_id` int(11) NOT NULL,
+  `discount_id` int(11) NOT NULL,
+  `discount_amount` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -348,17 +387,13 @@ CREATE TABLE IF NOT EXISTS `invoices` (
 -- Table structure for table `invoice_items`
 --
 
-DROP TABLE IF EXISTS `invoice_items`;
-CREATE TABLE IF NOT EXISTS `invoice_items` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `invoice_id` int NOT NULL,
-  `item_id` int NOT NULL,
-  `quantity` int DEFAULT NULL,
+CREATE TABLE `invoice_items` (
+  `id` int(11) NOT NULL,
+  `invoice_id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `quantity` int(11) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `total` decimal(10,2) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `invoice_id` (`invoice_id`),
-  KEY `item_id` (`item_id`)
+  `total` decimal(10,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -367,42 +402,44 @@ CREATE TABLE IF NOT EXISTS `invoice_items` (
 -- Table structure for table `items`
 --
 
-DROP TABLE IF EXISTS `items`;
-CREATE TABLE IF NOT EXISTS `items` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `sub_category_id` int NOT NULL,
-  `restaurant_id` int NOT NULL,
+CREATE TABLE `items` (
+  `id` int(11) NOT NULL,
+  `sub_category_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
   `eng_name` varchar(255) DEFAULT NULL,
-  `description` text,
-  `eng_description` text,
+  `description` text DEFAULT NULL,
+  `eng_description` text DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `currency_id` int NOT NULL,
-  `is_shisha` tinyint(1) DEFAULT '0',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `currency_id` int(11) NOT NULL,
+  `is_shisha` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `sub_category_id` (`sub_category_id`),
-  KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL,
+  `preparation_time` int(11) DEFAULT NULL COMMENT 'Estimated preparation time in minutes',
+  `allergens` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'List of allergens in the item' CHECK (json_valid(`allergens`)),
+  `calories` int(11) DEFAULT NULL,
+  `is_vegetarian` tinyint(1) DEFAULT 0,
+  `is_vegan` tinyint(1) DEFAULT 0,
+  `is_gluten_free` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `items`
 --
 
-INSERT INTO `items` (`id`, `sub_category_id`, `restaurant_id`, `name`, `eng_name`, `description`, `eng_description`, `price`, `currency_id`, `is_shisha`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(1, 1, 1, 'Caesar Salad', 'Caesar Salad', 'Fresh romaine lettuce with classic caesar dressing', 'Fresh romaine lettuce with classic caesar dressing', 12.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL),
-(2, 1, 1, 'Greek Salad', 'Greek Salad', 'Mixed greens with feta and olives', 'Mixed greens with feta and olives', 11.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL),
-(3, 3, 1, 'Filet Mignon', 'Filet Mignon', 'Premium cut beef tenderloin', 'Premium cut beef tenderloin', 45.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL),
-(4, 3, 1, 'Ribeye Steak', 'Ribeye Steak', 'Marbled ribeye with herb butter', 'Marbled ribeye with herb butter', 39.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL),
-(5, 7, 2, 'Espresso', 'Espresso', 'Single shot of premium espresso', 'Single shot of premium espresso', 3.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL),
-(6, 7, 2, 'Cappuccino', 'Cappuccino', 'Espresso with steamed milk and foam', 'Espresso with steamed milk and foam', 4.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL),
-(7, 11, 3, 'Butter Chicken', 'Butter Chicken', 'Creamy tomato based curry with tender chicken', 'Creamy tomato based curry with tender chicken', 16.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL),
-(8, 11, 3, 'Paneer Tikka Masala', 'Paneer Tikka Masala', 'Cottage cheese in spiced tomato gravy', 'Cottage cheese in spiced tomato gravy', 14.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL);
+INSERT INTO `items` (`id`, `sub_category_id`, `restaurant_id`, `name`, `eng_name`, `description`, `eng_description`, `price`, `currency_id`, `is_shisha`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`, `preparation_time`, `allergens`, `calories`, `is_vegetarian`, `is_vegan`, `is_gluten_free`) VALUES
+(1, 1, 1, 'Caesar Salad', 'Caesar Salad', 'Fresh romaine lettuce with classic caesar dressing', 'Fresh romaine lettuce with classic caesar dressing', 12.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(2, 1, 1, 'Greek Salad', 'Greek Salad', 'Mixed greens with feta and olives', 'Mixed greens with feta and olives', 11.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(3, 3, 1, 'Filet Mignon', 'Filet Mignon', 'Premium cut beef tenderloin', 'Premium cut beef tenderloin', 45.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(4, 3, 1, 'Ribeye Steak', 'Ribeye Steak', 'Marbled ribeye with herb butter', 'Marbled ribeye with herb butter', 39.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(5, 7, 2, 'Espresso', 'Espresso', 'Single shot of premium espresso', 'Single shot of premium espresso', 3.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(6, 7, 2, 'Cappuccino', 'Cappuccino', 'Espresso with steamed milk and foam', 'Espresso with steamed milk and foam', 4.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(7, 11, 3, 'Butter Chicken', 'Butter Chicken', 'Creamy tomato based curry with tender chicken', 'Creamy tomato based curry with tender chicken', 16.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0),
+(8, 11, 3, 'Paneer Tikka Masala', 'Paneer Tikka Masala', 'Cottage cheese in spiced tomato gravy', 'Cottage cheese in spiced tomato gravy', 14.99, 1, 0, '2025-01-12 17:19:31', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -410,22 +447,33 @@ INSERT INTO `items` (`id`, `sub_category_id`, `restaurant_id`, `name`, `eng_name
 -- Table structure for table `items_image_map`
 --
 
-DROP TABLE IF EXISTS `items_image_map`;
-CREATE TABLE IF NOT EXISTS `items_image_map` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `image_id` int NOT NULL,
-  `item_id` int NOT NULL,
-  `is_primary` tinyint(1) DEFAULT '0',
-  `created_by` int NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE `items_image_map` (
+  `id` int(11) NOT NULL,
+  `image_id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `image_id` (`image_id`),
-  KEY `item_id` (`item_id`),
-  KEY `created_by` (`created_by`)
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `kitchen_assignments`
+--
+
+CREATE TABLE `kitchen_assignments` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `assigned_to` int(11) NOT NULL,
+  `assigned_by` int(11) NOT NULL,
+  `assigned_at` timestamp NULL DEFAULT current_timestamp(),
+  `estimated_completion` timestamp NULL DEFAULT NULL,
+  `completed_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -434,18 +482,14 @@ CREATE TABLE IF NOT EXISTS `items_image_map` (
 -- Table structure for table `logs`
 --
 
-DROP TABLE IF EXISTS `logs`;
-CREATE TABLE IF NOT EXISTS `logs` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `logs` (
+  `id` int(11) NOT NULL,
   `action_type` varchar(255) DEFAULT NULL,
-  `user_id` int NOT NULL,
-  `restaurant_id` int NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
   `table_name` varchar(255) DEFAULT NULL,
-  `record_id` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  KEY `restaurant_id` (`restaurant_id`)
+  `record_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -454,12 +498,10 @@ CREATE TABLE IF NOT EXISTS `logs` (
 -- Table structure for table `movement_types`
 --
 
-DROP TABLE IF EXISTS `movement_types`;
-CREATE TABLE IF NOT EXISTS `movement_types` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `movement_types` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `movement_types`
@@ -477,15 +519,12 @@ INSERT INTO `movement_types` (`id`, `name`) VALUES
 -- Table structure for table `notifications`
 --
 
-DROP TABLE IF EXISTS `notifications`;
-CREATE TABLE IF NOT EXISTS `notifications` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `content` text,
-  `is_read` tinyint(1) DEFAULT '0',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`)
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `content` text DEFAULT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -494,22 +533,23 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 -- Table structure for table `orders`
 --
 
-DROP TABLE IF EXISTS `orders`;
-CREATE TABLE IF NOT EXISTS `orders` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `table_id` int NOT NULL,
-  `restaurant_id` int NOT NULL,
-  `status_id` int NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `updated_by` int DEFAULT NULL,
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL,
+  `table_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `status_id` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `table_id` (`table_id`),
-  KEY `branch_id` (`restaurant_id`),
-  KEY `status_id` (`status_id`)
+  `deleted_by` int(11) DEFAULT NULL,
+  `estimated_ready_time` timestamp NULL DEFAULT NULL,
+  `actual_ready_time` timestamp NULL DEFAULT NULL,
+  `customer_session_id` varchar(255) DEFAULT NULL,
+  `special_request` text DEFAULT NULL,
+  `allergy_info` text DEFAULT NULL,
+  `preparation_notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -518,14 +558,50 @@ CREATE TABLE IF NOT EXISTS `orders` (
 -- Table structure for table `order_items`
 --
 
-DROP TABLE IF EXISTS `order_items`;
-CREATE TABLE IF NOT EXISTS `order_items` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `order_id` int NOT NULL,
-  `item_id` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `order_id` (`order_id`),
-  KEY `item_id` (`item_id`)
+CREATE TABLE `order_items` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_statuses`
+--
+
+CREATE TABLE `order_statuses` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `order_statuses`
+--
+
+INSERT INTO `order_statuses` (`id`, `name`, `description`) VALUES
+(1, 'Pending', 'Order created by customer'),
+(2, 'Captain Approved', 'Order verified by captain'),
+(3, 'In Kitchen', 'Order being prepared in kitchen'),
+(4, 'Ready', 'Order ready for pickup/service'),
+(5, 'Served', 'Order delivered to customer'),
+(6, 'Cancelled', 'Order was cancelled'),
+(7, 'Completed', 'Order completed and paid for');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_status_history`
+--
+
+CREATE TABLE `order_status_history` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `status_id` int(11) NOT NULL,
+  `changed_by` int(11) NOT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -534,22 +610,18 @@ CREATE TABLE IF NOT EXISTS `order_items` (
 -- Table structure for table `payments`
 --
 
-DROP TABLE IF EXISTS `payments`;
-CREATE TABLE IF NOT EXISTS `payments` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `invoice_id` int NOT NULL,
-  `payment_status_id` int NOT NULL,
+CREATE TABLE `payments` (
+  `id` int(11) NOT NULL,
+  `invoice_id` int(11) NOT NULL,
+  `payment_status_id` int(11) NOT NULL,
   `payment_method` varchar(255) DEFAULT NULL,
   `amount` decimal(10,2) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `invoice_id` (`invoice_id`),
-  KEY `payment_status_id` (`payment_status_id`)
+  `deleted_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -558,12 +630,10 @@ CREATE TABLE IF NOT EXISTS `payments` (
 -- Table structure for table `payment_methods`
 --
 
-DROP TABLE IF EXISTS `payment_methods`;
-CREATE TABLE IF NOT EXISTS `payment_methods` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `payment_methods` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `payment_methods`
@@ -581,12 +651,10 @@ INSERT INTO `payment_methods` (`id`, `name`) VALUES
 -- Table structure for table `payment_statuses`
 --
 
-DROP TABLE IF EXISTS `payment_statuses`;
-CREATE TABLE IF NOT EXISTS `payment_statuses` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `payment_statuses` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `payment_statuses`
@@ -604,15 +672,11 @@ INSERT INTO `payment_statuses` (`id`, `name`) VALUES
 -- Table structure for table `permissions`
 --
 
-DROP TABLE IF EXISTS `permissions`;
-CREATE TABLE IF NOT EXISTS `permissions` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `role_id` int NOT NULL,
-  `user_id` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `role_id` (`role_id`),
-  KEY `user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `permissions` (
+  `id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `permissions`
@@ -637,23 +701,58 @@ INSERT INTO `permissions` (`id`, `role_id`, `user_id`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `purchase_orders`
+--
+
+CREATE TABLE `purchase_orders` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `supplier_id` int(11) NOT NULL,
+  `order_number` varchar(255) NOT NULL,
+  `order_date` date NOT NULL,
+  `expected_delivery` date DEFAULT NULL,
+  `status` enum('draft','ordered','partial','delivered','cancelled') NOT NULL DEFAULT 'draft',
+  `notes` text DEFAULT NULL,
+  `total_amount` decimal(10,2) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `purchase_order_items`
+--
+
+CREATE TABLE `purchase_order_items` (
+  `id` int(11) NOT NULL,
+  `purchase_order_id` int(11) NOT NULL,
+  `inventory_id` int(11) NOT NULL,
+  `quantity` float NOT NULL,
+  `unit_price` decimal(10,2) NOT NULL,
+  `received_quantity` float DEFAULT NULL,
+  `received_date` date DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `qr_codes`
 --
 
-DROP TABLE IF EXISTS `qr_codes`;
-CREATE TABLE IF NOT EXISTS `qr_codes` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `table_id` int DEFAULT NULL,
-  `qr_code` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+CREATE TABLE `qr_codes` (
+  `id` int(11) NOT NULL,
+  `table_id` int(11) DEFAULT NULL,
+  `qr_code` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `table_id` (`table_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `qr_codes`
@@ -665,27 +764,41 @@ INSERT INTO `qr_codes` (`id`, `table_id`, `qr_code`, `created_at`, `created_by`,
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `receipts`
+--
+
+CREATE TABLE `receipts` (
+  `id` int(11) NOT NULL,
+  `invoice_id` int(11) NOT NULL,
+  `receipt_number` varchar(255) NOT NULL,
+  `total_amount` decimal(10,2) NOT NULL,
+  `payment_id` int(11) NOT NULL,
+  `generated_at` timestamp NULL DEFAULT current_timestamp(),
+  `generated_by` int(11) NOT NULL,
+  `receipt_pdf` text DEFAULT NULL COMMENT 'Path to PDF file'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `restaurants`
 --
 
-DROP TABLE IF EXISTS `restaurants`;
-CREATE TABLE IF NOT EXISTS `restaurants` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `parent_rest_id` int DEFAULT NULL,
+CREATE TABLE `restaurants` (
+  `id` int(11) NOT NULL,
+  `parent_rest_id` int(11) DEFAULT NULL,
   `name` varchar(255) NOT NULL,
   `tagline` varchar(255) DEFAULT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `lat` double DEFAULT NULL,
   `long` double DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `parent_rest_id` (`parent_rest_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `restaurants`
@@ -702,22 +815,17 @@ INSERT INTO `restaurants` (`id`, `parent_rest_id`, `name`, `tagline`, `descripti
 -- Table structure for table `restaurants_image_map`
 --
 
-DROP TABLE IF EXISTS `restaurants_image_map`;
-CREATE TABLE IF NOT EXISTS `restaurants_image_map` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `image_id` int NOT NULL,
-  `restaurant_id` int NOT NULL,
-  `is_primary` tinyint(1) DEFAULT '0',
-  `created_by` int NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE `restaurants_image_map` (
+  `id` int(11) NOT NULL,
+  `image_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `image_id` (`image_id`),
-  KEY `restaurant_id` (`restaurant_id`),
-  KEY `created_by` (`created_by`)
+  `deleted_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -726,15 +834,12 @@ CREATE TABLE IF NOT EXISTS `restaurants_image_map` (
 -- Table structure for table `restaurant_settings`
 --
 
-DROP TABLE IF EXISTS `restaurant_settings`;
-CREATE TABLE IF NOT EXISTS `restaurant_settings` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `restaurant_id` int NOT NULL,
+CREATE TABLE `restaurant_settings` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
   `primary_color` varchar(255) DEFAULT NULL,
-  `secondary_color` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `secondary_color` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `restaurant_settings`
@@ -748,15 +853,32 @@ INSERT INTO `restaurant_settings` (`id`, `restaurant_id`, `primary_color`, `seco
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `restaurant_subscriptions`
+--
+
+CREATE TABLE `restaurant_subscriptions` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `subscription_plan_id` int(11) NOT NULL,
+  `starts_at` date NOT NULL,
+  `expires_at` date DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `payment_status` enum('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `last_payment_date` date DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `roles`
 --
 
-DROP TABLE IF EXISTS `roles`;
-CREATE TABLE IF NOT EXISTS `roles` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `roles`
@@ -780,22 +902,58 @@ INSERT INTO `roles` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `sales_summaries`
+--
+
+CREATE TABLE `sales_summaries` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `date` date NOT NULL,
+  `total_orders` int(11) NOT NULL DEFAULT 0,
+  `total_sales` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `total_discounts` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `total_taxes` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `net_sales` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `average_order_value` decimal(10,2) DEFAULT NULL,
+  `popular_category_id` int(11) DEFAULT NULL,
+  `popular_item_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `sessions`
 --
 
-DROP TABLE IF EXISTS `sessions`;
-CREATE TABLE IF NOT EXISTS `sessions` (
+CREATE TABLE `sessions` (
   `id` varchar(255) NOT NULL,
-  `user_id` int DEFAULT NULL,
-  `data` JSON DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`data`)),
   `ip_address` varchar(45) DEFAULT NULL,
-  `user_agent` text,
-  `last_activity` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `user_agent` text DEFAULT NULL,
+  `last_activity` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `expires_at` timestamp NULL DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  KEY `expires_at` (`expires_at`)
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `staff_performance`
+--
+
+CREATE TABLE `staff_performance` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `date` date NOT NULL,
+  `orders_processed` int(11) DEFAULT 0,
+  `average_processing_time` int(11) DEFAULT NULL COMMENT 'in seconds',
+  `customer_rating` decimal(3,2) DEFAULT NULL COMMENT 'average rating 1-5',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -804,23 +962,37 @@ CREATE TABLE IF NOT EXISTS `sessions` (
 -- Table structure for table `stock_movements`
 --
 
-DROP TABLE IF EXISTS `stock_movements`;
-CREATE TABLE IF NOT EXISTS `stock_movements` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `item_id` int NOT NULL,
-  `movement_type_id` int NOT NULL,
-  `reference_id` int DEFAULT NULL,
+CREATE TABLE `stock_movements` (
+  `id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `movement_type_id` int(11) NOT NULL,
+  `reference_id` int(11) DEFAULT NULL,
   `quantity` float DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  `notes` text,
-  PRIMARY KEY (`id`),
-  KEY `ingredient_id` (`item_id`),
-  KEY `movement_type_id` (`movement_type_id`)
+  `deleted_by` int(11) DEFAULT NULL,
+  `notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `subscription_plans`
+--
+
+CREATE TABLE `subscription_plans` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `billing_cycle` enum('monthly','quarterly','annually') NOT NULL,
+  `features` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`features`)),
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -829,22 +1001,18 @@ CREATE TABLE IF NOT EXISTS `stock_movements` (
 -- Table structure for table `sub_categories`
 --
 
-DROP TABLE IF EXISTS `sub_categories`;
-CREATE TABLE IF NOT EXISTS `sub_categories` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `restaurant_id` int DEFAULT NULL,
-  `category_id` int NOT NULL,
+CREATE TABLE `sub_categories` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) DEFAULT NULL,
+  `category_id` int(11) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `category_id` (`category_id`),
-  KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `sub_categories`
@@ -872,22 +1040,17 @@ INSERT INTO `sub_categories` (`id`, `restaurant_id`, `category_id`, `name`, `cre
 -- Table structure for table `sub_categories_image_map`
 --
 
-DROP TABLE IF EXISTS `sub_categories_image_map`;
-CREATE TABLE IF NOT EXISTS `sub_categories_image_map` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `image_id` int NOT NULL,
-  `sub_category_id` int NOT NULL,
-  `is_primary` tinyint(1) DEFAULT '0',
-  `created_by` int NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE `sub_categories_image_map` (
+  `id` int(11) NOT NULL,
+  `image_id` int(11) NOT NULL,
+  `sub_category_id` int(11) NOT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `image_id` (`image_id`),
-  KEY `sub_category_id` (`sub_category_id`),
-  KEY `created_by` (`created_by`)
+  `deleted_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -896,11 +1059,17 @@ CREATE TABLE IF NOT EXISTS `sub_categories_image_map` (
 -- Table structure for table `suppliers`
 --
 
-DROP TABLE IF EXISTS `suppliers`;
-CREATE TABLE IF NOT EXISTS `suppliers` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `suppliers` (
+  `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
+  `contact_person` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `phone` varchar(255) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -909,21 +1078,18 @@ CREATE TABLE IF NOT EXISTS `suppliers` (
 -- Table structure for table `tables`
 --
 
-DROP TABLE IF EXISTS `tables`;
-CREATE TABLE IF NOT EXISTS `tables` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `restaurant_id` int NOT NULL,
-  `number` int DEFAULT NULL,
-  `status` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `created_by` int NOT NULL,
+CREATE TABLE `tables` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `number` int(11) DEFAULT NULL,
+  `status` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `restaurant_id` (`restaurant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `tables`
@@ -938,12 +1104,10 @@ INSERT INTO `tables` (`id`, `restaurant_id`, `number`, `status`, `created_at`, `
 -- Table structure for table `table_order_statuses`
 --
 
-DROP TABLE IF EXISTS `table_order_statuses`;
-CREATE TABLE IF NOT EXISTS `table_order_statuses` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `table_order_statuses` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `table_order_statuses`
@@ -961,12 +1125,10 @@ INSERT INTO `table_order_statuses` (`id`, `name`) VALUES
 -- Table structure for table `table_statuses`
 --
 
-DROP TABLE IF EXISTS `table_statuses`;
-CREATE TABLE IF NOT EXISTS `table_statuses` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `table_statuses` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `table_statuses`
@@ -984,13 +1146,11 @@ INSERT INTO `table_statuses` (`id`, `name`) VALUES
 -- Table structure for table `units`
 --
 
-DROP TABLE IF EXISTS `units`;
-CREATE TABLE IF NOT EXISTS `units` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `units` (
+  `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `unit_symbol` varchar(25) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `unit_symbol` varchar(25) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `units`
@@ -1007,27 +1167,23 @@ INSERT INTO `units` (`id`, `name`, `unit_symbol`) VALUES
 -- Table structure for table `users`
 --
 
-DROP TABLE IF EXISTS `users`;
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `department_id` int NOT NULL,
-  `restaurant_id` int DEFAULT NULL,
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `department_id` int(11) NOT NULL,
+  `restaurant_id` int(11) DEFAULT NULL,
   `name` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `phone` varchar(50) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
-  `enabled` tinyint NOT NULL DEFAULT '1',
-  `created_at` timestamp NOT NULL,
-  `created_by` int NOT NULL,
+  `enabled` tinyint(4) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `restaurant_id` (`restaurant_id`),
-  KEY `users_ibfk_1` (`department_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `deleted_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
@@ -1042,25 +1198,790 @@ INSERT INTO `users` (`id`, `department_id`, `restaurant_id`, `name`, `username`,
 -- Table structure for table `users_image_map`
 --
 
-DROP TABLE IF EXISTS `users_image_map`;
-CREATE TABLE IF NOT EXISTS `users_image_map` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `image_id` int NOT NULL,
-  `user_id` int NOT NULL,
-  `is_primary` tinyint(1) DEFAULT '0',
-  `created_by` int NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE `users_image_map` (
+  `id` int(11) NOT NULL,
+  `image_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT NULL,
-  `updated_by` int DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `image_id` (`image_id`),
-  KEY `user_id` (`user_id`),
-  KEY `created_by` (`created_by`),
-  KEY `fk_users_updated_by` (`updated_by`),
-  KEY `fk_users_deleted_by` (`deleted_by`)
+  `deleted_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `attributes`
+--
+ALTER TABLE `attributes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `item_id` (`item_id`);
+
+--
+-- Indexes for table `captain_calls`
+--
+ALTER TABLE `captain_calls`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `table_id` (`table_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`),
+  ADD KEY `completed_by` (`completed_by`);
+
+--
+-- Indexes for table `carts`
+--
+ALTER TABLE `carts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `session_id` (`session_id`),
+  ADD KEY `table_id` (`table_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `cart_items`
+--
+ALTER TABLE `cart_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `cart_id` (`cart_id`),
+  ADD KEY `item_id` (`item_id`);
+
+--
+-- Indexes for table `categories`
+--
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `categories_image_map`
+--
+ALTER TABLE `categories_image_map`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `image_id` (`image_id`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `currencies`
+--
+ALTER TABLE `currencies`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `customer_feedback`
+--
+ALTER TABLE `customer_feedback`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`);
+
+--
+-- Indexes for table `customer_sessions`
+--
+ALTER TABLE `customer_sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `session_id` (`session_id`),
+  ADD KEY `table_id` (`table_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `departments`
+--
+ALTER TABLE `departments`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `discounts`
+--
+ALTER TABLE `discounts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `images`
+--
+ALTER TABLE `images`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `ingredients`
+--
+ALTER TABLE `ingredients`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `menu_item_id` (`menu_item_id`),
+  ADD KEY `inv_item_id` (`inv_item_id`),
+  ADD KEY `unit_id` (`unit_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `inventory`
+--
+ALTER TABLE `inventory`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`),
+  ADD KEY `currency_id` (`currency_id`),
+  ADD KEY `unit_id` (`unit_id`);
+
+--
+-- Indexes for table `inventory_items`
+--
+ALTER TABLE `inventory_items`
+  ADD PRIMARY KEY (`item_id`),
+  ADD KEY `preferred_unit_id` (`preferred_unit_id`);
+
+--
+-- Indexes for table `inventory_notifications`
+--
+ALTER TABLE `inventory_notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `inventory_id` (`inventory_id`),
+  ADD KEY `resolved_by` (`resolved_by`);
+
+--
+-- Indexes for table `invoices`
+--
+ALTER TABLE `invoices`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`);
+
+--
+-- Indexes for table `invoice_discounts`
+--
+ALTER TABLE `invoice_discounts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `invoice_id` (`invoice_id`),
+  ADD KEY `discount_id` (`discount_id`);
+
+--
+-- Indexes for table `invoice_items`
+--
+ALTER TABLE `invoice_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `invoice_id` (`invoice_id`),
+  ADD KEY `item_id` (`item_id`);
+
+--
+-- Indexes for table `items`
+--
+ALTER TABLE `items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `sub_category_id` (`sub_category_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `items_image_map`
+--
+ALTER TABLE `items_image_map`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `image_id` (`image_id`),
+  ADD KEY `item_id` (`item_id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `kitchen_assignments`
+--
+ALTER TABLE `kitchen_assignments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`),
+  ADD KEY `assigned_to` (`assigned_to`),
+  ADD KEY `assigned_by` (`assigned_by`);
+
+--
+-- Indexes for table `logs`
+--
+ALTER TABLE `logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `movement_types`
+--
+ALTER TABLE `movement_types`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `orders`
+--
+ALTER TABLE `orders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `table_id` (`table_id`),
+  ADD KEY `branch_id` (`restaurant_id`),
+  ADD KEY `status_id` (`status_id`);
+
+--
+-- Indexes for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`),
+  ADD KEY `item_id` (`item_id`);
+
+--
+-- Indexes for table `order_statuses`
+--
+ALTER TABLE `order_statuses`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `order_status_history`
+--
+ALTER TABLE `order_status_history`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`),
+  ADD KEY `status_id` (`status_id`),
+  ADD KEY `changed_by` (`changed_by`);
+
+--
+-- Indexes for table `payments`
+--
+ALTER TABLE `payments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `invoice_id` (`invoice_id`),
+  ADD KEY `payment_status_id` (`payment_status_id`);
+
+--
+-- Indexes for table `payment_methods`
+--
+ALTER TABLE `payment_methods`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `payment_statuses`
+--
+ALTER TABLE `payment_statuses`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `role_id` (`role_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `purchase_orders`
+--
+ALTER TABLE `purchase_orders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`),
+  ADD KEY `supplier_id` (`supplier_id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `purchase_order_items`
+--
+ALTER TABLE `purchase_order_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `purchase_order_id` (`purchase_order_id`),
+  ADD KEY `inventory_id` (`inventory_id`);
+
+--
+-- Indexes for table `qr_codes`
+--
+ALTER TABLE `qr_codes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `table_id` (`table_id`);
+
+--
+-- Indexes for table `receipts`
+--
+ALTER TABLE `receipts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `receipt_number` (`receipt_number`),
+  ADD KEY `invoice_id` (`invoice_id`),
+  ADD KEY `payment_id` (`payment_id`),
+  ADD KEY `generated_by` (`generated_by`);
+
+--
+-- Indexes for table `restaurants`
+--
+ALTER TABLE `restaurants`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `parent_rest_id` (`parent_rest_id`);
+
+--
+-- Indexes for table `restaurants_image_map`
+--
+ALTER TABLE `restaurants_image_map`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `image_id` (`image_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `restaurant_settings`
+--
+ALTER TABLE `restaurant_settings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `restaurant_subscriptions`
+--
+ALTER TABLE `restaurant_subscriptions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`),
+  ADD KEY `subscription_plan_id` (`subscription_plan_id`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `sales_summaries`
+--
+ALTER TABLE `sales_summaries`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `restaurant_date_unique` (`restaurant_id`,`date`),
+  ADD KEY `restaurant_id` (`restaurant_id`),
+  ADD KEY `popular_category_id` (`popular_category_id`),
+  ADD KEY `popular_item_id` (`popular_item_id`);
+
+--
+-- Indexes for table `sessions`
+--
+ALTER TABLE `sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `expires_at` (`expires_at`);
+
+--
+-- Indexes for table `staff_performance`
+--
+ALTER TABLE `staff_performance`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_restaurant_date_unique` (`user_id`,`restaurant_id`,`date`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `stock_movements`
+--
+ALTER TABLE `stock_movements`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `ingredient_id` (`item_id`),
+  ADD KEY `movement_type_id` (`movement_type_id`);
+
+--
+-- Indexes for table `subscription_plans`
+--
+ALTER TABLE `subscription_plans`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `sub_categories`
+--
+ALTER TABLE `sub_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `sub_categories_image_map`
+--
+ALTER TABLE `sub_categories_image_map`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `image_id` (`image_id`),
+  ADD KEY `sub_category_id` (`sub_category_id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `suppliers`
+--
+ALTER TABLE `suppliers`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `tables`
+--
+ALTER TABLE `tables`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `table_order_statuses`
+--
+ALTER TABLE `table_order_statuses`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `table_statuses`
+--
+ALTER TABLE `table_statuses`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `units`
+--
+ALTER TABLE `units`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `restaurant_id` (`restaurant_id`),
+  ADD KEY `users_ibfk_1` (`department_id`);
+
+--
+-- Indexes for table `users_image_map`
+--
+ALTER TABLE `users_image_map`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `image_id` (`image_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `fk_users_updated_by` (`updated_by`),
+  ADD KEY `fk_users_deleted_by` (`deleted_by`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `attributes`
+--
+ALTER TABLE `attributes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `captain_calls`
+--
+ALTER TABLE `captain_calls`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `carts`
+--
+ALTER TABLE `carts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `cart_items`
+--
+ALTER TABLE `cart_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `categories_image_map`
+--
+ALTER TABLE `categories_image_map`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `currencies`
+--
+ALTER TABLE `currencies`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `customer_feedback`
+--
+ALTER TABLE `customer_feedback`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `customer_sessions`
+--
+ALTER TABLE `customer_sessions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `departments`
+--
+ALTER TABLE `departments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `discounts`
+--
+ALTER TABLE `discounts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `images`
+--
+ALTER TABLE `images`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `ingredients`
+--
+ALTER TABLE `ingredients`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `inventory`
+--
+ALTER TABLE `inventory`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `inventory_items`
+--
+ALTER TABLE `inventory_items`
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `inventory_notifications`
+--
+ALTER TABLE `inventory_notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `invoices`
+--
+ALTER TABLE `invoices`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `invoice_discounts`
+--
+ALTER TABLE `invoice_discounts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `invoice_items`
+--
+ALTER TABLE `invoice_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `items`
+--
+ALTER TABLE `items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `items_image_map`
+--
+ALTER TABLE `items_image_map`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `kitchen_assignments`
+--
+ALTER TABLE `kitchen_assignments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `logs`
+--
+ALTER TABLE `logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `movement_types`
+--
+ALTER TABLE `movement_types`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `orders`
+--
+ALTER TABLE `orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `order_items`
+--
+ALTER TABLE `order_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `order_statuses`
+--
+ALTER TABLE `order_statuses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `order_status_history`
+--
+ALTER TABLE `order_status_history`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `payments`
+--
+ALTER TABLE `payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `payment_methods`
+--
+ALTER TABLE `payment_methods`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `payment_statuses`
+--
+ALTER TABLE `payment_statuses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `purchase_orders`
+--
+ALTER TABLE `purchase_orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `purchase_order_items`
+--
+ALTER TABLE `purchase_order_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `qr_codes`
+--
+ALTER TABLE `qr_codes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `receipts`
+--
+ALTER TABLE `receipts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `restaurants`
+--
+ALTER TABLE `restaurants`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `restaurants_image_map`
+--
+ALTER TABLE `restaurants_image_map`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `restaurant_settings`
+--
+ALTER TABLE `restaurant_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `restaurant_subscriptions`
+--
+ALTER TABLE `restaurant_subscriptions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `sales_summaries`
+--
+ALTER TABLE `sales_summaries`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `staff_performance`
+--
+ALTER TABLE `staff_performance`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `stock_movements`
+--
+ALTER TABLE `stock_movements`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `subscription_plans`
+--
+ALTER TABLE `subscription_plans`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sub_categories`
+--
+ALTER TABLE `sub_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `sub_categories_image_map`
+--
+ALTER TABLE `sub_categories_image_map`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `suppliers`
+--
+ALTER TABLE `suppliers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `tables`
+--
+ALTER TABLE `tables`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `table_order_statuses`
+--
+ALTER TABLE `table_order_statuses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `table_statuses`
+--
+ALTER TABLE `table_statuses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `units`
+--
+ALTER TABLE `units`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `users_image_map`
+--
+ALTER TABLE `users_image_map`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
@@ -1109,10 +2030,29 @@ ALTER TABLE `categories_image_map`
   ADD CONSTRAINT `categories_image_map_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
 
 --
+-- Constraints for table `customer_feedback`
+--
+ALTER TABLE `customer_feedback`
+  ADD CONSTRAINT `customer_feedback_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`);
+
+--
+-- Constraints for table `customer_sessions`
+--
+ALTER TABLE `customer_sessions`
+  ADD CONSTRAINT `customer_sessions_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`),
+  ADD CONSTRAINT `customer_sessions_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
+
+--
+-- Constraints for table `discounts`
+--
+ALTER TABLE `discounts`
+  ADD CONSTRAINT `discounts_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
+
+--
 -- Constraints for table `images`
 --
 ALTER TABLE `images`
-  ADD CONSTRAINT `images_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+  ADD CONSTRAINT `images_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `ingredients`
@@ -1120,22 +2060,36 @@ ALTER TABLE `images`
 ALTER TABLE `ingredients`
   ADD CONSTRAINT `ingredients_ibfk_1` FOREIGN KEY (`menu_item_id`) REFERENCES `items` (`id`),
   ADD CONSTRAINT `ingredients_ibfk_2` FOREIGN KEY (`inv_item_id`) REFERENCES `inventory` (`id`),
-  ADD CONSTRAINT `ingredients_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `units` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  ADD CONSTRAINT `ingredients_ibfk_4` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+  ADD CONSTRAINT `ingredients_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `units` (`id`),
+  ADD CONSTRAINT `ingredients_ibfk_4` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
 
 --
 -- Constraints for table `inventory`
 --
 ALTER TABLE `inventory`
   ADD CONSTRAINT `inventory_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
-  ADD CONSTRAINT `inventory_ibfk_2` FOREIGN KEY (`currency_id`) REFERENCES `currencies` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  ADD CONSTRAINT `inventory_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `units` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+  ADD CONSTRAINT `inventory_ibfk_2` FOREIGN KEY (`currency_id`) REFERENCES `currencies` (`id`),
+  ADD CONSTRAINT `inventory_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `units` (`id`);
+
+--
+-- Constraints for table `inventory_notifications`
+--
+ALTER TABLE `inventory_notifications`
+  ADD CONSTRAINT `inventory_notifications_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventory` (`id`),
+  ADD CONSTRAINT `inventory_notifications_ibfk_2` FOREIGN KEY (`resolved_by`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `invoices`
 --
 ALTER TABLE `invoices`
   ADD CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`);
+
+--
+-- Constraints for table `invoice_discounts`
+--
+ALTER TABLE `invoice_discounts`
+  ADD CONSTRAINT `invoice_discounts_ibfk_1` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
+  ADD CONSTRAINT `invoice_discounts_ibfk_2` FOREIGN KEY (`discount_id`) REFERENCES `discounts` (`id`);
 
 --
 -- Constraints for table `invoice_items`
@@ -1160,6 +2114,14 @@ ALTER TABLE `items_image_map`
   ADD CONSTRAINT `items_image_map_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
 
 --
+-- Constraints for table `kitchen_assignments`
+--
+ALTER TABLE `kitchen_assignments`
+  ADD CONSTRAINT `kitchen_assignments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+  ADD CONSTRAINT `kitchen_assignments_ibfk_2` FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `kitchen_assignments_ibfk_3` FOREIGN KEY (`assigned_by`) REFERENCES `users` (`id`);
+
+--
 -- Constraints for table `notifications`
 --
 ALTER TABLE `notifications`
@@ -1170,7 +2132,7 @@ ALTER TABLE `notifications`
 --
 ALTER TABLE `orders`
   ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`),
-  ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
   ADD CONSTRAINT `orders_ibfk_3` FOREIGN KEY (`status_id`) REFERENCES `table_order_statuses` (`id`);
 
 --
@@ -1179,6 +2141,14 @@ ALTER TABLE `orders`
 ALTER TABLE `order_items`
   ADD CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
   ADD CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`);
+
+--
+-- Constraints for table `order_status_history`
+--
+ALTER TABLE `order_status_history`
+  ADD CONSTRAINT `order_status_history_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+  ADD CONSTRAINT `order_status_history_ibfk_2` FOREIGN KEY (`status_id`) REFERENCES `order_statuses` (`id`),
+  ADD CONSTRAINT `order_status_history_ibfk_3` FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `payments`
@@ -1191,20 +2161,43 @@ ALTER TABLE `payments`
 -- Constraints for table `permissions`
 --
 ALTER TABLE `permissions`
-  ADD CONSTRAINT `permissions_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  ADD CONSTRAINT `permissions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+  ADD CONSTRAINT `permissions_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`),
+  ADD CONSTRAINT `permissions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `purchase_orders`
+--
+ALTER TABLE `purchase_orders`
+  ADD CONSTRAINT `purchase_orders_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
+  ADD CONSTRAINT `purchase_orders_ibfk_2` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`),
+  ADD CONSTRAINT `purchase_orders_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `purchase_order_items`
+--
+ALTER TABLE `purchase_order_items`
+  ADD CONSTRAINT `purchase_order_items_ibfk_1` FOREIGN KEY (`purchase_order_id`) REFERENCES `purchase_orders` (`id`),
+  ADD CONSTRAINT `purchase_order_items_ibfk_2` FOREIGN KEY (`inventory_id`) REFERENCES `inventory` (`id`);
 
 --
 -- Constraints for table `qr_codes`
 --
 ALTER TABLE `qr_codes`
-  ADD CONSTRAINT `qr_codes_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+  ADD CONSTRAINT `qr_codes_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`);
+
+--
+-- Constraints for table `receipts`
+--
+ALTER TABLE `receipts`
+  ADD CONSTRAINT `receipts_ibfk_1` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
+  ADD CONSTRAINT `receipts_ibfk_2` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`),
+  ADD CONSTRAINT `receipts_ibfk_3` FOREIGN KEY (`generated_by`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `restaurants`
 --
 ALTER TABLE `restaurants`
-  ADD CONSTRAINT `restaurants_ibfk_1` FOREIGN KEY (`parent_rest_id`) REFERENCES `restaurants` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+  ADD CONSTRAINT `restaurants_ibfk_1` FOREIGN KEY (`parent_rest_id`) REFERENCES `restaurants` (`id`);
 
 --
 -- Constraints for table `restaurants_image_map`
@@ -1221,6 +2214,28 @@ ALTER TABLE `restaurant_settings`
   ADD CONSTRAINT `restaurant_settings_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
 
 --
+-- Constraints for table `restaurant_subscriptions`
+--
+ALTER TABLE `restaurant_subscriptions`
+  ADD CONSTRAINT `restaurant_subscriptions_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
+  ADD CONSTRAINT `restaurant_subscriptions_ibfk_2` FOREIGN KEY (`subscription_plan_id`) REFERENCES `subscription_plans` (`id`);
+
+--
+-- Constraints for table `sales_summaries`
+--
+ALTER TABLE `sales_summaries`
+  ADD CONSTRAINT `sales_summaries_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`),
+  ADD CONSTRAINT `sales_summaries_ibfk_2` FOREIGN KEY (`popular_category_id`) REFERENCES `categories` (`id`),
+  ADD CONSTRAINT `sales_summaries_ibfk_3` FOREIGN KEY (`popular_item_id`) REFERENCES `items` (`id`);
+
+--
+-- Constraints for table `staff_performance`
+--
+ALTER TABLE `staff_performance`
+  ADD CONSTRAINT `staff_performance_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `staff_performance_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
+
+--
 -- Constraints for table `stock_movements`
 --
 ALTER TABLE `stock_movements`
@@ -1232,7 +2247,7 @@ ALTER TABLE `stock_movements`
 --
 ALTER TABLE `sub_categories`
   ADD CONSTRAINT `sub_categories_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`),
-  ADD CONSTRAINT `sub_categories_ibfk_3` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+  ADD CONSTRAINT `sub_categories_ibfk_3` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
 
 --
 -- Constraints for table `sub_categories_image_map`
@@ -1252,7 +2267,7 @@ ALTER TABLE `tables`
 -- Constraints for table `users`
 --
 ALTER TABLE `users`
-  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`),
   ADD CONSTRAINT `users_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`);
 
 --
