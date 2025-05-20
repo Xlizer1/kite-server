@@ -1,3 +1,5 @@
+// src/api/v1/index.js
+
 const express = require("express");
 const router = express.Router();
 
@@ -15,6 +17,9 @@ const IngredientsRouter = require("./ingredients/router");
 const settingRouter = require("./setting/router");
 const cartRouter = require("./cart/router");
 const captainRouter = require("./captain/router");
+const kitchenRouter = require("./kitchen/router");
+const cashierRouter = require("./cashier/router");
+const analyticsRouter = require("./analytics/router");
 
 router.use("/", homeRouter);
 router.use("/user", userRouter);
@@ -30,5 +35,8 @@ router.use("/ingredients", IngredientsRouter);
 router.use("/setting", settingRouter);
 router.use("/cart", cartRouter);
 router.use("/captain", captainRouter);
+router.use("/kitchen", kitchenRouter);
+router.use("/cashier", cashierRouter);
+router.use("/analytics", analyticsRouter);
 
 module.exports = router;
