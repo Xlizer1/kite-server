@@ -6,9 +6,9 @@ const swaggerOptions = {
     definition: {
         openapi: "3.0.0",
         info: {
-            title: "Restaurant Management API",
+            title: "Kite API",
             version: "1.0.0",
-            description: "API documentation for the Restaurant Management System",
+            description: "API documentation for the Kite System",
         },
         servers: [
             {
@@ -48,7 +48,7 @@ const setupSwagger = (app) => {
         swaggerUi.setup(swaggerSpec, {
             explorer: true,
             customCss: ".swagger-ui .topbar { display: none }", // Hide the top bar
-            customSiteTitle: "Restaurant Management API Documentation",
+            customSiteTitle: "Kite API Documentation",
         })
     );
 

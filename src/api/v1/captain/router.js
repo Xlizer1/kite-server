@@ -8,7 +8,9 @@ const {
     updateOrderStatusController,
     getPendingCaptainCallsController,
     updateCaptainCallController,
-    getTablesWithOrdersStatsController
+    getTablesWithOrdersStatsController,
+    createOrderForTableController,
+    getMenuForOrderingController
 } = require("./controller");
 
 const { checkUserAuthorized } = require("../../../helpers/common");
@@ -172,6 +174,135 @@ router.put("/calls/:call_id", (req, res) => {
  */
 router.get("/table-stats", (req, res) => {
     getTablesWithOrdersStatsController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/captain/menu:
+ *   get:
+ *     summary: Get menu for ordering
+ *     description: Returns the complete menu organized by categories for captain ordering
+ *     tags: [Captain]
+ *     responses:
+ *       200:
+ *         description: Menu retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                       sub_categories:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: integer
+ *                             name:
+ *                               type: string
+ *                             items:
+ *                               type: array
+ */
+router.get("/menu", (req, res) => {
+    getMenuForOrderingController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/captain/orders:
+ *   post:
+ *     summary: Create order for table
+ *     description: Allows captain to create an order directly for any table
+ *     tags: [Captain]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - table_id
+ *               - items
+ *             properties:
+ *               table_id:
+ *                 type: integer
+ *                 description: ID of the table to create order for
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - item_id
+ *                     - quantity
+ *                   properties:
+ *                     item_id:
+ *                       type: integer
+ *                       description: Menu item ID
+ *                     quantity:
+ *                       type: integer
+ *                       minimum: 1
+ *                       description: Quantity of the item
+ *                     special_instructions:
+ *                       type: string
+ *                       description: Special instructions for the item
+ *               special_request:
+ *                 type: string
+ *                 description: Special request for the entire order
+ *               allergy_info:
+ *                 type: string
+ *                 description: Allergy information
+ *               customer_name:
+ *                 type: string
+ *                 description: Customer name (optional)
+ *     responses:
+ *       200:
+ *         description: Order created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order_id:
+ *                       type: integer
+ *                     table_number:
+ *                       type: integer
+ *                     total_items:
+ *                       type: integer
+ *                     created_by:
+ *                       type: string
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Insufficient permissions
+ */
+router.post("/orders", validateRequest(createOrderForTableSchema), (req, res) => {
+    createOrderForTableController(req, (result) => {
         res.json(result);
     });
 });

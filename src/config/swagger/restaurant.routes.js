@@ -6,7 +6,7 @@
  * @swagger
  * tags:
  *   name: Restaurants
- *   description: Restaurant management endpoints
+ *   description: Kite endpoints
  */
 
 /**

@@ -227,6 +227,94 @@ const getTablesWithOrdersStatsController = async (request, callBack) => {
     }
 };
 
+/**
+ * Create order directly for any table (Captain assistance)
+ * @param {Object} request - Express request object
+ * @param {Function} callBack - Callback function
+ */
+const createOrderForTableController = async (request, callBack) => {
+    try {
+        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        
+        // Check if user has captain permissions
+        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
+            return callBack(resultObject(false, "You don't have permission to create orders"));
+        }
+        
+        const { table_id, items, special_request, allergy_info, customer_name } = request.body;
+        
+        if (!table_id) {
+            return callBack(resultObject(false, "Table ID is required"));
+        }
+        
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return callBack(resultObject(false, "At least one item is required"));
+        }
+        
+        // Validate items structure
+        for (const item of items) {
+            if (!item.item_id || !item.quantity || item.quantity <= 0) {
+                return callBack(resultObject(false, "Each item must have item_id and positive quantity"));
+            }
+        }
+        
+        const result = await createOrderForTableModel({
+            table_id,
+            items,
+            special_request,
+            allergy_info,
+            customer_name,
+            created_by: authorize.id,
+            restaurant_id: authorize.restaurant_id
+        });
+        
+        if (result && result.order_id) {
+            callBack(resultObject(true, "Order created successfully", {
+                order_id: result.order_id,
+                table_number: result.table_number,
+                total_items: items.length,
+                created_by: authorize.name || authorize.username
+            }));
+        } else {
+            callBack(resultObject(false, "Failed to create order"));
+        }
+    } catch (error) {
+        console.error(error);
+        
+        if (error.message && error.statusCode) {
+            callBack(resultObject(false, error.message));
+        } else {
+            callBack(resultObject(false, "Something went wrong, please try again later"));
+        }
+    }
+};
+
+/**
+ * Get available menu items for ordering
+ * @param {Object} request - Express request object
+ * @param {Function} callBack - Callback function
+ */
+const getMenuForOrderingController = async (request, callBack) => {
+    try {
+        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        
+        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
+            return callBack(resultObject(false, "You don't have permission to view menu"));
+        }
+        
+        const result = await getMenuForOrderingModel(authorize.restaurant_id);
+        
+        if (Array.isArray(result)) {
+            callBack(resultObject(true, "Menu retrieved successfully", result));
+        } else {
+            callBack(resultObject(false, "Failed to retrieve menu"));
+        }
+    } catch (error) {
+        console.error(error);
+        callBack(resultObject(false, "Something went wrong, please try again later"));
+    }
+};
+
 module.exports = {
     getRestaurantTablesController,
     getPendingOrdersController,
@@ -234,5 +322,7 @@ module.exports = {
     updateOrderStatusController,
     getPendingCaptainCallsController,
     updateCaptainCallController,
-    getTablesWithOrdersStatsController
+    getTablesWithOrdersStatsController,
+    createOrderForTableController,
+    getMenuForOrderingController
 };

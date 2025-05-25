@@ -1,6 +1,6 @@
 # Swagger Documentation System
 
-This directory contains a modular approach to Swagger documentation for the Restaurant Management API.
+This directory contains a modular approach to Swagger documentation for the Kite API.
 
 ## Directory Structure
 

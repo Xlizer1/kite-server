@@ -1,6 +1,6 @@
-# Restaurant Management System
+# Kite System
 
-A comprehensive restaurant management system with QR code-based ordering, kitchen management, inventory tracking, and analytics.
+A comprehensive Kite system with QR code-based ordering, kitchen management, inventory tracking, and analytics.
 
 ## Features
 
@@ -40,7 +40,7 @@ A comprehensive restaurant management system with QR code-based ordering, kitche
 - **Real-time Dashboard**: Get an overview of current restaurant operations
 
 ### For Administrators
-- **Multi-restaurant Management**: Manage multiple restaurant locations
+- **Multi-Kite**: Manage multiple restaurant locations
 - **User Management**: Create and manage staff accounts with role-based permissions
 - **Menu Management**: Add, update, and remove menu items, categories, and subcategories
 - **Inventory Management**: Manage inventory items, suppliers, and stock levels
@@ -98,7 +98,7 @@ A comprehensive restaurant management system with QR code-based ordering, kitche
 The system uses a comprehensive database schema with the following main tables:
 
 - **Users & Authentication**: `users`, `roles`, `permissions`, `departments`
-- **Restaurant Management**: `restaurants`, `restaurant_settings`, `tables`, `qr_codes`
+- **Kite**: `restaurants`, `restaurant_settings`, `tables`, `qr_codes`
 - **Menu Management**: `categories`, `sub_categories`, `items`, `images`
 - **Inventory Management**: `inventory`, `inventory_items`, `stock_movements`, `suppliers`, `purchase_orders`
 - **Order Processing**: `orders`, `order_items`, `order_statuses`, `order_status_history`, `captain_calls`
