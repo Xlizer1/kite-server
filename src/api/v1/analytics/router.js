@@ -20,7 +20,7 @@ router.use(checkUserAuthorized());
 
 /**
  * @swagger
- * /api/analytics/dashboard:
+ * /api/v1/analytics/dashboard:
  *   get:
  *     summary: Get dashboard summary
  *     description: Returns summary data for the dashboard
@@ -43,7 +43,7 @@ router.get("/dashboard", (req, res) => {
 
 /**
  * @swagger
- * /api/analytics/daily-sales:
+ * /api/v1/analytics/daily-sales:
  *   get:
  *     summary: Get daily sales data
  *     description: Returns sales data by day for a date range
@@ -78,7 +78,7 @@ router.get("/daily-sales", (req, res) => {
 
 /**
  * @swagger
- * /api/analytics/sales-by-category:
+ * /api/v1/analytics/sales-by-category:
  *   get:
  *     summary: Get sales by category
  *     description: Returns sales data grouped by category
@@ -113,7 +113,7 @@ router.get("/sales-by-category", (req, res) => {
 
 /**
  * @swagger
- * /api/analytics/top-selling-items:
+ * /api/v1/analytics/top-selling-items:
  *   get:
  *     summary: Get top selling items
  *     description: Returns top selling items for a date range
@@ -153,7 +153,7 @@ router.get("/top-selling-items", (req, res) => {
 
 /**
  * @swagger
- * /api/analytics/hourly-sales:
+ * /api/v1/analytics/hourly-sales:
  *   get:
  *     summary: Get hourly sales distribution
  *     description: Returns sales data by hour for a date range
@@ -188,7 +188,7 @@ router.get("/hourly-sales", (req, res) => {
 
 /**
  * @swagger
- * /api/analytics/inventory-usage:
+ * /api/v1/analytics/inventory-usage:
  *   get:
  *     summary: Get inventory usage report
  *     description: Returns inventory usage data for a date range
@@ -223,7 +223,7 @@ router.get("/inventory-usage", (req, res) => {
 
 /**
  * @swagger
- * /api/analytics/revenue-comparison:
+ * /api/v1/analytics/revenue-comparison:
  *   get:
  *     summary: Get revenue comparison
  *     description: Returns revenue comparison between current and previous periods

@@ -1,10 +1,11 @@
 const { getIngredientsModel, getIngredientsByRestaurantIDModel, createIngredientModel } = require("./model");
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
 const getIngredients = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view ingredients!", 403);
         }
@@ -26,7 +27,8 @@ const getIngredients = async (request, callBack) => {
 
 const getIngredientsByRestaurantID = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view ingredients!", 403);
@@ -54,7 +56,8 @@ const getIngredientsByRestaurantID = async (request, callBack) => {
 
 const createIngredient = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to create ingredients!", 403);

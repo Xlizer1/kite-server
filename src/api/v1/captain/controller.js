@@ -1,16 +1,16 @@
 // src/api/v1/captain/controller.js (Enhanced version)
 
-const { 
-    getRestaurantTablesModel, 
+const {
+    getRestaurantTablesModel,
     getPendingOrdersModel,
-    getActiveOrdersModel, 
+    getActiveOrdersModel,
     updateOrderStatusModel,
     getPendingCaptainCallsModel,
     updateCaptainCallModel,
-    getTablesWithOrdersStatsModel
+    getTablesWithOrdersStatsModel,
 } = require("./model");
 
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
 /**
@@ -20,14 +20,15 @@ const { CustomError } = require("../../../middleware/errorHandler");
  */
 const getRestaurantTablesController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to view tables"));
         }
-        
-        const result = await getRestaurantTablesModel(request);
-        
+
+        const result = await getRestaurantTablesModel(authorize.restaurant_id);
+
         if (Array.isArray(result)) {
             callBack(resultObject(true, "Tables retrieved successfully", result));
         } else {
@@ -47,14 +48,15 @@ const getRestaurantTablesController = async (request, callBack) => {
  */
 const getPendingOrdersController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to view pending orders"));
         }
-        
-        const result = await getPendingOrdersModel(request);
-        
+
+        const result = await getPendingOrdersModel(authorize.restaurant_id);
+
         if (Array.isArray(result)) {
             callBack(resultObject(true, "Pending orders retrieved successfully", result));
         } else {
@@ -74,14 +76,15 @@ const getPendingOrdersController = async (request, callBack) => {
  */
 const getActiveOrdersController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to view active orders"));
         }
-        
-        const result = await getActiveOrdersModel(request);
-        
+
+        const result = await getActiveOrdersModel(authorize.restaurant_id);
+
         if (Array.isArray(result)) {
             callBack(resultObject(true, "Active orders retrieved successfully", result));
         } else {
@@ -101,26 +104,27 @@ const getActiveOrdersController = async (request, callBack) => {
  */
 const updateOrderStatusController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to update order status"));
         }
-        
+
         const { order_id } = request.params;
         const { status_id, notes } = request.body;
-        
+
         if (!order_id || !status_id) {
             return callBack(resultObject(false, "Order ID and status ID are required"));
         }
-        
+
         const result = await updateOrderStatusModel({
             order_id,
             status_id,
             user_id: authorize.id,
-            notes
+            notes,
         });
-        
+
         if (result) {
             callBack(resultObject(true, "Order status updated successfully"));
         } else {
@@ -139,14 +143,15 @@ const updateOrderStatusController = async (request, callBack) => {
  */
 const getPendingCaptainCallsController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to view captain calls"));
         }
-        
-        const result = await getPendingCaptainCallsModel(request);
-        
+
+        const result = await getPendingCaptainCallsModel(authorize.restaurant_id);
+
         if (Array.isArray(result)) {
             callBack(resultObject(true, "Captain calls retrieved successfully", result));
         } else {
@@ -166,29 +171,30 @@ const getPendingCaptainCallsController = async (request, callBack) => {
  */
 const updateCaptainCallController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to update captain calls"));
         }
-        
+
         const { call_id } = request.params;
         const { status } = request.body;
-        
+
         if (!call_id || !status) {
             return callBack(resultObject(false, "Call ID and status are required"));
         }
-        
-        if (!['in_progress', 'completed', 'cancelled'].includes(status)) {
+
+        if (!["in_progress", "completed", "cancelled"].includes(status)) {
             return callBack(resultObject(false, "Invalid status. Must be one of: in_progress, completed, cancelled"));
         }
-        
+
         const result = await updateCaptainCallModel({
             call_id,
             status,
-            user_id: authorize.id
+            user_id: authorize.id,
         });
-        
+
         if (result) {
             callBack(resultObject(true, "Captain call updated successfully"));
         } else {
@@ -207,14 +213,15 @@ const updateCaptainCallController = async (request, callBack) => {
  */
 const getTablesWithOrdersStatsController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to view table statistics"));
         }
-        
-        const result = await getTablesWithOrdersStatsModel(request);
-        
+
+        const result = await getTablesWithOrdersStatsModel(authorize.restaurant_id);
+
         if (Array.isArray(result)) {
             callBack(resultObject(true, "Table statistics retrieved successfully", result));
         } else {
@@ -234,30 +241,31 @@ const getTablesWithOrdersStatsController = async (request, callBack) => {
  */
 const createOrderForTableController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         // Check if user has captain permissions
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to create orders"));
         }
-        
+
         const { table_id, items, special_request, allergy_info, customer_name } = request.body;
-        
+
         if (!table_id) {
             return callBack(resultObject(false, "Table ID is required"));
         }
-        
+
         if (!items || !Array.isArray(items) || items.length === 0) {
             return callBack(resultObject(false, "At least one item is required"));
         }
-        
+
         // Validate items structure
         for (const item of items) {
             if (!item.item_id || !item.quantity || item.quantity <= 0) {
                 return callBack(resultObject(false, "Each item must have item_id and positive quantity"));
             }
         }
-        
+
         const result = await createOrderForTableModel({
             table_id,
             items,
@@ -265,22 +273,24 @@ const createOrderForTableController = async (request, callBack) => {
             allergy_info,
             customer_name,
             created_by: authorize.id,
-            restaurant_id: authorize.restaurant_id
+            restaurant_id: authorize.restaurant_id,
         });
-        
+
         if (result && result.order_id) {
-            callBack(resultObject(true, "Order created successfully", {
-                order_id: result.order_id,
-                table_number: result.table_number,
-                total_items: items.length,
-                created_by: authorize.name || authorize.username
-            }));
+            callBack(
+                resultObject(true, "Order created successfully", {
+                    order_id: result.order_id,
+                    table_number: result.table_number,
+                    total_items: items.length,
+                    created_by: authorize.name || authorize.username,
+                })
+            );
         } else {
             callBack(resultObject(false, "Failed to create order"));
         }
     } catch (error) {
         console.error(error);
-        
+
         if (error.message && error.statusCode) {
             callBack(resultObject(false, error.message));
         } else {
@@ -296,14 +306,15 @@ const createOrderForTableController = async (request, callBack) => {
  */
 const getMenuForOrderingController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
-        
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
             return callBack(resultObject(false, "You don't have permission to view menu"));
         }
-        
+
         const result = await getMenuForOrderingModel(authorize.restaurant_id);
-        
+
         if (Array.isArray(result)) {
             callBack(resultObject(true, "Menu retrieved successfully", result));
         } else {
@@ -324,5 +335,5 @@ module.exports = {
     updateCaptainCallController,
     getTablesWithOrdersStatsController,
     createOrderForTableController,
-    getMenuForOrderingController
+    getMenuForOrderingController,
 };

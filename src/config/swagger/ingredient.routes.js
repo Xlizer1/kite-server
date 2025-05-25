@@ -50,7 +50,7 @@
 
 /**
  * @swagger
- * /api/ingredients:
+ * /api/v1/ingredients:
  *   get:
  *     summary: Get all ingredients
  *     description: Retrieves a list of all ingredients
@@ -91,7 +91,7 @@
 
 /**
  * @swagger
- * /api/ingredients/{restaurant_id}:
+ * /api/v1/ingredients/{restaurant_id}:
  *   get:
  *     summary: Get ingredients by restaurant ID
  *     description: Retrieves ingredients filtered by restaurant ID
@@ -151,7 +151,7 @@
 
 /**
  * @swagger
- * /api/ingredients:
+ * /api/v1/ingredients:
  *   post:
  *     summary: Create new ingredient
  *     description: Creates a new ingredient

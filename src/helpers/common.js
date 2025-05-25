@@ -107,11 +107,31 @@ const userExists = async (username, email, phone) => {
     }
 };
 
+function getToken(req) {
+    return new Promise(async (resolve, reject) => {
+        const authHeader = req?.headers?.authorization || "";
+        const parts = await authHeader.split(" ");
+        const headerAuthorization = parts.length === 2 ? parts[1] : null;
+        const token = headerAuthorization || req?.headers["jwt"] || req?.headers["token"];
+        if (typeof token === "string" && token.length > 1) {
+            resolve(token);
+        } else {
+            reject(false);
+        }
+    });
+}
+
 const checkUserAuthorized = () => {
     return async (req, res, next) => {
         try {
-            const authorize = await verifyUserToken(req?.headers["jwt"]);
-            if (!authorize?.id || !authorize?.email) {
+            const authHeader = req?.headers?.authorization || "";
+            const parts = await authHeader.split(" ");
+            const headerAuthorization = parts.length === 2 ? parts[1] : null;
+
+            const jwt = headerAuthorization || req?.headers["jwt"] || req?.headers["token"];
+            const authorize = await verifyUserToken(jwt);
+
+            if (!authorize || !authorize?.id || !authorize?.email) {
                 res.json(resultObject(false, "Token is invalid!"));
                 return;
             } else {
@@ -124,7 +144,7 @@ const checkUserAuthorized = () => {
     };
 };
 
-const verifyUserToken = (token, callBack) => {
+const verifyUserToken = (token) => {
     return new Promise((resolve, reject) => {
         if (token) {
             var data = jwt.verify(token, tokenKey);
@@ -135,7 +155,7 @@ const verifyUserToken = (token, callBack) => {
                 });
             } else resolve(data?.data);
         } else {
-            callBack(resultObject(false, "Token must be provided!"));
+            resultObject(false, "Token must be provided!");
             resolve(false);
         }
     });
@@ -306,4 +326,5 @@ module.exports = {
     checkSubCategoryForRestaurant,
     getRestaurantLocation,
     checkUserAuthorized,
+    getToken
 };

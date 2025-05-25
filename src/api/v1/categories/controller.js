@@ -1,5 +1,5 @@
 const { createRestaurantCategoryModel, getRestaurantCategoryModel, updateCategoryImageModel } = require("./model");
-const { resultObject, verifyUserToken, processTableEncryptedKey } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, processTableEncryptedKey, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
 const getRestaurantCategory = async (request, callBack) => {
@@ -35,7 +35,8 @@ const getRestaurantCategory = async (request, callBack) => {
 
 const createRestaurantCategory = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(1)) {
             const { name, restaurant_id } = request.body;
             const image = request.file;
@@ -67,7 +68,8 @@ const createRestaurantCategory = async (request, callBack) => {
 
 const updateCategoryImage = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             callBack(resultObject(false, "You don't have permission to update category images!"));

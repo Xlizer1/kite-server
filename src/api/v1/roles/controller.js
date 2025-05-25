@@ -5,11 +5,12 @@ const {
     updateUserPermissionsModel,
     deleteRolesModel,
 } = require("./model");
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 
 const getRoles = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         const result = await getRolesModel(authorize);
         if (Array.isArray(result)) {
             callBack(resultObject(true, "success", result));
@@ -27,7 +28,8 @@ const getRoles = async (request, callBack) => {
 
 const createRoles = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(10)) {
             const { name } = request?.body;
             createRolesModel(name, (result) => {
@@ -50,7 +52,8 @@ const createRoles = async (request, callBack) => {
 
 const updateRoles = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(11)) {
             const { id } = request?.params;
             const { name } = request?.body;
@@ -75,7 +78,8 @@ const updateRoles = async (request, callBack) => {
 
 const updateUserPermissions = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(13)) {
             const { id } = request?.params;
             const { roles } = request?.body;
@@ -100,7 +104,8 @@ const updateUserPermissions = async (request, callBack) => {
 
 const deleteRoles = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(12)) {
             const { id } = request?.params;
             const result = await deleteRolesModel(id);

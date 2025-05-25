@@ -7,12 +7,13 @@ const {
     deleteInventoryItemModel,
     getInventoryHistoryModel,
 } = require("./model");
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
 const getInventoryItems = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory items!", 403);
@@ -35,7 +36,8 @@ const getInventoryItems = async (request, callBack) => {
 
 const getInventoryItemsByRestaurantID = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory items!", 403);
@@ -63,7 +65,8 @@ const getInventoryItemsByRestaurantID = async (request, callBack) => {
 
 const getLowStockItems = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory items!", 403);
@@ -91,7 +94,8 @@ const getLowStockItems = async (request, callBack) => {
 
 const createInventoryItem = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to create inventory items!", 403);
         }
@@ -144,7 +148,8 @@ const createInventoryItem = async (request, callBack) => {
 
 const updateInventoryItem = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to update inventory items!", 403);
@@ -202,7 +207,8 @@ const updateInventoryItem = async (request, callBack) => {
 
 const deleteInventoryItem = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to delete inventory items!", 403);
         }
@@ -229,7 +235,8 @@ const deleteInventoryItem = async (request, callBack) => {
 
 const getInventoryHistory = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.roles?.includes(1)) {
             throw new CustomError("You don't have permission to view inventory history!", 403);
         }

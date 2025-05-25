@@ -16,6 +16,7 @@ const {
 const { checkUserAuthorized } = require("../../../helpers/common");
 const { validateOrderStatus } = require("../../../validators/orderValidator");
 const validateRequest = require("../../../middleware/validateRequest");
+const { createOrderForTableSchema } = require("../../../validators/captainOrderValidator");
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.use(checkUserAuthorized());
 
 /**
  * @swagger
- * /api/captain/tables:
+ * /api/v1/v1/captain/tables:
  *   get:
  *     summary: Get all tables for the restaurant
  *     description: Returns all tables with their status
@@ -41,7 +42,7 @@ router.get("/tables", (req, res) => {
 
 /**
  * @swagger
- * /api/captain/orders/pending:
+ * /api/v1/captain/orders/pending:
  *   get:
  *     summary: Get pending orders
  *     description: Returns all orders that need captain approval
@@ -58,7 +59,7 @@ router.get("/orders/pending", (req, res) => {
 
 /**
  * @swagger
- * /api/captain/orders/active:
+ * /api/v1/captain/orders/active:
  *   get:
  *     summary: Get active orders
  *     description: Returns all active orders (approved but not completed)
@@ -75,7 +76,7 @@ router.get("/orders/active", (req, res) => {
 
 /**
  * @swagger
- * /api/captain/orders/{order_id}/status:
+ * /api/v1/captain/orders/{order_id}/status:
  *   put:
  *     summary: Update order status
  *     description: Update the status of an order
@@ -111,7 +112,7 @@ router.put("/orders/:order_id/status", validateRequest(validateOrderStatus), (re
 
 /**
  * @swagger
- * /api/captain/calls:
+ * /api/v1/captain/calls:
  *   get:
  *     summary: Get pending captain calls
  *     description: Returns all pending captain calls
@@ -128,7 +129,7 @@ router.get("/calls", (req, res) => {
 
 /**
  * @swagger
- * /api/captain/calls/{call_id}:
+ * /api/v1/captain/calls/{call_id}:
  *   put:
  *     summary: Update captain call status
  *     description: Update the status of a captain call
@@ -163,7 +164,7 @@ router.put("/calls/:call_id", (req, res) => {
 
 /**
  * @swagger
- * /api/captain/table-stats:
+ * /api/v1/captain/table-stats:
  *   get:
  *     summary: Get tables with orders statistics
  *     description: Returns statistics about tables and their orders
@@ -180,7 +181,7 @@ router.get("/table-stats", (req, res) => {
 
 /**
  * @swagger
- * /api/captain/menu:
+ * /api/v1/captain/menu:
  *   get:
  *     summary: Get menu for ordering
  *     description: Returns the complete menu organized by categories for captain ordering
@@ -227,7 +228,7 @@ router.get("/menu", (req, res) => {
 
 /**
  * @swagger
- * /api/captain/orders:
+ * /api/v1/captain/orders:
  *   post:
  *     summary: Create order for table
  *     description: Allows captain to create an order directly for any table

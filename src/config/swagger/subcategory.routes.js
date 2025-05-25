@@ -43,7 +43,7 @@
 
 /**
  * @swagger
- * /api/sub_categories:
+ * /api/v1/sub_categories:
  *   get:
  *     summary: Get all sub-categories
  *     description: Retrieves a list of all restaurant sub-categories
@@ -87,7 +87,7 @@
 
 /**
  * @swagger
- * /api/sub_categories/get_by_category_id:
+ * /api/v1/sub_categories/get_by_category_id:
  *   get:
  *     summary: Get sub-categories by category ID
  *     description: Retrieves sub-categories filtered by parent category ID
@@ -144,7 +144,7 @@
 
 /**
  * @swagger
- * /api/sub_categories:
+ * /api/v1/sub_categories:
  *   post:
  *     summary: Create new sub-category
  *     description: Creates a new restaurant sub-category
@@ -204,7 +204,7 @@
 
 /**
  * @swagger
- * /api/sub_categories/{id}/image:
+ * /api/v1/sub_categories/{id}/image:
  *   put:
  *     summary: Update sub-category image
  *     description: Updates the image of an existing sub-category

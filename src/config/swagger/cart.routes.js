@@ -11,7 +11,7 @@
 
 /**
  * @swagger
- * /api/cart:
+ * /api/v1/cart:
  *   get:
  *     summary: Get cart details
  *     description: Retrieves the current cart details including all items
@@ -47,7 +47,7 @@
 
 /**
  * @swagger
- * /api/cart/initialize:
+ * /api/v1/cart/initialize:
  *   post:
  *     summary: Initialize a new cart
  *     description: Creates a new cart with the provided encryption key
@@ -101,7 +101,7 @@
 
 /**
  * @swagger
- * /api/cart/items:
+ * /api/v1/cart/items:
  *   post:
  *     summary: Add item to cart
  *     description: Adds a new item to the cart
@@ -172,7 +172,7 @@
 
 /**
  * @swagger
- * /api/cart/items/{cartItemId}:
+ * /api/v1/cart/items/{cartItemId}:
  *   put:
  *     summary: Update cart item
  *     description: Updates an existing item in the cart
@@ -246,7 +246,7 @@
 
 /**
  * @swagger
- * /api/cart/items/{cartItemId}:
+ * /api/v1/cart/items/{cartItemId}:
  *   delete:
  *     summary: Remove cart item
  *     description: Removes an item from the cart
@@ -287,7 +287,7 @@
 
 /**
  * @swagger
- * /api/cart/clear:
+ * /api/v1/cart/clear:
  *   delete:
  *     summary: Clear cart
  *     description: Removes all items from the cart
@@ -321,7 +321,7 @@
 
 /**
  * @swagger
- * /api/cart/call-captain:
+ * /api/v1/cart/call-captain:
  *   post:
  *     summary: Call captain
  *     description: Creates a request for a captain to attend to the table
@@ -357,7 +357,7 @@
 
 /**
  * @swagger
- * /api/cart/captain-calls:
+ * /api/v1/cart/captain-calls:
  *   get:
  *     summary: Get captain calls
  *     description: Retrieves all captain calls for the restaurant
@@ -383,7 +383,7 @@
 
 /**
  * @swagger
- * /api/cart/captain-calls/{callId}:
+ * /api/v1/cart/captain-calls/{callId}:
  *   put:
  *     summary: Update captain call
  *     description: Updates the status of a captain call
@@ -451,7 +451,7 @@
 
 /**
  * @swagger
- * /api/cart/create-order:
+ * /api/v1/cart/create-order:
  *   post:
  *     summary: Create order from cart
  *     description: Creates a new order from the current cart

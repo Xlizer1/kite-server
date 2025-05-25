@@ -56,42 +56,42 @@ A comprehensive Kite system with QR code-based ordering, kitchen management, inv
 ## API Endpoints
 
 ### Authentication
-- POST `/api/user`: Login
-- POST `/api/user/register`: Register new user
+- POST `/v1/user`: Login
+- POST `/v1/user/register`: Register new user
 
 ### Menu Management
-- GET `/api/menu/main`: Get restaurant main menu
-- GET `/api/categories`: Get all categories
-- GET `/api/sub_categories`: Get all subcategories
-- GET `/api/items`: Get all menu items
-- GET `/api/items/get_by_sub_cat_id`: Get items by subcategory
+- GET `/v1/menu/main`: Get restaurant main menu
+- GET `/v1/categories`: Get all categories
+- GET `/v1/sub_categories`: Get all subcategories
+- GET `/v1/items`: Get all menu items
+- GET `/v1/items/get_by_sub_cat_id`: Get items by subcategory
 
 ### Order Management
-- GET `/api/captain/orders/pending`: Get pending orders
-- GET `/api/captain/orders/active`: Get active orders
-- PUT `/api/captain/orders/:order_id/status`: Update order status
-- GET `/api/kitchen/orders/pending`: Get pending kitchen orders
-- GET `/api/kitchen/orders/in-progress`: Get in-progress kitchen orders
-- POST `/api/kitchen/orders/:order_id/start`: Start processing an order
-- POST `/api/kitchen/orders/:order_id/complete`: Complete an order
+- GET `/v1/captain/orders/pending`: Get pending orders
+- GET `/v1/captain/orders/active`: Get active orders
+- PUT `/v1/captain/orders/:order_id/status`: Update order status
+- GET `/v1/kitchen/orders/pending`: Get pending kitchen orders
+- GET `/v1/kitchen/orders/in-progress`: Get in-progress kitchen orders
+- POST `/v1/kitchen/orders/:order_id/start`: Start processing an order
+- POST `/v1/kitchen/orders/:order_id/complete`: Complete an order
 
 ### Billing & Payments
-- GET `/api/cashier/tables`: Get tables with active bills
-- GET `/api/cashier/table/:table_id/orders`: Get orders for billing
-- GET `/api/cashier/discounts`: Get available discounts
-- POST `/api/cashier/invoice`: Create invoice
-- GET `/api/cashier/invoice/:invoice_id`: Get invoice details
-- POST `/api/cashier/invoice/:invoice_id/receipt`: Generate receipt PDF
-- GET `/api/cashier/report`: Get cashier sales report
+- GET `/v1/cashier/tables`: Get tables with active bills
+- GET `/v1/cashier/table/:table_id/orders`: Get orders for billing
+- GET `/v1/cashier/discounts`: Get available discounts
+- POST `/v1/cashier/invoice`: Create invoice
+- GET `/v1/cashier/invoice/:invoice_id`: Get invoice details
+- POST `/v1/cashier/invoice/:invoice_id/receipt`: Generate receipt PDF
+- GET `/v1/cashier/report`: Get cashier sales report
 
 ### Analytics
-- GET `/api/analytics/dashboard`: Get dashboard summary
-- GET `/api/analytics/daily-sales`: Get daily sales data
-- GET `/api/analytics/sales-by-category`: Get sales by category
-- GET `/api/analytics/top-selling-items`: Get top selling items
-- GET `/api/analytics/hourly-sales`: Get hourly sales distribution
-- GET `/api/analytics/inventory-usage`: Get inventory usage report
-- GET `/api/analytics/revenue-comparison`: Get revenue comparison
+- GET `/v1/analytics/dashboard`: Get dashboard summary
+- GET `/v1/analytics/daily-sales`: Get daily sales data
+- GET `/v1/analytics/sales-by-category`: Get sales by category
+- GET `/v1/analytics/top-selling-items`: Get top selling items
+- GET `/v1/analytics/hourly-sales`: Get hourly sales distribution
+- GET `/v1/analytics/inventory-usage`: Get inventory usage report
+- GET `/v1/analytics/revenue-comparison`: Get revenue comparison
 
 ## Database Schema
 

@@ -1,9 +1,10 @@
 const { getTablesModel, createTablesModel, updateTablesModel, deleteTablesModel } = require("./model");
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 
 const getTables = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(1)) {
             const result = await getTablesModel(authorize.restaurant_id);
             if (result && result[0] && result?.length > 0) {
@@ -26,7 +27,8 @@ const getTables = async (request, callBack) => {
 
 const createTables = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(2)) {
             return callBack(resultObject(false, "You don't have permission to create a restaurant!"));
@@ -58,7 +60,8 @@ const createTables = async (request, callBack) => {
 
 const updateTables = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(3)) {
             const { id } = request?.params;
             const { name, tagline, description } = request?.body;
@@ -83,7 +86,8 @@ const updateTables = async (request, callBack) => {
 
 const deleteTables = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(4)) {
             const { id } = request?.params;
             const result = await deleteTablesModel(id, authorize?.id);

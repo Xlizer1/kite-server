@@ -22,7 +22,7 @@ router.use(checkUserAuthorized());
 
 /**
  * @swagger
- * /api/cashier/tables:
+ * /api/v1/cashier/tables:
  *   get:
  *     summary: Get tables with active bills
  *     description: Returns tables that have orders ready for billing
@@ -39,7 +39,7 @@ router.get("/tables", (req, res) => {
 
 /**
  * @swagger
- * /api/cashier/table/{table_id}/orders:
+ * /api/v1/cashier/table/{table_id}/orders:
  *   get:
  *     summary: Get orders for billing
  *     description: Returns all orders ready for billing for a specific table
@@ -62,7 +62,7 @@ router.get("/table/:table_id/orders", (req, res) => {
 
 /**
  * @swagger
- * /api/cashier/discounts:
+ * /api/v1/cashier/discounts:
  *   get:
  *     summary: Get available discounts
  *     description: Returns all available discounts for the restaurant
@@ -79,7 +79,7 @@ router.get("/discounts", (req, res) => {
 
 /**
  * @swagger
- * /api/cashier/invoice:
+ * /api/v1/cashier/invoice:
  *   post:
  *     summary: Create invoice
  *     description: Creates an invoice for one or more orders
@@ -119,7 +119,7 @@ router.post("/invoice", validateRequest(createInvoiceSchema), (req, res) => {
 
 /**
  * @swagger
- * /api/cashier/invoice/{invoice_id}:
+ * /api/v1/cashier/invoice/{invoice_id}:
  *   get:
  *     summary: Get invoice details
  *     description: Returns details for a specific invoice
@@ -142,7 +142,7 @@ router.get("/invoice/:invoice_id", (req, res) => {
 
 /**
  * @swagger
- * /api/cashier/invoice/{invoice_id}/receipt:
+ * /api/v1/cashier/invoice/{invoice_id}/receipt:
  *   post:
  *     summary: Generate receipt PDF
  *     description: Generates a PDF receipt for a specific invoice
@@ -165,7 +165,7 @@ router.post("/invoice/:invoice_id/receipt", (req, res) => {
 
 /**
  * @swagger
- * /api/cashier/report:
+ * /api/v1/cashier/report:
  *   get:
  *     summary: Get cashier sales report
  *     description: Returns a sales report for a specific date

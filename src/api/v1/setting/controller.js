@@ -4,7 +4,6 @@ const { ValidationError } = require("../../../helpers/errors");
 
 const getUserById = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
         const { id } = request.params;
 
         if (!id || isNaN(id)) {

@@ -6,7 +6,7 @@ const {
     deleteRestaurantsModel,
     updateRestaurantImageModel,
 } = require("./model");
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 const { IP, PORT } = process.env;
 
@@ -15,7 +15,8 @@ const port = PORT || "8000";
 
 const getRestaurants = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(1)) {
             const result = await getRestaurantsModel(authorize);
             if (result && result[0] && result?.length > 0) {
@@ -38,7 +39,8 @@ const getRestaurants = async (request, callBack) => {
 
 const getRestaurantsByID = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(1)) {
             const { id } = request.params;
             const result = await getRestaurantsByIDModel(id, authorize);
@@ -62,7 +64,8 @@ const getRestaurantsByID = async (request, callBack) => {
 
 const createRestaurants = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(2)) {
             const { name, tagline, description } = request?.body;
 
@@ -93,7 +96,8 @@ const createRestaurants = async (request, callBack) => {
 
 const updateRestaurants = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(3)) {
             const { id } = request?.params;
             const { name, tagline, description } = request?.body;
@@ -124,7 +128,8 @@ const updateRestaurants = async (request, callBack) => {
 
 const deleteRestaurants = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(4)) {
             const { id } = request?.params;
             const result = await deleteRestaurantsModel(id, authorize?.id);
@@ -148,7 +153,8 @@ const deleteRestaurants = async (request, callBack) => {
 
 const updateRestaurantImage = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.roles?.includes(1)) {
             callBack(resultObject(false, "You don't have permission to update restaurant images!"));
             return;

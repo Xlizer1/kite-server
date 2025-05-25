@@ -46,7 +46,7 @@
 
 /**
  * @swagger
- * /api/roles:
+ * /api/v1/roles:
  *   get:
  *     summary: Get all roles
  *     description: Retrieves a list of all roles. Requires admin privileges (role ID 9).
@@ -114,7 +114,7 @@
 
 /**
  * @swagger
- * /api/roles:
+ * /api/v1/roles:
  *   post:
  *     summary: Create new role
  *     description: Creates a new role. Requires role creation privileges (role ID 10).
@@ -190,7 +190,7 @@
 
 /**
  * @swagger
- * /api/roles/{id}:
+ * /api/v1/roles/{id}:
  *   put:
  *     summary: Update role
  *     description: Updates an existing role. Requires role update privileges (role ID 11).
@@ -286,7 +286,7 @@
 
 /**
  * @swagger
- * /api/roles/user/{id}:
+ * /api/v1/roles/user/{id}:
  *   put:
  *     summary: Update user permissions
  *     description: Updates the roles assigned to a user. Requires user permission management privileges (role ID 13).
@@ -384,7 +384,7 @@
 
 /**
  * @swagger
- * /api/roles/{id}:
+ * /api/v1/roles/{id}:
  *   delete:
  *     summary: Delete role
  *     description: Soft deletes an existing role. Requires role deletion privileges (role ID 12).

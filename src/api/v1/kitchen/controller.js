@@ -9,7 +9,7 @@ const {
     getKitchenOrderHistoryModel
 } = require("./model");
 
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
 /**
@@ -19,7 +19,8 @@ const { CustomError } = require("../../../middleware/errorHandler");
  */
 const getPendingKitchenOrdersController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(6)) {
             return callBack(resultObject(false, "You don't have permission to view kitchen orders"));
@@ -46,7 +47,8 @@ const getPendingKitchenOrdersController = async (request, callBack) => {
  */
 const getInProgressKitchenOrdersController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(6)) {
             return callBack(resultObject(false, "You don't have permission to view kitchen orders"));
@@ -73,7 +75,8 @@ const getInProgressKitchenOrdersController = async (request, callBack) => {
  */
 const startProcessingOrderController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(6)) {
             return callBack(resultObject(false, "You don't have permission to process kitchen orders"));
@@ -116,7 +119,8 @@ const startProcessingOrderController = async (request, callBack) => {
  */
 const completeOrderController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(6)) {
             return callBack(resultObject(false, "You don't have permission to complete kitchen orders"));
@@ -153,7 +157,8 @@ const completeOrderController = async (request, callBack) => {
  */
 const getLowInventoryItemsController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(6) && !authorize?.roles?.includes(4)) {
             return callBack(resultObject(false, "You don't have permission to view inventory items"));
@@ -180,7 +185,8 @@ const getLowInventoryItemsController = async (request, callBack) => {
  */
 const getKitchenOrderHistoryController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(6)) {
             return callBack(resultObject(false, "You don't have permission to view kitchen order history"));

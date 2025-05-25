@@ -9,6 +9,7 @@ const {
     verifyUserToken,
     checkCategoryForRestaurant,
     processTableEncryptedKey,
+    getToken,
 } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
@@ -73,7 +74,8 @@ const getSubCategoriesByCategoryID = async (request, callBack) => {
 
 const createSubRestaurantCategory = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(1)) {
             const { name, category_id } = request.body;
             const image = request.file;
@@ -113,7 +115,8 @@ const createSubRestaurantCategory = async (request, callBack) => {
 
 const updateSubCategoryImage = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;

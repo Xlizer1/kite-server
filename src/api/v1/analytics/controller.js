@@ -10,7 +10,7 @@ const {
     getRevenueComparisonModel
 } = require("./model");
 
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
 /**
@@ -20,7 +20,8 @@ const { CustomError } = require("../../../middleware/errorHandler");
  */
 const getDailySalesController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         // Check for appropriate permission (manager or admin)
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(2)) {
@@ -66,7 +67,8 @@ const getDailySalesController = async (request, callBack) => {
  */
 const getSalesByCategoryController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         // Check for appropriate permission (manager or admin)
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(2)) {
@@ -112,7 +114,8 @@ const getSalesByCategoryController = async (request, callBack) => {
  */
 const getTopSellingItemsController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         // Check for appropriate permission (manager or admin)
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(2)) {
@@ -159,7 +162,8 @@ const getTopSellingItemsController = async (request, callBack) => {
  */
 const getHourlySalesController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         // Check for appropriate permission (manager or admin)
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(2)) {
@@ -205,7 +209,8 @@ const getHourlySalesController = async (request, callBack) => {
  */
 const getInventoryUsageController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         // Check for appropriate permission (manager, admin, or inventory admin)
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(2) && !authorize?.roles?.includes(4)) {
@@ -251,7 +256,8 @@ const getInventoryUsageController = async (request, callBack) => {
  */
 const getDashboardSummaryController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         // Check for appropriate permission (manager or admin)
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(2)) {
@@ -295,7 +301,8 @@ const getDashboardSummaryController = async (request, callBack) => {
  */
 const getRevenueComparisonController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         
         // Check for appropriate permission (manager or admin)
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(2)) {

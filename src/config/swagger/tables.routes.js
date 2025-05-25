@@ -40,7 +40,7 @@
 
 /**
  * @swagger
- * /api/tables:
+ * /api/v1/tables:
  *   get:
  *     summary: Get all tables
  *     description: Retrieves a list of all tables for the restaurant associated with the authenticated user. Requires view permission (role ID 1).
@@ -108,7 +108,7 @@
 
 /**
  * @swagger
- * /api/tables/{id}:
+ * /api/v1/tables/{id}:
  *   get:
  *     summary: Get table by ID
  *     description: Retrieves a specific table by its ID
@@ -181,7 +181,7 @@
 
 /**
  * @swagger
- * /api/tables:
+ * /api/v1/tables:
  *   post:
  *     summary: Create new table
  *     description: Creates a new table. Requires create permission (role ID 2).
@@ -282,7 +282,7 @@
 
 /**
  * @swagger
- * /api/tables/{id}:
+ * /api/v1/tables/{id}:
  *   put:
  *     summary: Update table
  *     description: Updates an existing table. Requires update permission (role ID 3).
@@ -394,7 +394,7 @@
 
 /**
  * @swagger
- * /api/tables/{id}:
+ * /api/v1/tables/{id}:
  *   delete:
  *     summary: Delete table
  *     description: Deletes an existing table. Requires delete permission (role ID 4).

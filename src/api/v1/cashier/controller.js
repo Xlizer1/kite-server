@@ -10,7 +10,7 @@ const {
     getCashierReportModel
 } = require("./model");
 
-const { resultObject, verifyUserToken } = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
 /**
@@ -20,7 +20,8 @@ const { CustomError } = require("../../../middleware/errorHandler");
  */
 const getTablesWithActiveBillsController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token, callBack);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(8)) {
             return callBack(resultObject(false, "You don't have permission to view active bills"));
@@ -47,7 +48,8 @@ const getTablesWithActiveBillsController = async (request, callBack) => {
  */
 const getOrdersForBillingController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token, callBack);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(8)) {
             return callBack(resultObject(false, "You don't have permission to view orders for billing"));
@@ -80,7 +82,8 @@ const getOrdersForBillingController = async (request, callBack) => {
  */
 const getAvailableDiscountsController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token, callBack);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(8)) {
             return callBack(resultObject(false, "You don't have permission to view available discounts"));
@@ -107,7 +110,8 @@ const getAvailableDiscountsController = async (request, callBack) => {
  */
 const createInvoiceController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token, callBack);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(8)) {
             return callBack(resultObject(false, "You don't have permission to create invoices"));
@@ -159,7 +163,8 @@ const createInvoiceController = async (request, callBack) => {
  */
 const getInvoiceDetailsController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token, callBack);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(8)) {
             return callBack(resultObject(false, "You don't have permission to view invoice details"));
@@ -196,7 +201,8 @@ const getInvoiceDetailsController = async (request, callBack) => {
  */
 const generateReceiptPdfController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token, callBack);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(8)) {
             return callBack(resultObject(false, "You don't have permission to generate receipts"));
@@ -238,7 +244,8 @@ const generateReceiptPdfController = async (request, callBack) => {
  */
 const getCashierReportController = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"], callBack);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token, callBack);
         
         if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(8)) {
             return callBack(resultObject(false, "You don't have permission to view sales reports"));

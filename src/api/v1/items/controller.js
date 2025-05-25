@@ -11,6 +11,7 @@ const {
     verifyUserToken,
     processTableEncryptedKey,
     checkSubCategoryForRestaurant,
+    getToken,
 } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
@@ -116,7 +117,8 @@ const getPaginatedItemsBySubCategoryID = async (request, callBack) => {
 
 const createItem = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.roles?.includes(1)) {
             callBack(resultObject(false, "You don't have permission to create items!"));
             return;
@@ -173,7 +175,8 @@ const createItem = async (request, callBack) => {
 
 const updateItemImage = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.roles?.includes(1)) {
             callBack(resultObject(false, "You don't have permission to update item images!"));

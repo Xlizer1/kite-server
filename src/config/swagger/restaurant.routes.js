@@ -11,7 +11,7 @@
 
 /**
  * @swagger
- * /api/restaurants:
+ * /api/v1/restaurants:
  *   get:
  *     summary: Get all restaurants
  *     description: Retrieves a list of all restaurants
@@ -50,7 +50,7 @@
 
 /**
  * @swagger
- * /api/restaurants/{id}:
+ * /api/v1/restaurants/{id}:
  *   get:
  *     summary: Get restaurant by ID
  *     description: Retrieves a specific restaurant by its ID
@@ -93,7 +93,7 @@
 
 /**
  * @swagger
- * /api/restaurants:
+ * /api/v1/restaurants:
  *   post:
  *     summary: Create new restaurant
  *     description: Creates a new restaurant
@@ -158,7 +158,7 @@
 
 /**
  * @swagger
- * /api/restaurants/{id}:
+ * /api/v1/restaurants/{id}:
  *   put:
  *     summary: Update restaurant
  *     description: Updates an existing restaurant
@@ -238,7 +238,7 @@
 
 /**
  * @swagger
- * /api/restaurants/{id}:
+ * /api/v1/restaurants/{id}:
  *   delete:
  *     summary: Delete restaurant
  *     description: Deletes an existing restaurant
@@ -279,7 +279,7 @@
 
 /**
  * @swagger
- * /api/restaurants/{id}/image:
+ * /api/v1/restaurants/{id}/image:
  *   put:
  *     summary: Update restaurant image
  *     description: Updates the logo image of an existing restaurant

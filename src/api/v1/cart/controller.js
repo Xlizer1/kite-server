@@ -311,7 +311,8 @@ const callCaptain = async (request, callBack) => {
 // Get captain calls (for staff)
 const getCaptainCalls = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.id || !authorize?.email) {
             return callBack(resultObject(false, "Token is invalid!"));
@@ -340,7 +341,8 @@ const getCaptainCalls = async (request, callBack) => {
 // Update captain call status (for staff)
 const updateCaptainCall = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.id || !authorize?.email) {
             return callBack(resultObject(false, "Token is invalid!"));
@@ -382,7 +384,8 @@ const updateCaptainCall = async (request, callBack) => {
 // Create order from cart (for staff)
 const createOrderFromCart = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
 
         if (!authorize?.id || !authorize?.email) {
             return callBack(resultObject(false, "Token is invalid!"));

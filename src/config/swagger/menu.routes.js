@@ -109,7 +109,7 @@
 
 /**
  * @swagger
- * /api/menu/main:
+ * /api/v1/menu/main:
  *   get:
  *     summary: Get restaurant main menu
  *     description: Retrieves the main menu for a restaurant based on the encrypted table key

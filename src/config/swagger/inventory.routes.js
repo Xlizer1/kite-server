@@ -87,7 +87,7 @@
 
 /**
  * @swagger
- * /api/inventory:
+ * /api/v1/inventory:
  *   get:
  *     summary: Get all inventory items
  *     description: Retrieves a list of all inventory items
@@ -128,7 +128,7 @@
 
 /**
  * @swagger
- * /api/inventory/restaurant/{restaurant_id}:
+ * /api/v1/inventory/restaurant/{restaurant_id}:
  *   get:
  *     summary: Get inventory items by restaurant ID
  *     description: Retrieves inventory items filtered by restaurant ID
@@ -188,7 +188,7 @@
 
 /**
  * @swagger
- * /api/inventory/low-stock/{restaurant_id}:
+ * /api/v1/inventory/low-stock/{restaurant_id}:
  *   get:
  *     summary: Get low stock items by restaurant ID
  *     description: Retrieves inventory items with quantity below threshold for a specific restaurant
@@ -248,7 +248,7 @@
 
 /**
  * @swagger
- * /api/inventory/history/{id}:
+ * /api/v1/inventory/history/{id}:
  *   get:
  *     summary: Get inventory history
  *     description: Retrieves history of changes for a specific inventory item
@@ -308,7 +308,7 @@
 
 /**
  * @swagger
- * /api/inventory:
+ * /api/v1/inventory:
  *   post:
  *     summary: Create new inventory item
  *     description: Creates a new inventory item
@@ -400,7 +400,7 @@
 
 /**
  * @swagger
- * /api/inventory/{id}:
+ * /api/v1/inventory/{id}:
  *   put:
  *     summary: Update inventory item
  *     description: Updates an existing inventory item
@@ -511,7 +511,7 @@
 
 /**
  * @swagger
- * /api/inventory/{id}:
+ * /api/v1/inventory/{id}:
  *   delete:
  *     summary: Delete inventory item
  *     description: Deletes an existing inventory item

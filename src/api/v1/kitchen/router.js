@@ -21,7 +21,7 @@ router.use(checkUserAuthorized());
 
 /**
  * @swagger
- * /api/kitchen/orders/pending:
+ * /api/v1/kitchen/orders/pending:
  *   get:
  *     summary: Get pending kitchen orders
  *     description: Returns all orders approved by captains and ready for kitchen processing
@@ -38,7 +38,7 @@ router.get("/orders/pending", (req, res) => {
 
 /**
  * @swagger
- * /api/kitchen/orders/in-progress:
+ * /api/v1/kitchen/orders/in-progress:
  *   get:
  *     summary: Get in-progress kitchen orders
  *     description: Returns all orders currently being prepared in the kitchen
@@ -55,7 +55,7 @@ router.get("/orders/in-progress", (req, res) => {
 
 /**
  * @swagger
- * /api/kitchen/orders/{order_id}/start:
+ * /api/v1/kitchen/orders/{order_id}/start:
  *   post:
  *     summary: Start processing an order
  *     description: Start processing an order in the kitchen
@@ -88,7 +88,7 @@ router.post("/orders/:order_id/start", validateRequest(startProcessingOrderSchem
 
 /**
  * @swagger
- * /api/kitchen/orders/{order_id}/complete:
+ * /api/v1/kitchen/orders/{order_id}/complete:
  *   post:
  *     summary: Complete an order
  *     description: Mark an order as completed in the kitchen
@@ -121,7 +121,7 @@ router.post("/orders/:order_id/complete", validateRequest(completeOrderSchema), 
 
 /**
  * @swagger
- * /api/kitchen/inventory/low:
+ * /api/v1/kitchen/inventory/low:
  *   get:
  *     summary: Get low inventory items
  *     description: Returns inventory items that are below their threshold
@@ -138,7 +138,7 @@ router.get("/inventory/low", (req, res) => {
 
 /**
  * @swagger
- * /api/kitchen/history:
+ * /api/v1/kitchen/history:
  *   get:
  *     summary: Get kitchen order history
  *     description: Returns completed kitchen orders

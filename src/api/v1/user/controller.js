@@ -6,6 +6,7 @@ const {
     resultObject,
     createToken,
     verifyUserToken,
+    getToken,
 } = require("../../../helpers/common");
 const { registerUserSchema, loginUserSchema } = require("../../../validators/userValidator");
 const { ValidationError } = require("../../../helpers/errors");
@@ -61,7 +62,8 @@ const loginUser = async (request, callBack) => {
 
 const getUserById = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;
@@ -106,7 +108,8 @@ const getUserById = async (request, callBack) => {
 
 const updateUser = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;
@@ -163,7 +166,8 @@ const updateUser = async (request, callBack) => {
 
 const getUsers = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(5)) {
             const result = await getUsersModel();
             if (Array.isArray(result)) {
@@ -186,7 +190,8 @@ const getUsers = async (request, callBack) => {
 
 const registerUser = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;
@@ -250,7 +255,8 @@ const registerUser = async (request, callBack) => {
 
 const deleteUser = async (request, callBack) => {
     try {
-        const authorize = await verifyUserToken(request?.headers["jwt"]);
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
         if (!authorize?.id || !authorize?.email) {
             callBack(resultObject(false, "Token is invalid!"));
             return;

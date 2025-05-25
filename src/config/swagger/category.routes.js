@@ -46,7 +46,7 @@
 
 /**
  * @swagger
- * /api/categories:
+ * /api/v1/categories:
  *   get:
  *     summary: Get all categories
  *     description: Retrieves a list of all restaurant categories
@@ -90,7 +90,7 @@
 
 /**
  * @swagger
- * /api/categories:
+ * /api/v1/categories:
  *   post:
  *     summary: Create new category
  *     description: Creates a new restaurant category
@@ -155,7 +155,7 @@
 
 /**
  * @swagger
- * /api/categories/{id}/image:
+ * /api/v1/categories/{id}/image:
  *   put:
  *     summary: Update category image
  *     description: Updates the image of an existing category

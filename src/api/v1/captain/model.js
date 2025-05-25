@@ -8,12 +8,9 @@ const { CustomError } = require("../../../middleware/errorHandler");
  * @param {Object} req - Request object
  * @returns {Promise<Array>} - Array of tables with status
  */
-const getRestaurantTablesModel = async (req) => {
+const getRestaurantTablesModel = async (restaurant_id) => {
     try {
-        const { restaurant_id } = req.params;
-
-        // Use restaurant_id from the authenticated user if not specified
-        const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
+        const actualRestaurantId = restaurant_id;
 
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
@@ -58,12 +55,9 @@ const getRestaurantTablesModel = async (req) => {
  * @param {Object} req - Request object
  * @returns {Promise<Array>} - Array of pending orders
  */
-const getPendingOrdersModel = async (req) => {
+const getPendingOrdersModel = async (restaurant_id) => {
     try {
-        const { restaurant_id } = req.params;
-
-        // Use restaurant_id from the authenticated user if not specified
-        const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
+        const actualRestaurantId = restaurant_id;
 
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
@@ -120,12 +114,9 @@ const getPendingOrdersModel = async (req) => {
  * @param {Object} req - Request object
  * @returns {Promise<Array>} - Array of active orders
  */
-const getActiveOrdersModel = async (req) => {
+const getActiveOrdersModel = async (restaurant_id) => {
     try {
-        const { restaurant_id } = req.params;
-
-        // Use restaurant_id from the authenticated user if not specified
-        const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
+        const actualRestaurantId = restaurant_id;
 
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
@@ -261,12 +252,9 @@ const updateOrderStatusModel = async (data) => {
  * @param {Object} req - Request object
  * @returns {Promise<Array>} - Array of pending captain calls
  */
-const getPendingCaptainCallsModel = async (req) => {
+const getPendingCaptainCallsModel = async (restaurant_id) => {
     try {
-        const { restaurant_id } = req.params;
-
-        // Use restaurant_id from the authenticated user if not specified
-        const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
+        const actualRestaurantId = restaurant_id;
 
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
@@ -336,12 +324,9 @@ const updateCaptainCallModel = async (data) => {
  * @param {Object} req - Request object
  * @returns {Promise<Array>} - Array of tables with order statistics
  */
-const getTablesWithOrdersStatsModel = async (req) => {
+const getTablesWithOrdersStatsModel = async (restaurant_id) => {
     try {
-        const { restaurant_id } = req.params;
-
-        // Use restaurant_id from the authenticated user if not specified
-        const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
+        const actualRestaurantId = restaurant_id;
 
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
