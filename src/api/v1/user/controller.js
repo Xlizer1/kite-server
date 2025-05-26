@@ -799,40 +799,36 @@ const logout = async (request, callBack) => {
 };
 
 module.exports = {
+    // Basic CRUD operations
+    getUsersController: getUsers,
     getUserByIdController: getUserById,
     registerUserController: registerUser,
     loginUserController: loginUser,
-    getUsersController: getUsers,
-    updateUserController: updateUser,
-    deleteUserModel: deleteUser,
-    getUserByIdController: getUserById,
-    registerUserController: registerUser,
-    loginUserController: loginUser,
-    getUsersController: getUsers,
     updateUserController: updateUser,
     deleteUserController: deleteUser,
-    // New exports - Password Management
+
+    // Password Management
     changePasswordController: changePassword,
     forgotPasswordController: forgotPassword,
     resetPasswordController: resetPassword,
 
-    // New exports - Profile Management
+    // Profile Management
     getCurrentUserProfileController: getCurrentUserProfile,
     updateUserProfileController: updateUserProfile,
 
-    // New exports - User Activity & Management
+    // User Activity & Management
     getUserActivityController: getUserActivity,
     activateUserController: activateUser,
     deactivateUserController: deactivateUser,
 
-    // New exports - Bulk Operations
+    // Bulk Operations
     bulkDeleteUsersController: bulkDeleteUsers,
     bulkUpdateUserRolesController: bulkUpdateUserRoles,
 
-    // New exports - Export & Reports
+    // Export & Reports
     exportUsersController: exportUsers,
     getUserLoginHistoryController: getUserLoginHistory,
 
-    // New exports - Session Management
+    // Session Management
     logoutController: logout,
 };
