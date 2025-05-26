@@ -22,7 +22,7 @@ const cashierRouter = require("./cashier/router");
 const analyticsRouter = require("./analytics/router");
 
 router.use("/", homeRouter);
-router.use("/user", userRouter);
+router.use("/users", userRouter);
 router.use("/roles", rolesRouter);
 router.use("/restaurants", restaurantsRouter);
 router.use("/tables", tablesRouter);

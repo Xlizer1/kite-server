@@ -12,27 +12,39 @@ const { registerUserSchema, loginUserSchema } = require("../../../validators/use
 const { ValidationError } = require("../../../helpers/errors");
 
 const getUsers = async (request, callBack) => {
-    try {
-        const token = await getToken(request);
-        const authorize = await verifyUserToken(token);
-        if (authorize?.roles?.includes(5)) {
-            const result = await getUsersModel();
-            if (Array.isArray(result)) {
-                callBack(resultObject(true, "success", result));
-            } else {
-                callBack(resultObject(false, "no users were found!"));
-            }
-        } else {
-            callBack(resultObject(false, "You don't have the permission to see users!"));
-            return;
-        }
-    } catch (error) {
-        if (error instanceof ValidationError) {
-            callBack(resultObject(false, error.message));
-        } else {
-            callBack(resultObject(false, "Something went wrong. Please try again later."));
-        }
+  try {
+    const token = await getToken(request);
+    const authorize = await verifyUserToken(token);
+    
+    if (authorize?.roles?.includes(5)) {
+      const result = await getUsersModel(request);
+      
+      // Handle the new response structure with pagination
+      if (result && result.data && Array.isArray(result.data)) {
+        // Return the complete result with pagination metadata
+        callBack(resultObject(true, "success", result));
+      } else if (result && result.data && result.data.length === 0) {
+        // No users found but query was successful
+        callBack(resultObject(true, "No users found", {
+          data: [],
+          pagination: result.pagination,
+          filters: result.filters
+        }));
+      } else {
+        // Something went wrong with the query
+        callBack(resultObject(false, "Failed to retrieve users"));
+      }
+    } else {
+      callBack(resultObject(false, "You don't have the permission to see users!"));
+      return;
     }
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      callBack(resultObject(false, error.message));
+    } else {
+      callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+  }
 };
 
 const getUserById = async (request, callBack) => {
