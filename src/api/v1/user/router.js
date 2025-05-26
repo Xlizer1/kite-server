@@ -39,7 +39,8 @@ const {
   getUserActivitySchema,
   userIdParamSchema
 } = require("../../../validators/userValidator");
-const { requireManagement } = require("../../../helpers/permissions");
+const { requireManagement, requirePermission, requireAdmin } = require("../../../helpers/permissions");
+const validateRequest = require("../../../middleware/validateRequest");
 
 const router = express.Router();
 

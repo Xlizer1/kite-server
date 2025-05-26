@@ -6,6 +6,7 @@ const router = express.Router();
 const homeRouter = require("./home/router");
 const userRouter = require("./user/router");
 const rolesRouter = require("./roles/router");
+const departmentsRouter = require("./departments/router"); // Added departments router
 const restaurantsRouter = require("./restaurants/router");
 const tablesRouter = require("./tables/router");
 const menuRouter = require("./menu/router");
@@ -24,6 +25,7 @@ const analyticsRouter = require("./analytics/router");
 router.use("/", homeRouter);
 router.use("/users", userRouter);
 router.use("/roles", rolesRouter);
+router.use("/departments", departmentsRouter); // Added departments route
 router.use("/restaurants", restaurantsRouter);
 router.use("/tables", tablesRouter);
 router.use("/menu", menuRouter);
