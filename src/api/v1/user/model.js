@@ -1,3 +1,5 @@
+// Updated src/api/v1/user/model.js - Simplified for department-based system
+
 const { hash, executeQuery, buildInsertQuery, buildUpdateQuery } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
@@ -10,7 +12,6 @@ const getUsers = async (request) => {
             search = "",
             department_id = "",
             status = "", // 'enabled', 'disabled', or empty for all
-            role_id = "",
             sort_by = "created_at",
             sort_order = "DESC",
         } = request.query || {};
@@ -47,12 +48,6 @@ const getUsers = async (request) => {
             params.push(enabledValue);
         }
 
-        // Role filter (users who have this specific role)
-        if (role_id && role_id !== "") {
-            conditions.push("EXISTS (SELECT 1 FROM permissions p2 WHERE p2.user_id = u.id AND p2.role_id = ?)");
-            params.push(parseInt(role_id));
-        }
-
         // Validate sort fields to prevent SQL injection
         const allowedSortFields = ["id", "name", "username", "email", "created_at", "updated_at", "department"];
         const sortField = allowedSortFields.includes(sort_by) ? sort_by : "created_at";
@@ -71,21 +66,20 @@ const getUsers = async (request) => {
             u.username,
             u.email,
             u.phone,
-            d.id AS department_id,
+            u.department_id,
             d.name AS department,
+            r.name AS restaurant,
             u.enabled,
             IF(u.enabled = 1, "enabled", "disabled") AS status,
+            u.last_login,
             u.created_at,
-            u.updated_at,
-            GROUP_CONCAT(p.role_id) as roles
+            u.updated_at
           FROM 
             users u
-          LEFT JOIN permissions p ON u.id = p.user_id
           LEFT JOIN departments d ON u.department_id = d.id
+          LEFT JOIN restaurants r ON u.restaurant_id = r.id
           WHERE 
             ${whereClause}
-          GROUP BY 
-            u.id
           ORDER BY 
             ${sortColumn} ${sortDirection}
           LIMIT ? OFFSET ?
@@ -93,11 +87,11 @@ const getUsers = async (request) => {
 
         // Count query for total records
         const countQuery = `
-          SELECT COUNT(DISTINCT u.id) as total
+          SELECT COUNT(u.id) as total
           FROM 
             users u
           LEFT JOIN departments d ON u.department_id = d.id
-          ${role_id ? "LEFT JOIN permissions p2 ON u.id = p2.user_id" : ""}
+          LEFT JOIN restaurants r ON u.restaurant_id = r.id
           WHERE 
             ${whereClause}
         `;
@@ -111,12 +105,11 @@ const getUsers = async (request) => {
             executeQuery(countQuery, countParams),
         ]);
 
-        const processedUsers = processUserResults(result);
         const total = countResult[0]?.total || 0;
         const totalPages = Math.ceil(total / limitNum);
 
         return {
-            data: processedUsers || [],
+            data: result || [],
             pagination: {
                 current_page: parseInt(page),
                 total_pages: totalPages,
@@ -129,7 +122,6 @@ const getUsers = async (request) => {
                 search,
                 department_id,
                 status,
-                role_id,
                 sort_by: sortField,
                 sort_order: sortDirection,
             },
@@ -137,14 +129,6 @@ const getUsers = async (request) => {
     } catch (error) {
         throw new CustomError(error.message, 500);
     }
-};
-
-// Helper function to process user results (you might already have this)
-const processUserResults = (results) => {
-    return results.map((user) => ({
-        ...user,
-        roles: user.roles ? user.roles.split(",").map((role) => parseInt(role.trim())) : [],
-    }));
 };
 
 const getUserById = async (id) => {
@@ -157,9 +141,11 @@ const getUserById = async (id) => {
             u.email,
             u.phone,
             u.enabled,
+            u.last_login,
             IF(u.enabled = 1, "enabled", "disabled") AS status,
             u.created_at,
             u.updated_at,
+            u.department_id,
             JSON_OBJECT(
               'id', r.id,
               'name', r.name
@@ -167,23 +153,39 @@ const getUserById = async (id) => {
             JSON_OBJECT(
               'id', d.id,
               'name', d.name
-            ) as department,
-            JSON_ARRAYAGG(p.role_id) as roles
+            ) as department
           FROM 
             users u
-          LEFT JOIN 
-            permissions p ON u.id = p.user_id
           LEFT JOIN 
             departments d ON u.department_id = d.id
           LEFT JOIN 
             restaurants r ON u.restaurant_id = r.id
           WHERE 
             u.id = ? AND u.deleted_at IS NULL
-          GROUP BY 
-            u.id
         `;
 
         const result = await executeQuery(sql, [id], "getUserById");
+        return result?.[0] || null;
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
+};
+
+const getUserByEmailModel = async (email) => {
+    try {
+        const sql = `
+            SELECT 
+                u.id,
+                u.name,
+                u.username,
+                u.email,
+                u.enabled
+            FROM 
+                users u
+            WHERE 
+                u.email = ? AND u.deleted_at IS NULL
+        `;
+        const result = await executeQuery(sql, [email], "getUserByEmail");
         return result?.[0] || null;
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -195,18 +197,16 @@ const getUserByUsername = async (username) => {
         const sql = `
       SELECT 
         u.*,
-        JSON_ARRAYAGG(p.role_id) as roles
+        d.name as department_name
       FROM 
         users u
       LEFT JOIN 
-        permissions p ON u.id = p.user_id
+        departments d ON u.department_id = d.id
       WHERE 
         u.username = ? AND u.deleted_at IS NULL
-      GROUP BY 
-        u.id
     `;
 
-        const result = await executeQuery(sql, [username], "getUserById");
+        const result = await executeQuery(sql, [username], "getUserByUsername");
         return result?.[0] || null;
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -215,31 +215,26 @@ const getUserByUsername = async (username) => {
 
 const registerUser = async (obj) => {
     try {
-        const { username, email, phone, password, roles } = obj;
+        const { username, email, phone, password, name, department_id, restaurant_id, parent_restaurant_id, created_by } = obj;
 
-        // Insert user
+        // Insert user with department_id instead of roles
         const userData = {
             username,
             email,
             phone,
+            name,
             password: await hash(password),
+            department_id,
+            restaurant_id,
+            parent_restaurant_id,
+            created_by,
             created_at: new Date(),
         };
 
         const { sql, params } = buildInsertQuery("users", userData);
         const result = await executeQuery(sql, params, "registerUser");
 
-        if (result?.insertId && roles?.length) {
-            // Insert roles
-            const roleValues = roles.map((roleId) => [result.insertId, roleId]);
-            await executeQuery(
-                "INSERT INTO permissions (user_id, role_id) VALUES ?",
-                [roleValues],
-                "inserting user roles"
-            );
-        }
-
-        return true;
+        return { status: true, user_id: result.insertId };
     } catch (error) {
         throw new CustomError(error.message, 500);
     }
@@ -247,41 +242,38 @@ const registerUser = async (obj) => {
 
 const updateUser = async (obj) => {
     try {
-        const { id, username, email, phone, password, roles } = obj;
+        const { id, username, email, phone, name, department_id, restaurant_id, parent_restaurant_id, enabled, updated_by } = obj;
+        
         const updateData = {
             username,
             email,
             phone,
-            ...(password && { password: await hash(password) }),
+            name,
+            department_id,
+            restaurant_id,
+            parent_restaurant_id,
+            enabled,
+            updated_by,
             updated_at: new Date(),
         };
 
         const { sql, params } = buildUpdateQuery("users", updateData, { id });
         const result = await executeQuery(sql, params, "updateUser");
 
-        if (result.affectedRows > 0 && roles?.length) {
-            // Delete existing roles
-            await executeQuery("DELETE FROM permissions WHERE user_id = ?", [id], "deleting user roles");
-
-            // Insert new roles
-            const roleValues = roles.map((roleId) => [id, roleId]);
-            await executeQuery(
-                "INSERT INTO permissions (user_id, role_id) VALUES ?",
-                [roleValues],
-                "inserting user roles"
-            );
+        if (result.affectedRows > 0) {
+            const user = await getUserById(id);
+            return { status: true, user };
         }
-
-        const user = await getUserById(id);
-
-        return { status: true, user };
+        
+        return { status: false };
     } catch (error) {
         throw new CustomError(error.message, 500);
     }
 };
 
-const deleteUser = async (id, user_id) => {
+const deleteUser = async (obj) => {
     try {
+        const { id, deleted_by } = obj;
         const sql = `
       UPDATE users 
       SET 
@@ -292,13 +284,14 @@ const deleteUser = async (id, user_id) => {
       WHERE id = ?
     `;
 
-        const result = await executeQuery(sql, [user_id, user_id, id], "deleteUser");
-        return result.affectedRows > 0;
+        const result = await executeQuery(sql, [deleted_by, deleted_by, id], "deleteUser");
+        return { status: result.affectedRows > 0 };
     } catch (error) {
         throw new CustomError(error.message, 500);
     }
 };
 
+// Password Management Functions
 const updateUserPasswordModel = async (userId, newPassword, updatedBy) => {
     try {
         const hashedPassword = await hash(newPassword);
@@ -521,48 +514,6 @@ const bulkDeleteUsersModel = async (userIds, deletedBy) => {
     }
 };
 
-const bulkUpdateUserRolesModel = async (userIds, roleIds, updatedBy) => {
-    try {
-        // Delete existing permissions for these users
-        const placeholders = userIds.map(() => '?').join(',');
-        await executeQuery(
-            `DELETE FROM permissions WHERE user_id IN (${placeholders})`,
-            userIds,
-            "deleteExistingPermissions"
-        );
-        
-        // Insert new permissions
-        const permissionValues = [];
-        userIds.forEach(userId => {
-            roleIds.forEach(roleId => {
-                permissionValues.push([userId, roleId]);
-            });
-        });
-        
-        if (permissionValues.length > 0) {
-            await executeQuery(
-                "INSERT INTO permissions (user_id, role_id) VALUES ?",
-                [permissionValues],
-                "insertNewPermissions"
-            );
-        }
-        
-        // Update users table
-        await executeQuery(
-            `UPDATE users SET updated_at = NOW(), updated_by = ? WHERE id IN (${placeholders})`,
-            [updatedBy, ...userIds],
-            "updateUsersTimestamp"
-        );
-        
-        return {
-            status: true,
-            updatedCount: userIds.length
-        };
-    } catch (error) {
-        throw new CustomError(error.message, 500);
-    }
-};
-
 // Export Functions
 const exportUsersModel = async (format = 'csv') => {
     try {
@@ -576,6 +527,7 @@ const exportUsersModel = async (format = 'csv') => {
                 d.name as department,
                 r.name as restaurant,
                 IF(u.enabled = 1, 'Active', 'Inactive') as status,
+                u.last_login,
                 u.created_at
             FROM users u
             LEFT JOIN departments d ON u.department_id = d.id
@@ -685,29 +637,40 @@ const getUserLoginHistoryModel = async (userId, page = 1, limit = 10) => {
 };
 
 module.exports = {
+    // Basic CRUD
     getUserByIdModel: getUserById,
     getUserByUsernameModel: getUserByUsername,
+    getUserByEmailModel,
     updateUserModel: updateUser,
     registerUserModel: registerUser,
     deleteUserModel: deleteUser,
     getUsersModel: getUsers,
-
-    // New functions
+    
+    // Password Management
     updateUserPasswordModel,
     createPasswordResetTokenModel,
     validatePasswordResetTokenModel,
     resetPasswordModel,
+    
+    // Profile Management
     updateUserProfileModel,
     checkUserExistsExceptCurrent,
+    
+    // Activity & Status
     createUserActivityLogModel,
     getUserActivityModel,
     updateUserStatusModel,
     updateLastLoginModel,
+    
+    // Bulk Operations
     bulkDeleteUsersModel,
-    bulkUpdateUserRolesModel,
+    
+    // Export & Reports
     exportUsersModel,
+    getUserLoginHistoryModel,
+    
+    // Security
     checkFailedLoginAttemptsModel,
     incrementFailedLoginAttemptsModel,
-    resetFailedLoginAttemptsModel,
-    getUserLoginHistoryModel
+    resetFailedLoginAttemptsModel
 };

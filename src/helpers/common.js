@@ -1,4 +1,7 @@
+// Updated src/helpers/common.js - Simplified for department-based permissions
+
 const { executeQuery, executeTransaction, buildInsertQuery, buildUpdateQuery } = require("./db");
+const { hasPermission, isAdmin } = require("./permissions");
 
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -95,6 +98,7 @@ const userExists = async (username, email, phone) => {
         users
       WHERE
         (username = ? OR email = ? OR phone = ?)
+        AND deleted_at IS NULL
     `;
         const result = await executeQuery(sql, [username, email, phone], "userExists");
         if (result && result?.length) {
@@ -121,6 +125,7 @@ function getToken(req) {
     });
 }
 
+// Simplified authorization check using department_id
 const checkUserAuthorized = () => {
     return async (req, res, next) => {
         try {
@@ -181,36 +186,14 @@ async function checkDataTokenValidation(data, callback) {
     }
 }
 
-const getUserPermissions = (user_id) => {
-    return new Promise(async (resolve) => {
-        let sql = `
-      SELECT
-        r.id
-      FROM
-        permissions p
-      LEFT JOIN
-        roles r ON r.id = p.role_id
-      LEFT JOIN
-        users u ON u.id = p.user_id
-      WHERE
-        u.id = ?
-    `;
-        const result = await executeQuery(sql, [user_id], "getUser");
-        if (result && result?.length) {
-            resolve(result?.map((r) => r?.id));
-        } else {
-            resolve([]);
-        }
-    });
-};
-
+// Simplified user fetching with department info
 const getUser = async (username) => {
     try {
         let sql = `
           SELECT
             u.*,
-            d.id as role_id,
-            d.name AS role_name,
+            d.id as department_id,
+            d.name AS department_name,
             rest.name AS restaurant_name
           FROM
             users u
@@ -220,12 +203,13 @@ const getUser = async (username) => {
             restaurants rest ON rest.id = u.restaurant_id
           WHERE
             u.username = ?
+            AND u.deleted_at IS NULL
         `;
         const result = await executeQuery(sql, [username], "getUser");
         if (result && result?.length && result[0]) {
             let user = result[0];
-            const permissions = await getUserPermissions(user?.id);
-            return { ...user, roles: permissions };
+            // Return user with department_id instead of complex roles
+            return user;
         } else {
             return null;
         }
@@ -253,7 +237,7 @@ const getRestaurantLocation = async (id) => {
             return null;
         }
     } catch (error) {
-        throw new Error(`An error occurred while getting user: ${error.message}`);
+        throw new Error(`An error occurred while getting restaurant location: ${error.message}`);
     }
 };
 
@@ -326,5 +310,5 @@ module.exports = {
     checkSubCategoryForRestaurant,
     getRestaurantLocation,
     checkUserAuthorized,
-    getToken
+    getToken,
 };

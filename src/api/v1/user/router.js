@@ -21,7 +21,8 @@ const {
   bulkUpdateUserRolesController,
   exportUsersController,
   getUserLoginHistoryController,
-  logoutController
+  logoutController,
+  deleteUserController
 } = require("./controller");
 const { checkUserAuthorized } = require("../../../helpers/common");
 const {
@@ -38,6 +39,7 @@ const {
   getUserActivitySchema,
   userIdParamSchema
 } = require("../../../validators/userValidator");
+const { requireManagement } = require("../../../helpers/permissions");
 
 const router = express.Router();
 
@@ -391,8 +393,8 @@ router.delete("/:id", checkUserAuthorized(), (req, res) => {
  * /api/v1/users:
  *   get:
  *     summary: Get all users
- *     description: Returns a paginated list of users with optional filtering
- *     tags: [Users]
+ *     description: Returns a paginated list of users with optional filtering. Requires 'users' read permission.
+ *     tags: [User Management]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -427,7 +429,7 @@ router.delete("/:id", checkUserAuthorized(), (req, res) => {
  *       403:
  *         description: Insufficient permissions
  */
-router.get("/", checkUserAuthorized(), (req, res) => {
+router.get("/", checkUserAuthorized(), requirePermission('users', 'read'), (req, res) => {
   getUsersController(req, (result) => {
     res.json(result);
   });
@@ -438,8 +440,8 @@ router.get("/", checkUserAuthorized(), (req, res) => {
  * /api/v1/users/{id}:
  *   get:
  *     summary: Get user by ID
- *     description: Returns a specific user by their ID
- *     tags: [Users]
+ *     description: Returns a specific user by their ID. Users can view their own profile, others need 'users' read permission.
+ *     tags: [User Management]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -454,6 +456,8 @@ router.get("/", checkUserAuthorized(), (req, res) => {
  *         description: User details
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions
  *       404:
  *         description: User not found
  */
@@ -468,8 +472,8 @@ router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (r
  * /api/v1/users/register:
  *   post:
  *     summary: Register a new user
- *     description: Creates a new user account
- *     tags: [Users]
+ *     description: Creates a new user account. Requires 'users' create permission.
+ *     tags: [User Management]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -477,7 +481,43 @@ router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (r
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UserRegistration'
+ *             type: object
+ *             required:
+ *               - name
+ *               - username
+ *               - email
+ *               - password
+ *               - phone
+ *               - department_id
+ *               - restaurant_id
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "John Doe"
+ *               username:
+ *                 type: string
+ *                 example: "johndoe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: "password123"
+ *               phone:
+ *                 type: string
+ *                 example: "00964771234567"
+ *               department_id:
+ *                 type: integer
+ *                 example: 5
+ *                 description: "Department ID (1=Admin, 2=Restaurant Admin, 3=Branch Admin, 4=Inventory Admin, 5=Captain, 6=Kitchen, 7=Hookah, 8=Finance)"
+ *               restaurant_id:
+ *                 type: integer
+ *                 example: 1
+ *               parent_restaurant_id:
+ *                 type: integer
+ *                 example: 1
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -485,10 +525,12 @@ router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (r
  *         description: Validation error
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions
  *       409:
  *         description: User already exists
  */
-router.post("/register", checkUserAuthorized(), validateRequest(registerUserSchema), (req, res) => {
+router.post("/register", checkUserAuthorized(), requirePermission('users', 'create'), validateRequest(registerUserSchema), (req, res) => {
   registerUserController(req, (result) => {
     res.json(result);
   });
@@ -526,8 +568,8 @@ router.post("/", validateRequest(loginUserSchema), (req, res) => {
  * /api/v1/users/{id}:
  *   put:
  *     summary: Update user
- *     description: Updates an existing user's information
- *     tags: [Users]
+ *     description: Updates an existing user's information. Requires 'users' update permission.
+ *     tags: [User Management]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -542,7 +584,30 @@ router.post("/", validateRequest(loginUserSchema), (req, res) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UserRegistration'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "John Doe"
+ *               username:
+ *                 type: string
+ *                 example: "johndoe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john@example.com"
+ *               phone:
+ *                 type: string
+ *                 example: "00964771234567"
+ *               department_id:
+ *                 type: integer
+ *                 example: 5
+ *               restaurant_id:
+ *                 type: integer
+ *                 example: 1
+ *               enabled:
+ *                 type: boolean
+ *                 example: true
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -550,10 +615,12 @@ router.post("/", validateRequest(loginUserSchema), (req, res) => {
  *         description: Validation error
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions
  *       404:
  *         description: User not found
  */
-router.put("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (req, res) => {
+router.put("/:id", checkUserAuthorized(), requirePermission('users', 'update'), validateRequest(userIdParamSchema), (req, res) => {
   updateUserController(req, (result) => {
     res.json(result);
   });
@@ -564,8 +631,8 @@ router.put("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (r
  * /api/v1/users/{id}:
  *   delete:
  *     summary: Delete user
- *     description: Soft deletes a user (sets deleted_at timestamp)
- *     tags: [Users]
+ *     description: Soft deletes a user. Requires 'users' delete permission.
+ *     tags: [User Management]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -580,10 +647,12 @@ router.put("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (r
  *         description: User deleted successfully
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions
  *       404:
  *         description: User not found
  */
-router.delete("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (req, res) => {
+router.delete("/:id", checkUserAuthorized(), requirePermission('users', 'delete'), validateRequest(userIdParamSchema), (req, res) => {
   deleteUserController(req, (result) => {
     res.json(result);
   });
@@ -780,7 +849,7 @@ router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchem
  * /api/v1/users/{id}/activate:
  *   post:
  *     summary: Activate user
- *     description: Activates a disabled user account
+ *     description: Activates a disabled user account. Requires 'users' update permission.
  *     tags: [User Management]
  *     security:
  *       - BearerAuth: []
@@ -801,7 +870,7 @@ router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchem
  *       404:
  *         description: User not found
  */
-router.post("/:id/activate", checkUserAuthorized(), validateRequest(userIdParamSchema), (req, res) => {
+router.post("/:id/activate", checkUserAuthorized(), requirePermission('users', 'update'), validateRequest(userIdParamSchema), (req, res) => {
   activateUserController(req, (result) => {
     res.json(result);
   });
@@ -812,7 +881,7 @@ router.post("/:id/activate", checkUserAuthorized(), validateRequest(userIdParamS
  * /api/v1/users/{id}/deactivate:
  *   post:
  *     summary: Deactivate user
- *     description: Deactivates an active user account
+ *     description: Deactivates an active user account. Requires 'users' update permission.
  *     tags: [User Management]
  *     security:
  *       - BearerAuth: []
@@ -833,7 +902,7 @@ router.post("/:id/activate", checkUserAuthorized(), validateRequest(userIdParamS
  *       404:
  *         description: User not found
  */
-router.post("/:id/deactivate", checkUserAuthorized(), validateRequest(userIdParamSchema), (req, res) => {
+router.post("/:id/deactivate", checkUserAuthorized(), requirePermission('users', 'update'), validateRequest(userIdParamSchema), (req, res) => {
   deactivateUserController(req, (result) => {
     res.json(result);
   });
@@ -844,8 +913,8 @@ router.post("/:id/deactivate", checkUserAuthorized(), validateRequest(userIdPara
  * /api/v1/users/{id}/activity:
  *   get:
  *     summary: Get user activity
- *     description: Returns user activity logs with pagination
- *     tags: [User Management]
+ *     description: Returns user activity logs with pagination. Admin only.
+ *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -873,9 +942,9 @@ router.post("/:id/deactivate", checkUserAuthorized(), validateRequest(userIdPara
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Insufficient permissions
+ *         description: Admin access required
  */
-router.get("/:id/activity", checkUserAuthorized(), validateRequest(userIdParamSchema), (req, res) => {
+router.get("/:id/activity", checkUserAuthorized(), requireAdmin, validateRequest(userIdParamSchema), (req, res) => {
   getUserActivityController(req, (result) => {
     res.json(result);
   });
@@ -886,8 +955,8 @@ router.get("/:id/activity", checkUserAuthorized(), validateRequest(userIdParamSc
  * /api/v1/users/{id}/login-history:
  *   get:
  *     summary: Get user login history
- *     description: Returns user login/logout history with pagination
- *     tags: [User Management]
+ *     description: Returns user login/logout history with pagination. Admin only.
+ *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -915,9 +984,9 @@ router.get("/:id/activity", checkUserAuthorized(), validateRequest(userIdParamSc
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Insufficient permissions
+ *         description: Admin access required
  */
-router.get("/:id/login-history", checkUserAuthorized(), validateRequest(userIdParamSchema), (req, res) => {
+router.get("/:id/login-history", checkUserAuthorized(), requireAdmin, validateRequest(userIdParamSchema), (req, res) => {
   getUserLoginHistoryController(req, (result) => {
     res.json(result);
   });
@@ -932,8 +1001,8 @@ router.get("/:id/login-history", checkUserAuthorized(), validateRequest(userIdPa
  * /api/v1/users/bulk-delete:
  *   post:
  *     summary: Bulk delete users
- *     description: Soft deletes multiple users at once
- *     tags: [Bulk Operations]
+ *     description: Soft deletes multiple users at once. Admin only.
+ *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -949,6 +1018,7 @@ router.get("/:id/login-history", checkUserAuthorized(), validateRequest(userIdPa
  *                 type: array
  *                 items:
  *                   type: integer
+ *                 example: [2, 3, 4]
  *     responses:
  *       200:
  *         description: Users deleted successfully
@@ -957,9 +1027,9 @@ router.get("/:id/login-history", checkUserAuthorized(), validateRequest(userIdPa
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Insufficient permissions
+ *         description: Admin access required
  */
-router.post("/bulk-delete", checkUserAuthorized(), validateRequest(bulkDeleteUsersSchema), (req, res) => {
+router.post("/bulk-delete", checkUserAuthorized(), requireAdmin, (req, res) => {
   bulkDeleteUsersController(req, (result) => {
     res.json(result);
   });
@@ -1017,8 +1087,8 @@ router.post("/bulk-update-roles", checkUserAuthorized(), validateRequest(bulkUpd
  * /api/v1/users/export:
  *   get:
  *     summary: Export users
- *     description: Exports user data in specified format
- *     tags: [Export & Reports]
+ *     description: Exports user data in specified format. Management level access required.
+ *     tags: [Management]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1035,9 +1105,9 @@ router.post("/bulk-update-roles", checkUserAuthorized(), validateRequest(bulkUpd
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Insufficient permissions
+ *         description: Management access required
  */
-router.get("/export", checkUserAuthorized(), validateRequest(exportUsersSchema), (req, res) => {
+router.get("/export", checkUserAuthorized(), requireManagement, (req, res) => {
   exportUsersController(req, (result) => {
     res.json(result);
   });

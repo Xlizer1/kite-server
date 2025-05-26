@@ -1,3 +1,5 @@
+// Updated src/api/v1/user/controller.js - Using department-based permissions
+
 const {
     registerUserModel,
     updateUserModel,
@@ -20,8 +22,10 @@ const {
     getUserLoginHistoryModel,
     checkFailedLoginAttemptsModel,
     incrementFailedLoginAttemptsModel,
-    resetFailedLoginAttemptsModel
+    resetFailedLoginAttemptsModel,
+    getUserByEmailModel,
 } = require("./model");
+
 const {
     userExists,
     getUser,
@@ -32,22 +36,26 @@ const {
     getToken,
     hash,
 } = require("../../../helpers/common");
+
+const { hasPermission, isAdmin, isManagement, canManageUsers, DEPARTMENTS } = require("../../../helpers/permissions");
+
 const {
     registerUserSchema,
     loginUserSchema,
     changePasswordSchema,
     profileUpdateSchema,
 } = require("../../../validators/userValidator");
+
 const { ValidationError } = require("../../../helpers/errors");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer"); // For sending emails
 
 const getUsers = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
 
-        if (authorize?.roles?.includes(5)) {
+        // Check if user can view users
+        if (hasPermission(authorize.department_id, "users", "read")) {
             const result = await getUsersModel(request);
 
             if (result && result.data && Array.isArray(result.data)) {
@@ -64,7 +72,7 @@ const getUsers = async (request, callBack) => {
                 callBack(resultObject(false, "Failed to retrieve users"));
             }
         } else {
-            callBack(resultObject(false, "You don't have the permission to see users!"));
+            callBack(resultObject(false, "You don't have permission to view users!"));
         }
     } catch (error) {
         if (error instanceof ValidationError) {
@@ -89,6 +97,13 @@ const getUserById = async (request, callBack) => {
             throw new ValidationError("Invalid user ID provided.");
         }
 
+        // Check if user can view this user (own profile or has permission)
+        const targetUserId = parseInt(id);
+        if (authorize.id !== targetUserId && !hasPermission(authorize.department_id, "users", "read")) {
+            callBack(resultObject(false, "You don't have permission to view this user!"));
+            return;
+        }
+
         const user = await getUserByIdModel(id);
         if (user && user?.id) {
             const object = {
@@ -100,9 +115,9 @@ const getUserById = async (request, callBack) => {
                 enabled: user?.enabled,
                 last_login: user?.last_login,
                 created_at: user?.created_at,
-                roles: user?.roles || [],
-                restaurant: user?.restaurant,
+                department_id: user?.department_id,
                 department: user?.department,
+                restaurant: user?.restaurant,
             };
             callBack(resultObject(true, "success", object));
         } else {
@@ -119,11 +134,6 @@ const getUserById = async (request, callBack) => {
 
 const loginUser = async (request, callBack) => {
     try {
-        // const { error } = loginUserSchema.validate(request.body);
-        // if (error) {
-        //   throw new ValidationError(error.details[0].message);
-        // }
-
         const { username, password } = request.body;
 
         if (!username || !password) {
@@ -174,7 +184,8 @@ const loginUser = async (request, callBack) => {
                         email: user.email,
                         phone: user.phone,
                         department_id: user.department_id,
-                        roles: user.roles,
+                        department_name: user.department_name,
+                        restaurant_name: user.restaurant_name,
                         token: await createToken(user),
                     })
                 );
@@ -213,23 +224,15 @@ const registerUser = async (request, callBack) => {
             return;
         }
 
-        if (authorize?.roles?.includes(6)) {
+        // Check if user can create users
+        if (hasPermission(authorize.department_id, "users", "create")) {
             const { error } = registerUserSchema.validate(request.body);
             if (error) {
                 throw new ValidationError(error.details[0].message);
             }
 
-            const {
-                department_id,
-                restaurant_id,
-                parent_restaurant_id,
-                name,
-                username,
-                email,
-                phone,
-                password,
-                roles,
-            } = request.body;
+            const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, password } =
+                request.body;
 
             const checkUserExists = await userExists(username, email, phone);
             if (checkUserExists) {
@@ -245,7 +248,6 @@ const registerUser = async (request, callBack) => {
                 restaurant_id,
                 parent_restaurant_id,
                 department_id,
-                roles,
                 created_by: authorize.id,
             });
 
@@ -263,7 +265,7 @@ const registerUser = async (request, callBack) => {
                 callBack(resultObject(false, "Failed to create user."));
             }
         } else {
-            callBack(resultObject(false, "You don't have the permission to create a user!"));
+            callBack(resultObject(false, "You don't have permission to create users!"));
         }
     } catch (error) {
         if (error instanceof ValidationError) {
@@ -284,9 +286,10 @@ const updateUser = async (request, callBack) => {
             return;
         }
 
-        if (authorize?.roles?.includes(7)) {
+        // Check if user can update users
+        if (hasPermission(authorize.department_id, "users", "update")) {
             const id = request.params.id;
-            const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, enabled, roles } =
+            const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, enabled } =
                 request.body;
 
             const result = await updateUserModel({
@@ -298,7 +301,6 @@ const updateUser = async (request, callBack) => {
                 email,
                 phone,
                 enabled,
-                roles,
                 id,
                 updated_by: authorize?.id,
             });
@@ -317,7 +319,7 @@ const updateUser = async (request, callBack) => {
                 callBack(resultObject(false, "Failed to update user."));
             }
         } else {
-            callBack(resultObject(false, "You don't have the permission to update a user!"));
+            callBack(resultObject(false, "You don't have permission to update users!"));
         }
     } catch (error) {
         console.log(error);
@@ -338,8 +340,14 @@ const deleteUser = async (request, callBack) => {
             return;
         }
 
-        if (authorize?.roles?.includes(8)) {
+        // Check if user can delete users
+        if (hasPermission(authorize.department_id, "users", "delete")) {
             const { id } = request.params;
+
+            // Prevent self-deletion
+            if (parseInt(id) === authorize.id) {
+                return callBack(resultObject(false, "You cannot delete your own account!"));
+            }
 
             const result = await deleteUserModel({ id, deleted_by: authorize?.id });
             if (result?.status === true) {
@@ -356,7 +364,7 @@ const deleteUser = async (request, callBack) => {
                 callBack(resultObject(false, "Failed to delete user."));
             }
         } else {
-            callBack(resultObject(false, "You don't have the permission to delete a user!"));
+            callBack(resultObject(false, "You don't have permission to delete users!"));
         }
     } catch (error) {
         if (error instanceof ValidationError) {
@@ -422,7 +430,7 @@ const forgotPassword = async (request, callBack) => {
             return callBack(resultObject(false, "Email is required"));
         }
 
-        const user = await getUserByIdModel(null, email);
+        const user = await getUserByEmailModel(email);
         if (!user) {
             // Don't reveal if email exists or not for security
             return callBack(resultObject(true, "If the email exists, a password reset link has been sent"));
@@ -435,8 +443,13 @@ const forgotPassword = async (request, callBack) => {
         // Save reset token
         await createPasswordResetTokenModel(user.id, resetToken, resetTokenExpiry);
 
-        // Send email (implement your email service)
-        // await sendPasswordResetEmail(email, resetToken);
+        // Send email
+        try {
+            await sendPasswordResetEmail(email, resetToken, user.name);
+        } catch (emailError) {
+            console.error("Email sending failed:", emailError);
+            // Don't expose email errors to user for security
+        }
 
         // Log password reset request
         await createUserActivityLogModel({
@@ -558,8 +571,9 @@ const getUserActivity = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (!authorize?.roles?.includes(1)) {
-            // Admin role
+
+        // Only admin can view other users' activity
+        if (!isAdmin(authorize.department_id)) {
             return callBack(resultObject(false, "You don't have permission to view user activity"));
         }
 
@@ -583,8 +597,9 @@ const activateUser = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (!authorize?.roles?.includes(1)) {
-            // Admin role
+
+        // Check if user can update users
+        if (!hasPermission(authorize.department_id, "users", "update")) {
             return callBack(resultObject(false, "You don't have permission to activate users"));
         }
 
@@ -615,12 +630,18 @@ const deactivateUser = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (!authorize?.roles?.includes(1)) {
-            // Admin role
+
+        // Check if user can update users
+        if (!hasPermission(authorize.department_id, "users", "update")) {
             return callBack(resultObject(false, "You don't have permission to deactivate users"));
         }
 
         const { id } = request.params;
+
+        // Prevent self-deactivation
+        if (parseInt(id) === authorize.id) {
+            return callBack(resultObject(false, "You cannot deactivate your own account"));
+        }
 
         const result = await updateUserStatusModel(id, 0, authorize.id); // 0 = disabled
 
@@ -647,8 +668,9 @@ const bulkDeleteUsers = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (!authorize?.roles?.includes(1)) {
-            // Admin role
+
+        // Only admin can bulk delete
+        if (!isAdmin(authorize.department_id)) {
             return callBack(resultObject(false, "You don't have permission to bulk delete users"));
         }
 
@@ -656,6 +678,11 @@ const bulkDeleteUsers = async (request, callBack) => {
 
         if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
             return callBack(resultObject(false, "User IDs array is required"));
+        }
+
+        // Prevent self-deletion
+        if (user_ids.includes(authorize.id)) {
+            return callBack(resultObject(false, "You cannot delete your own account"));
         }
 
         const result = await bulkDeleteUsersModel(user_ids, authorize.id);
@@ -678,51 +705,13 @@ const bulkDeleteUsers = async (request, callBack) => {
     }
 };
 
-const bulkUpdateUserRoles = async (request, callBack) => {
-    try {
-        const token = await getToken(request);
-        const authorize = await verifyUserToken(token);
-        if (!authorize?.roles?.includes(1)) {
-            // Admin role
-            return callBack(resultObject(false, "You don't have permission to bulk update user roles"));
-        }
-
-        const { user_ids, roles } = request.body;
-
-        if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
-            return callBack(resultObject(false, "User IDs array is required"));
-        }
-
-        if (!roles || !Array.isArray(roles) || roles.length === 0) {
-            return callBack(resultObject(false, "Roles array is required"));
-        }
-
-        const result = await bulkUpdateUserRolesModel(user_ids, roles, authorize.id);
-
-        if (result.status) {
-            // Log bulk role update
-            await createUserActivityLogModel({
-                user_id: authorize.id,
-                action: "bulk_update_roles",
-                description: `Bulk updated roles for ${user_ids.length} users`,
-            });
-
-            callBack(resultObject(true, `Successfully updated roles for ${result.updatedCount} users`));
-        } else {
-            callBack(resultObject(false, "Failed to update user roles"));
-        }
-    } catch (error) {
-        console.error("Error in bulkUpdateUserRoles:", error);
-        callBack(resultObject(false, "Something went wrong. Please try again later."));
-    }
-};
-
 const exportUsers = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (!authorize?.roles?.includes(1)) {
-            // Admin role
+
+        // Only management can export
+        if (!isManagement(authorize.department_id)) {
             return callBack(resultObject(false, "You don't have permission to export users"));
         }
 
@@ -752,8 +741,9 @@ const getUserLoginHistory = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (!authorize?.roles?.includes(1)) {
-            // Admin role
+
+        // Only admin can view login history
+        if (!isAdmin(authorize.department_id)) {
             return callBack(resultObject(false, "You don't have permission to view login history"));
         }
 
@@ -789,8 +779,6 @@ const logout = async (request, callBack) => {
             ip_address: request.ip || request.connection.remoteAddress,
         });
 
-        // In a more sophisticated setup, you'd invalidate the token
-        // For now, just log the logout action
         callBack(resultObject(true, "Logged out successfully"));
     } catch (error) {
         console.error("Error in logout:", error);
@@ -823,7 +811,6 @@ module.exports = {
 
     // Bulk Operations
     bulkDeleteUsersController: bulkDeleteUsers,
-    bulkUpdateUserRolesController: bulkUpdateUserRoles,
 
     // Export & Reports
     exportUsersController: exportUsers,
