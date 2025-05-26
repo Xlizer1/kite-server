@@ -11,51 +11,26 @@ const {
 const { registerUserSchema, loginUserSchema } = require("../../../validators/userValidator");
 const { ValidationError } = require("../../../helpers/errors");
 
-const loginUser = async (request, callBack) => {
+const getUsers = async (request, callBack) => {
     try {
-        // const { error } = loginUserSchema.validate(request.body);
-        // if (error) {
-        //   throw new ValidationError(error.details[0].message);
-        // }
-
-        const { username, password } = request.body;
-
-        if (!username || !password) {
-            callBack(resultObject(false, "Please provide username/password!"));
-        }
-
-        const user = await getUser(username);
-        if (user && user?.id) {
-            const isPasswordCorrect = await verifyPassword(password, user?.password);
-            if (isPasswordCorrect) {
-                callBack(
-                    resultObject(true, "success", {
-                        id: user.id,
-                        name: user.name,
-                        email: user.email,
-                        phone: user.phone,
-                        department_id: user.department_id,
-                        roles: user.roles,
-                        token: await createToken(user),
-                    })
-                );
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+        if (authorize?.roles?.includes(5)) {
+            const result = await getUsersModel();
+            if (Array.isArray(result)) {
+                callBack(resultObject(true, "success", result));
             } else {
-                callBack(resultObject(false, "Wrong Password!"));
+                callBack(resultObject(false, "no users were found!"));
             }
         } else {
-            callBack(resultObject(false, "User Doesn't exist!"));
+            callBack(resultObject(false, "You don't have the permission to see users!"));
+            return;
         }
     } catch (error) {
         if (error instanceof ValidationError) {
-            callBack({
-                status: false,
-                message: error.message,
-            });
+            callBack(resultObject(false, error.message));
         } else {
-            callBack({
-                status: false,
-                message: "Something went wrong. Please try again later.",
-            });
+            callBack(resultObject(false, "Something went wrong. Please try again later."));
         }
     }
 };
@@ -106,84 +81,51 @@ const getUserById = async (request, callBack) => {
     }
 };
 
-const updateUser = async (request, callBack) => {
+const loginUser = async (request, callBack) => {
     try {
-        const token = await getToken(request);
-        const authorize = await verifyUserToken(token);
-        if (!authorize?.id || !authorize?.email) {
-            callBack(resultObject(false, "Token is invalid!"));
-            return;
-        } else {
-            if (authorize?.roles?.includes(7)) {
-                const id = request.params.id;
-                const {
-                    department_id,
-                    restaurant_id,
-                    parent_restaurant_id,
-                    name,
-                    username,
-                    email,
-                    phone,
-                    enabled,
-                    roles,
-                } = request.body;
+        // const { error } = loginUserSchema.validate(request.body);
+        // if (error) {
+        //   throw new ValidationError(error.details[0].message);
+        // }
 
-                const result = await updateUserModel({
-                    department_id,
-                    restaurant_id,
-                    parent_restaurant_id,
-                    name,
-                    username,
-                    email,
-                    phone,
-                    enabled,
-                    roles,
-                    id,
-                    updated_id: authorize?.id,
-                });
+        const { username, password } = request.body;
 
-                if (result?.status === true) {
-                    callBack(resultObject(true, "User updated successfully.", result.user));
-                    return;
-                } else {
-                    callBack(resultObject(false, "Failed to update user."));
-                    return;
-                }
-            } else {
-                callBack(resultObject(false, "You don't have the permission to update a user!"));
-                return;
-            }
+        if (!username || !password) {
+            callBack(resultObject(false, "Please provide username/password!"));
         }
-    } catch (error) {
-        console.log(error);
-        if (error instanceof ValidationError) {
-            callBack(resultObject(false, error.message));
-        } else {
-            callBack(resultObject(false, "Something went wrong. Please try again later."));
-        }
-    }
-};
 
-const getUsers = async (request, callBack) => {
-    try {
-        const token = await getToken(request);
-        const authorize = await verifyUserToken(token);
-        if (authorize?.roles?.includes(5)) {
-            const result = await getUsersModel();
-            if (Array.isArray(result)) {
-                callBack(resultObject(true, "success", result));
+        const user = await getUser(username);
+        if (user && user?.id) {
+            const isPasswordCorrect = await verifyPassword(password, user?.password);
+            if (isPasswordCorrect) {
+                callBack(
+                    resultObject(true, "success", {
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
+                        phone: user.phone,
+                        department_id: user.department_id,
+                        roles: user.roles,
+                        token: await createToken(user),
+                    })
+                );
             } else {
-                callBack(resultObject(false, "no users were found!"));
+                callBack(resultObject(false, "Wrong Password!"));
             }
         } else {
-            callBack(resultObject(false, "You don't have the permission to see users!"));
-            return;
+            callBack(resultObject(false, "User Doesn't exist!"));
         }
     } catch (error) {
         if (error instanceof ValidationError) {
-            callBack(resultObject(false, error.message));
+            callBack({
+                status: false,
+                message: error.message,
+            });
         } else {
-            callBack(resultObject(false, "Something went wrong. Please try again later."));
+            callBack({
+                status: false,
+                message: "Something went wrong. Please try again later.",
+            });
         }
     }
 };
@@ -249,6 +191,64 @@ const registerUser = async (request, callBack) => {
         } else {
             callBack(resultObject(false, "Something went wrong. Please try again later."));
             console.log(error);
+        }
+    }
+};
+
+const updateUser = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+        if (!authorize?.id || !authorize?.email) {
+            callBack(resultObject(false, "Token is invalid!"));
+            return;
+        } else {
+            if (authorize?.roles?.includes(7)) {
+                const id = request.params.id;
+                const {
+                    department_id,
+                    restaurant_id,
+                    parent_restaurant_id,
+                    name,
+                    username,
+                    email,
+                    phone,
+                    enabled,
+                    roles,
+                } = request.body;
+
+                const result = await updateUserModel({
+                    department_id,
+                    restaurant_id,
+                    parent_restaurant_id,
+                    name,
+                    username,
+                    email,
+                    phone,
+                    enabled,
+                    roles,
+                    id,
+                    updated_id: authorize?.id,
+                });
+
+                if (result?.status === true) {
+                    callBack(resultObject(true, "User updated successfully.", result.user));
+                    return;
+                } else {
+                    callBack(resultObject(false, "Failed to update user."));
+                    return;
+                }
+            } else {
+                callBack(resultObject(false, "You don't have the permission to update a user!"));
+                return;
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        if (error instanceof ValidationError) {
+            callBack(resultObject(false, error.message));
+        } else {
+            callBack(resultObject(false, "Something went wrong. Please try again later."));
         }
     }
 };

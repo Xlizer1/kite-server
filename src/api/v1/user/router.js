@@ -11,18 +11,6 @@ const { checkUserAuthorized } = require("../../../helpers/common");
 
 const router = express.Router();
 
-router.post("/register", checkUserAuthorized(), (req, res) => {
-    registerUserController(req, (result) => {
-        res.json(result);
-    });
-});
-
-router.post("/", (req, res) => {
-    loginUserController(req, (result) => {
-        res.json(result);
-    });
-});
-
 router.get("/", checkUserAuthorized(), (req, res) => {
     getUsersController(req, (result) => {
         res.json(result);
@@ -31,6 +19,18 @@ router.get("/", checkUserAuthorized(), (req, res) => {
 
 router.get("/:id", checkUserAuthorized(), (req, res) => {
     getUserByIdController(req, (result) => {
+        res.json(result);
+    });
+});
+
+router.post("/register", checkUserAuthorized(), (req, res) => {
+    registerUserController(req, (result) => {
+        res.json(result);
+    });
+});
+
+router.post("/", (req, res) => {
+    loginUserController(req, (result) => {
         res.json(result);
     });
 });
