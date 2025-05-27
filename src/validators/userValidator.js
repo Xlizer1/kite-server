@@ -12,7 +12,6 @@ const registerUserSchema = Joi.object({
     .required(),
   department_id: Joi.number().integer().positive().required(),
   restaurant_id: Joi.number().integer().positive().required(),
-  parent_restaurant_id: Joi.number().integer().positive(),
   enabled: Joi.number().integer().positive(),
   roles: Joi.array().required(),
 });

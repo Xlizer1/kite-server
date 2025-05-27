@@ -8,6 +8,11 @@ const {
     getPendingCaptainCallsModel,
     updateCaptainCallModel,
     getTablesWithOrdersStatsModel,
+    getMenuForOrderingModel,
+    updateTableStatusModel,
+    getCaptainDashboardModel,
+    assignCaptainToTablesModel,
+    createOrderForTableModel,
 } = require("./model");
 
 const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
@@ -22,10 +27,6 @@ const getRestaurantTablesController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to view tables"));
-        }
 
         const result = await getRestaurantTablesModel(authorize.restaurant_id);
 
@@ -51,10 +52,6 @@ const getPendingOrdersController = async (request, callBack) => {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
 
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to view pending orders"));
-        }
-
         const result = await getPendingOrdersModel(authorize.restaurant_id);
 
         if (Array.isArray(result)) {
@@ -79,10 +76,6 @@ const getActiveOrdersController = async (request, callBack) => {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
 
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to view active orders"));
-        }
-
         const result = await getActiveOrdersModel(authorize.restaurant_id);
 
         if (Array.isArray(result)) {
@@ -106,10 +99,6 @@ const updateOrderStatusController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to update order status"));
-        }
 
         const { order_id } = request.params;
         const { status_id, notes } = request.body;
@@ -146,10 +135,6 @@ const getPendingCaptainCallsController = async (request, callBack) => {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
 
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to view captain calls"));
-        }
-
         const result = await getPendingCaptainCallsModel(authorize.restaurant_id);
 
         if (Array.isArray(result)) {
@@ -173,10 +158,6 @@ const updateCaptainCallController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to update captain calls"));
-        }
 
         const { call_id } = request.params;
         const { status } = request.body;
@@ -216,10 +197,6 @@ const getTablesWithOrdersStatsController = async (request, callBack) => {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
 
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to view table statistics"));
-        }
-
         const result = await getTablesWithOrdersStatsModel(authorize.restaurant_id);
 
         if (Array.isArray(result)) {
@@ -243,11 +220,6 @@ const createOrderForTableController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-
-        // Check if user has captain permissions
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to create orders"));
-        }
 
         const { table_id, items, special_request, allergy_info, customer_name } = request.body;
 
@@ -309,10 +281,6 @@ const getMenuForOrderingController = async (request, callBack) => {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
 
-        if (!authorize?.roles?.includes(1) && !authorize?.roles?.includes(5)) {
-            return callBack(resultObject(false, "You don't have permission to view menu"));
-        }
-
         const result = await getMenuForOrderingModel(authorize.restaurant_id);
 
         if (Array.isArray(result)) {
@@ -326,6 +294,110 @@ const getMenuForOrderingController = async (request, callBack) => {
     }
 };
 
+/**
+ * Update table status (occupied/free)
+ * @param {Object} request - Express request object
+ * @param {Function} callBack - Callback function
+ */
+const updateTableStatusController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        const { table_id } = request.params;
+        const { status, customer_count, notes } = request.body;
+
+        if (!table_id || !status) {
+            return callBack(resultObject(false, "Table ID and status are required"));
+        }
+
+        const result = await updateTableStatusModel({
+            table_id,
+            status, // 1 = free, 2 = occupied, 3 = reserved, 4 = cleaning
+            customer_count,
+            notes,
+            updated_by: authorize.id,
+            restaurant_id: authorize.restaurant_id
+        });
+
+        if (result) {
+            // Trigger real-time notification
+            const realtimeService = require("../../../services/realtimeService");
+            realtimeService.notifyTableStatusChange(authorize.restaurant_id, {
+                table_id: parseInt(table_id),
+                status,
+                customer_count,
+                updated_by: authorize.id,
+                updated_at: new Date()
+            });
+
+            callBack(resultObject(true, "Table status updated successfully"));
+        } else {
+            callBack(resultObject(false, "Failed to update table status"));
+        }
+    } catch (error) {
+        console.error(error);
+        callBack(resultObject(false, "Something went wrong, please try again later"));
+    }
+};
+
+/**
+ * Get captain dashboard summary
+ * @param {Object} request - Express request object  
+ * @param {Function} callBack - Callback function
+ */
+const getCaptainDashboardController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        const result = await getCaptainDashboardModel(authorize.restaurant_id);
+
+        if (result) {
+            callBack(resultObject(true, "Dashboard data retrieved successfully", result));
+        } else {
+            callBack(resultObject(false, "Failed to retrieve dashboard data"));
+        }
+    } catch (error) {
+        console.error(error);
+        callBack(resultObject(false, "Something went wrong, please try again later"));
+    }
+};
+
+/**
+ * Assign captain to specific tables
+ * @param {Object} request - Express request object
+ * @param {Function} callBack - Callback function
+ */
+const assignCaptainToTablesController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        const { table_ids } = request.body;
+
+        if (!table_ids || !Array.isArray(table_ids)) {
+            return callBack(resultObject(false, "Table IDs array is required"));
+        }
+
+        const result = await assignCaptainToTablesModel({
+            captain_id: authorize.id,
+            table_ids,
+            restaurant_id: authorize.restaurant_id
+        });
+
+        if (result) {
+            callBack(resultObject(true, "Tables assigned successfully"));
+        } else {
+            callBack(resultObject(false, "Failed to assign tables"));
+        }
+    } catch (error) {
+        console.error(error);
+        callBack(resultObject(false, "Something went wrong, please try again later"));
+    }
+};
+
+
 module.exports = {
     getRestaurantTablesController,
     getPendingOrdersController,
@@ -336,4 +408,7 @@ module.exports = {
     getTablesWithOrdersStatsController,
     createOrderForTableController,
     getMenuForOrderingController,
+    updateTableStatusController,
+    getCaptainDashboardController,
+    assignCaptainToTablesController
 };

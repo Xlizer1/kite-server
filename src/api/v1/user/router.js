@@ -516,9 +516,6 @@ router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (r
  *               restaurant_id:
  *                 type: integer
  *                 example: 1
- *               parent_restaurant_id:
- *                 type: integer
- *                 example: 1
  *     responses:
  *       201:
  *         description: User registered successfully

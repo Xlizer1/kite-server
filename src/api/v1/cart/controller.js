@@ -281,15 +281,10 @@ const callCaptain = async (request, callBack) => {
             return callBack(resultObject(false, "Session ID is required"));
         }
 
-        // Get cart details
         const cart = await getCartModel(sessionId);
 
         if (!cart || !cart.id) {
             return callBack(resultObject(false, "Cart not found. Please initialize cart first"));
-        }
-
-        if (!cart.items || cart.items.length === 0) {
-            return callBack(resultObject(false, "Your cart is empty. Please add items before calling a captain"));
         }
 
         const result = await createCaptainCallModel({
@@ -298,13 +293,22 @@ const callCaptain = async (request, callBack) => {
         });
 
         if (result.status) {
+            // 🔥 FIREBASE: Send real-time notification
+            const firebaseRealtimeService = require("../../../services/firebaseRealtimeService");
+            await firebaseRealtimeService.sendCaptainCallNotification(cart.restaurant_id, {
+                id: result.id,
+                table_id: cart.table_id,
+                table_number: cart.table_number || `Table ${cart.table_id}`,
+                created_at: new Date()
+            });
+
             return callBack(resultObject(true, result.message || "Captain has been called", { callId: result.id }));
         } else {
             return callBack(resultObject(false, result.message || "Failed to call captain"));
         }
     } catch (error) {
         console.error("Error in callCaptain controller:", error);
-        return callBack(resultObject(false, "Something went wrong. Please try again later."));
+        return callBack(resultObject(false, "Something went wrong, please try again later"));
     }
 };
 

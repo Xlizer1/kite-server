@@ -215,7 +215,7 @@ const getUserByUsername = async (username) => {
 
 const registerUser = async (obj) => {
     try {
-        const { username, email, phone, password, name, department_id, restaurant_id, parent_restaurant_id, created_by } = obj;
+        const { username, email, phone, password, name, department_id, restaurant_id, created_by } = obj;
 
         // Insert user with department_id instead of roles
         const userData = {
@@ -226,7 +226,6 @@ const registerUser = async (obj) => {
             password: await hash(password),
             department_id,
             restaurant_id,
-            parent_restaurant_id,
             created_by,
             created_at: new Date(),
         };
@@ -242,7 +241,7 @@ const registerUser = async (obj) => {
 
 const updateUser = async (obj) => {
     try {
-        const { id, username, email, phone, name, department_id, restaurant_id, parent_restaurant_id, enabled, updated_by } = obj;
+        const { id, username, email, phone, name, department_id, restaurant_id, enabled, updated_by } = obj;
         
         const updateData = {
             username,
@@ -251,7 +250,6 @@ const updateUser = async (obj) => {
             name,
             department_id,
             restaurant_id,
-            parent_restaurant_id,
             enabled,
             updated_by,
             updated_at: new Date(),

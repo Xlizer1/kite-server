@@ -231,7 +231,7 @@ const registerUser = async (request, callBack) => {
                 throw new ValidationError(error.details[0].message);
             }
 
-            const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, password } =
+            const { department_id, restaurant_id, name, username, email, phone, password } =
                 request.body;
 
             const checkUserExists = await userExists(username, email, phone);
@@ -246,7 +246,6 @@ const registerUser = async (request, callBack) => {
                 phone,
                 password,
                 restaurant_id,
-                parent_restaurant_id,
                 department_id,
                 created_by: authorize.id,
             });
@@ -289,13 +288,12 @@ const updateUser = async (request, callBack) => {
         // Check if user can update users
         if (hasPermission(authorize.department_id, "users", "update")) {
             const id = request.params.id;
-            const { department_id, restaurant_id, parent_restaurant_id, name, username, email, phone, enabled } =
+            const { department_id, restaurant_id, name, username, email, phone, enabled } =
                 request.body;
 
             const result = await updateUserModel({
                 department_id,
                 restaurant_id,
-                parent_restaurant_id,
                 name,
                 username,
                 email,

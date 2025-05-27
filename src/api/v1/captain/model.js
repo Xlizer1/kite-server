@@ -618,6 +618,171 @@ const getMenuForOrderingModel = async (restaurant_id) => {
     }
 };
 
+/**
+ * Update table status
+ * @param {Object} data - Table status data
+ * @returns {Promise<Boolean>} - Success status
+ */
+const updateTableStatusModel = async (data) => {
+    try {
+        const { table_id, status, customer_count, notes, updated_by, restaurant_id } = data;
+
+        // Validate table belongs to restaurant
+        const tableCheck = await executeQuery(
+            "SELECT id FROM tables WHERE id = ? AND restaurant_id = ?",
+            [table_id, restaurant_id],
+            "validateTableOwnership"
+        );
+
+        if (!tableCheck || tableCheck.length === 0) {
+            throw new CustomError("Table not found or doesn't belong to this restaurant", 404);
+        }
+
+        const queries = [];
+
+        // Update table status
+        queries.push({
+            sql: `
+                UPDATE tables
+                SET status = ?, customer_count = ?, updated_by = ?, updated_at = NOW()
+                WHERE id = ?
+            `,
+            params: [status, customer_count, updated_by, table_id]
+        });
+
+        // Log the status change
+        queries.push({
+            sql: `
+                INSERT INTO table_status_history
+                (table_id, status, customer_count, notes, changed_by, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
+            `,
+            params: [table_id, status, customer_count, notes, updated_by]
+        });
+
+        await executeTransaction(queries, "updateTableStatus");
+        return true;
+    } catch (error) {
+        throw new CustomError(`Failed to update table status: ${error.message}`, 500);
+    }
+};
+
+/**
+ * Get captain dashboard summary
+ * @param {number} restaurant_id - Restaurant ID
+ * @returns {Promise<Object>} - Dashboard data
+ */
+const getCaptainDashboardModel = async (restaurant_id) => {
+    try {
+        if (!restaurant_id) {
+            throw new CustomError("Restaurant ID is required", 400);
+        }
+
+        // Get overall statistics
+        const statsQuery = `
+            SELECT 
+                (SELECT COUNT(*) FROM tables WHERE restaurant_id = ? AND deleted_at IS NULL) as total_tables,
+                (SELECT COUNT(*) FROM tables WHERE restaurant_id = ? AND status = 1 AND deleted_at IS NULL) as free_tables,
+                (SELECT COUNT(*) FROM tables WHERE restaurant_id = ? AND status = 2 AND deleted_at IS NULL) as occupied_tables,
+                (SELECT COUNT(*) FROM captain_calls WHERE restaurant_id = ? AND status IN ('pending', 'in_progress')) as active_calls,
+                (SELECT COUNT(*) FROM orders WHERE restaurant_id = ? AND status_id = 1 AND deleted_at IS NULL) as pending_orders,
+                (SELECT COUNT(*) FROM orders WHERE restaurant_id = ? AND status_id IN (2, 3) AND deleted_at IS NULL) as active_orders
+        `;
+
+        const stats = await executeQuery(statsQuery, [
+            restaurant_id, restaurant_id, restaurant_id, 
+            restaurant_id, restaurant_id, restaurant_id
+        ], "getCaptainDashboardStats");
+
+        // Get recent activities
+        const activitiesQuery = `
+            SELECT 
+                'captain_call' as type,
+                cc.id,
+                t.number as table_number,
+                cc.created_at,
+                'Customer assistance requested' as description
+            FROM captain_calls cc
+            JOIN tables t ON cc.table_id = t.id
+            WHERE cc.restaurant_id = ? AND cc.created_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+            
+            UNION ALL
+            
+            SELECT 
+                'order' as type,
+                o.id,
+                t.number as table_number,
+                o.created_at,
+                CONCAT('New order - ', 
+                    (SELECT COUNT(*) FROM order_items WHERE order_id = o.id), 
+                    ' items') as description
+            FROM orders o
+            JOIN tables t ON o.table_id = t.id
+            WHERE o.restaurant_id = ? AND o.created_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+            
+            ORDER BY created_at DESC
+            LIMIT 10
+        `;
+
+        const activities = await executeQuery(activitiesQuery, [restaurant_id, restaurant_id], "getRecentActivities");
+
+        return {
+            stats: stats[0],
+            recent_activities: activities,
+            timestamp: new Date()
+        };
+    } catch (error) {
+        throw new CustomError(`Failed to get dashboard data: ${error.message}`, 500);
+    }
+};
+
+/**
+ * Assign captain to specific tables
+ * @param {Object} data - Assignment data
+ * @returns {Promise<Boolean>} - Success status
+ */
+const assignCaptainToTablesModel = async (data) => {
+    try {
+        const { captain_id, table_ids, restaurant_id } = data;
+
+        // Validate all tables belong to restaurant
+        const tableCheck = await executeQuery(
+            `SELECT id FROM tables WHERE id IN (${table_ids.map(() => '?').join(',')}) AND restaurant_id = ?`,
+            [...table_ids, restaurant_id],
+            "validateTablesOwnership"
+        );
+
+        if (tableCheck.length !== table_ids.length) {
+            throw new CustomError("One or more tables don't belong to this restaurant", 400);
+        }
+
+        const queries = [];
+
+        // Remove existing assignments for these tables
+        queries.push({
+            sql: `DELETE FROM captain_table_assignments WHERE table_id IN (${table_ids.map(() => '?').join(',')})`,
+            params: table_ids
+        });
+
+        // Add new assignments
+        table_ids.forEach(table_id => {
+            queries.push({
+                sql: `
+                    INSERT INTO captain_table_assignments 
+                    (captain_id, table_id, assigned_at, assigned_by)
+                    VALUES (?, ?, NOW(), ?)
+                `,
+                params: [captain_id, table_id, captain_id]
+            });
+        });
+
+        await executeTransaction(queries, "assignCaptainToTables");
+        return true;
+    } catch (error) {
+        throw new CustomError(`Failed to assign tables: ${error.message}`, 500);
+    }
+};
+
 module.exports = {
     getRestaurantTablesModel,
     getPendingOrdersModel,
@@ -627,5 +792,8 @@ module.exports = {
     updateCaptainCallModel,
     getTablesWithOrdersStatsModel,
     createOrderForTableModel,      // Add this
-    getMenuForOrderingModel        // Add this
+    getMenuForOrderingModel,        // Add this
+    updateTableStatusModel,
+    getCaptainDashboardModel,
+    assignCaptainToTablesModel
 };

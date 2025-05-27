@@ -1,5 +1,3 @@
-// src/api/v1/captain/router.js (Enhanced version)
-
 const express = require("express");
 const { 
     getRestaurantTablesController, 
@@ -10,7 +8,10 @@ const {
     updateCaptainCallController,
     getTablesWithOrdersStatsController,
     createOrderForTableController,
-    getMenuForOrderingController
+    getMenuForOrderingController,
+    assignCaptainToTablesController,
+    updateTableStatusController,
+    getCaptainDashboardController
 } = require("./controller");
 
 const { checkUserAuthorized } = require("../../../helpers/common");
@@ -25,7 +26,7 @@ router.use(checkUserAuthorized());
 
 /**
  * @swagger
- * /api/v1/v1/captain/tables:
+ * /api/v1/captain/tables:
  *   get:
  *     summary: Get all tables for the restaurant
  *     description: Returns all tables with their status
@@ -304,6 +305,96 @@ router.get("/menu", (req, res) => {
  */
 router.post("/orders", validateRequest(createOrderForTableSchema), (req, res) => {
     createOrderForTableController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/captain/dashboard:
+ *   get:
+ *     summary: Get captain dashboard summary
+ *     description: Returns summary statistics and recent activities for captain dashboard
+ *     tags: [Captain]
+ *     responses:
+ *       200:
+ *         description: Dashboard data retrieved successfully
+ */
+router.get("/dashboard", (req, res) => {
+    getCaptainDashboardController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/captain/tables/{table_id}/status:
+ *   put:
+ *     summary: Update table status
+ *     description: Updates the status of a specific table (free, occupied, etc.)
+ *     tags: [Captain]
+ *     parameters:
+ *       - in: path
+ *         name: table_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: integer
+ *                 enum: [1, 2, 3, 4]
+ *                 description: 1=free, 2=occupied, 3=reserved, 4=cleaning
+ *               customer_count:
+ *                 type: integer
+ *                 description: Number of customers at the table
+ *               notes:
+ *                 type: string
+ *                 description: Additional notes about the status change
+ *     responses:
+ *       200:
+ *         description: Table status updated successfully
+ */
+router.put("/tables/:table_id/status", (req, res) => {
+    updateTableStatusController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/captain/assign-tables:
+ *   post:
+ *     summary: Assign captain to tables
+ *     description: Assigns the current captain to specific tables
+ *     tags: [Captain]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - table_ids
+ *             properties:
+ *               table_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of table IDs to assign to the captain
+ *     responses:
+ *       200:
+ *         description: Tables assigned successfully
+ */
+router.post("/assign-tables", (req, res) => {
+    assignCaptainToTablesController(req, (result) => {
         res.json(result);
     });
 });
