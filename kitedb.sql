@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: May 20, 2025 at 07:06 PM
+-- Generation Time: May 27, 2025 at 09:02 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -204,13 +204,13 @@ CREATE TABLE `departments` (
 
 INSERT INTO `departments` (`id`, `name`) VALUES
 (1, 'Admin'),
-(2, 'Restaurant admin'),
 (3, 'Branch admin'),
-(4, 'Inventory admin'),
 (5, 'Captain'),
-(6, 'Kitchen'),
+(8, 'Finance'),
 (7, 'Hookah'),
-(8, 'Finance');
+(4, 'Inventory admin'),
+(6, 'Kitchen'),
+(2, 'Restaurant admin');
 
 -- --------------------------------------------------------
 
@@ -235,6 +235,22 @@ CREATE TABLE `discounts` (
   `created_by` int(11) NOT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `updated_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `failed_login_attempts`
+--
+
+CREATE TABLE `failed_login_attempts` (
+  `id` int(11) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `failed_attempts` int(11) NOT NULL DEFAULT 0,
+  `last_attempt` timestamp NULL DEFAULT current_timestamp(),
+  `locked_until` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -602,6 +618,21 @@ CREATE TABLE `order_status_history` (
   `changed_by` int(11) NOT NULL,
   `notes` text DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `password_reset_tokens`
+--
+
+CREATE TABLE `password_reset_tokens` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `expires_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `used_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1175,6 +1206,7 @@ CREATE TABLE `users` (
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `phone` varchar(50) DEFAULT NULL,
+  `last_login` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `enabled` tinyint(4) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -1189,8 +1221,8 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `department_id`, `restaurant_id`, `name`, `username`, `email`, `phone`, `password`, `enabled`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
-(1, 1, NULL, 'admin user', 'admin', 'admin@mail.com', '009647733002275', '$2b$10$eRvI9y3.JIXASkCZU/vqc.GeD4V56EZCAvroQwjms2LlJj2yZ7Ymq', 1, '2025-01-12 17:24:28', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `users` (`id`, `department_id`, `restaurant_id`, `name`, `username`, `email`, `phone`, `last_login`, `password`, `enabled`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) VALUES
+(1, 1, 1, 'admin user', 'admin', 'admin@mail.com', '009647733002275', NULL, '$2b$10$eRvI9y3.JIXASkCZU/vqc.GeD4V56EZCAvroQwjms2LlJj2yZ7Ymq', 1, '2025-05-25 13:05:33', 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1210,6 +1242,84 @@ CREATE TABLE `users_image_map` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   `deleted_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_activity_logs`
+--
+
+CREATE TABLE `user_activity_logs` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `action` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `target_user_id` int(11) DEFAULT NULL COMMENT 'ID of user affected by the action (for admin actions)',
+  `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`)),
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `user_activity_logs`
+--
+
+INSERT INTO `user_activity_logs` (`id`, `user_id`, `action`, `description`, `ip_address`, `target_user_id`, `metadata`, `created_at`) VALUES
+(1, 1, 'system_init', 'System initialized with sample data', NULL, NULL, NULL, '2025-05-26 15:22:47'),
+(2, 1, 'login', 'Admin user logged in', NULL, NULL, NULL, '2025-05-25 16:50:40'),
+(3, 1, 'user_created', 'Created new user account', NULL, NULL, NULL, '2025-05-26 14:50:40'),
+(4, 1, 'department_viewed', 'Viewed departments list', NULL, NULL, NULL, '2025-05-26 15:50:40');
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `user_activity_summary`
+-- (See below for the actual view)
+--
+CREATE TABLE `user_activity_summary` (
+`user_id` int(11)
+,`username` varchar(255)
+,`name` varchar(255)
+,`total_activities` bigint(21)
+,`last_activity` timestamp
+,`login_count` bigint(21)
+,`logout_count` bigint(21)
+,`failed_login_count` bigint(21)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `user_login_stats`
+-- (See below for the actual view)
+--
+CREATE TABLE `user_login_stats` (
+`user_id` int(11)
+,`username` varchar(255)
+,`name` varchar(255)
+,`last_login` timestamp
+,`failed_attempts` int(11)
+,`locked_until` timestamp
+,`account_status` varchar(8)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `user_activity_summary`
+--
+DROP TABLE IF EXISTS `user_activity_summary`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `user_activity_summary`  AS SELECT `u`.`id` AS `user_id`, `u`.`username` AS `username`, `u`.`name` AS `name`, count(`ual`.`id`) AS `total_activities`, max(`ual`.`created_at`) AS `last_activity`, count(case when `ual`.`action` = 'login' then 1 end) AS `login_count`, count(case when `ual`.`action` = 'logout' then 1 end) AS `logout_count`, count(case when `ual`.`action` = 'failed_login' then 1 end) AS `failed_login_count` FROM (`users` `u` left join `user_activity_logs` `ual` on(`u`.`id` = `ual`.`user_id`)) WHERE `u`.`deleted_at` is null GROUP BY `u`.`id`, `u`.`username`, `u`.`name` ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `user_login_stats`
+--
+DROP TABLE IF EXISTS `user_login_stats`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `user_login_stats`  AS SELECT `u`.`id` AS `user_id`, `u`.`username` AS `username`, `u`.`name` AS `name`, `u`.`last_login` AS `last_login`, coalesce(`fla`.`failed_attempts`,0) AS `failed_attempts`, `fla`.`locked_until` AS `locked_until`, CASE WHEN `fla`.`locked_until` is not null AND `fla`.`locked_until` > current_timestamp() THEN 'locked' WHEN `u`.`enabled` = 0 THEN 'disabled' ELSE 'active' END AS `account_status` FROM (`users` `u` left join `failed_login_attempts` `fla` on(`u`.`username` = `fla`.`username`)) WHERE `u`.`deleted_at` is null ;
 
 --
 -- Indexes for dumped tables
@@ -1290,7 +1400,8 @@ ALTER TABLE `customer_sessions`
 -- Indexes for table `departments`
 --
 ALTER TABLE `departments`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_departments_name` (`name`);
 
 --
 -- Indexes for table `discounts`
@@ -1298,6 +1409,14 @@ ALTER TABLE `departments`
 ALTER TABLE `discounts`
   ADD PRIMARY KEY (`id`),
   ADD KEY `restaurant_id` (`restaurant_id`);
+
+--
+-- Indexes for table `failed_login_attempts`
+--
+ALTER TABLE `failed_login_attempts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD KEY `locked_until` (`locked_until`);
 
 --
 -- Indexes for table `images`
@@ -1441,6 +1560,15 @@ ALTER TABLE `order_status_history`
   ADD KEY `order_id` (`order_id`),
   ADD KEY `status_id` (`status_id`),
   ADD KEY `changed_by` (`changed_by`);
+
+--
+-- Indexes for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `token` (`token`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `expires_at` (`expires_at`);
 
 --
 -- Indexes for table `payments`
@@ -1636,7 +1764,12 @@ ALTER TABLE `units`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD KEY `restaurant_id` (`restaurant_id`),
-  ADD KEY `users_ibfk_1` (`department_id`);
+  ADD KEY `users_ibfk_1` (`department_id`),
+  ADD KEY `idx_users_last_login` (`last_login`),
+  ADD KEY `idx_users_enabled_deleted` (`enabled`,`deleted_at`),
+  ADD KEY `idx_users_department_id` (`department_id`),
+  ADD KEY `idx_users_enabled` (`enabled`),
+  ADD KEY `idx_users_deleted_at` (`deleted_at`);
 
 --
 -- Indexes for table `users_image_map`
@@ -1648,6 +1781,16 @@ ALTER TABLE `users_image_map`
   ADD KEY `created_by` (`created_by`),
   ADD KEY `fk_users_updated_by` (`updated_by`),
   ADD KEY `fk_users_deleted_by` (`deleted_by`);
+
+--
+-- Indexes for table `user_activity_logs`
+--
+ALTER TABLE `user_activity_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `action` (`action`),
+  ADD KEY `created_at` (`created_at`),
+  ADD KEY `target_user_id` (`target_user_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -1717,6 +1860,12 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `discounts`
 --
 ALTER TABLE `discounts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `failed_login_attempts`
+--
+ALTER TABLE `failed_login_attempts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -1825,6 +1974,12 @@ ALTER TABLE `order_statuses`
 -- AUTO_INCREMENT for table `order_status_history`
 --
 ALTER TABLE `order_status_history`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -1982,6 +2137,12 @@ ALTER TABLE `users`
 --
 ALTER TABLE `users_image_map`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `user_activity_logs`
+--
+ALTER TABLE `user_activity_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables
@@ -2151,6 +2312,12 @@ ALTER TABLE `order_status_history`
   ADD CONSTRAINT `order_status_history_ibfk_3` FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`);
 
 --
+-- Constraints for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD CONSTRAINT `password_reset_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `payments`
 --
 ALTER TABLE `payments`
@@ -2280,6 +2447,13 @@ ALTER TABLE `users_image_map`
   ADD CONSTRAINT `users_image_map_ibfk_1` FOREIGN KEY (`image_id`) REFERENCES `images` (`id`),
   ADD CONSTRAINT `users_image_map_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
   ADD CONSTRAINT `users_image_map_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `user_activity_logs`
+--
+ALTER TABLE `user_activity_logs`
+  ADD CONSTRAINT `user_activity_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `user_activity_logs_ibfk_2` FOREIGN KEY (`target_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
