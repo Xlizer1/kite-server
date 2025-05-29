@@ -1,6 +1,3 @@
-// src/helpers/permissions.js - Simplified Department-Based Permission System
-
-// Department IDs from your database
 const DEPARTMENTS = {
     ADMIN: 1,
     RESTAURANT_ADMIN: 2,

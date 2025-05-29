@@ -10,7 +10,7 @@ const router = express.Router();
 tagDoc('Users', 'User management endpoints');
 
 // GET all users
-getEndpoint('/api/user', 'Get all users', 'Retrieves a list of all users', 'Users', 'User');
+getEndpoint('/api/v1/user', 'Get all users', 'Retrieves a list of all users', 'Users', 'User');
 router.get("/", (req, res) => {
   getUsersController(req, (result) => {
     res.json(result);

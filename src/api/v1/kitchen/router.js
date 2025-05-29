@@ -1,5 +1,3 @@
-// src/api/v1/kitchen/router.js
-
 const express = require("express");
 const { 
     getPendingKitchenOrdersController,
@@ -16,7 +14,6 @@ const { startProcessingOrderSchema, completeOrderSchema } = require("../../../va
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
 router.use(checkUserAuthorized());
 
 /**
