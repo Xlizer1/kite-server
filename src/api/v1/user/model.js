@@ -1,11 +1,8 @@
-// Updated src/api/v1/user/model.js - Simplified for department-based system
-
 const { hash, executeQuery, buildInsertQuery, buildUpdateQuery } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
 
-const getUsers = async (request) => {
+const getUsers = async (request, user) => {
     try {
-        // Extract query parameters with defaults
         const {
             page = 1,
             limit = 10,
@@ -16,15 +13,12 @@ const getUsers = async (request) => {
             sort_order = "DESC",
         } = request.query || {};
 
-        // Calculate pagination
         const offset = (parseInt(page) - 1) * parseInt(limit);
         const limitNum = parseInt(limit);
 
-        // Build dynamic WHERE conditions
         const conditions = ["u.deleted_at IS NULL"];
         const params = [];
 
-        // Search filter (searches in name, username, email)
         if (search && search.trim()) {
             conditions.push(`(
               u.name LIKE ? OR 
@@ -35,30 +29,30 @@ const getUsers = async (request) => {
             params.push(searchParam, searchParam, searchParam);
         }
 
-        // Department filter
         if (department_id && department_id !== "") {
             conditions.push("u.department_id = ?");
             params.push(parseInt(department_id));
         }
 
-        // Status filter
         if (status && (status === "enabled" || status === "disabled")) {
             const enabledValue = status === "enabled" ? 1 : 0;
             conditions.push("u.enabled = ?");
             params.push(enabledValue);
         }
 
-        // Validate sort fields to prevent SQL injection
+        if(user.department_id === 2) {
+            conditions.push("r.id = ?");
+            params.push(user.restaurant_id);
+        }
+
         const allowedSortFields = ["id", "name", "username", "email", "created_at", "updated_at", "department"];
         const sortField = allowedSortFields.includes(sort_by) ? sort_by : "created_at";
         const sortDirection = sort_order.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
-        // Handle department sorting
         const sortColumn = sortField === "department" ? "d.name" : `u.${sortField}`;
 
         const whereClause = conditions.join(" AND ");
 
-        // Main data query
         const dataQuery = `
           SELECT 
             u.id,
@@ -85,7 +79,6 @@ const getUsers = async (request) => {
           LIMIT ? OFFSET ?
         `;
 
-        // Count query for total records
         const countQuery = `
           SELECT COUNT(u.id) as total
           FROM 
@@ -96,7 +89,6 @@ const getUsers = async (request) => {
             ${whereClause}
         `;
 
-        // Execute both queries
         const dataParams = [...params, limitNum, offset];
         const countParams = [...params];
 
@@ -131,43 +123,50 @@ const getUsers = async (request) => {
     }
 };
 
-const getUserById = async (id) => {
+const getUserById = async (id, user) => {
     try {
-        const sql = `
-          SELECT 
-            u.id,
-            u.name,
-            u.username,
-            u.email,
-            u.phone,
-            u.enabled,
-            u.password,
-            u.last_login,
-            IF(u.enabled = 1, "enabled", "disabled") AS status,
-            u.created_at,
-            u.updated_at,
-            u.department_id,
-            JSON_OBJECT(
-              'id', r.id,
-              'name', r.name
-            ) as restaurant,
-            JSON_OBJECT(
-              'id', d.id,
-              'name', d.name
-            ) as department
-          FROM 
-            users u
-          LEFT JOIN 
-            departments d ON u.department_id = d.id
-          LEFT JOIN 
-            restaurants r ON u.restaurant_id = r.id
-          WHERE 
-            u.id = ? AND u.deleted_at IS NULL
+        let sql = `
+            SELECT 
+                u.id,
+                u.name,
+                u.username,
+                u.email,
+                u.phone,
+                u.enabled,
+                u.password,
+                u.last_login,
+                IF(u.enabled = 1, "enabled", "disabled") AS status,
+                u.created_at,
+                u.updated_at,
+                u.department_id,
+                JSON_OBJECT(
+                    'id', r.id,
+                    'name', r.name
+                ) as restaurant,
+                JSON_OBJECT(
+                    'id', d.id,
+                    'name', d.name
+                ) as department
+            FROM 
+                users u
+            LEFT JOIN 
+                departments d ON u.department_id = d.id
+            LEFT JOIN 
+                restaurants r ON u.restaurant_id = r.id
+            WHERE 
+                u.id = ? 
+            AND 
+                u.deleted_at IS NULL
         `;
+
+        if(user?.department_id === 2 && user?.restaurant_id) {
+            sql += ` AND r.id = ${user?.restaurant_id}`
+        }
 
         const result = await executeQuery(sql, [id], "getUserById");
         return result?.[0] || null;
     } catch (error) {
+        console.log(error)
         throw new CustomError(error.message, 500);
     }
 };
@@ -274,14 +273,14 @@ const deleteUser = async (obj) => {
     try {
         const { id, deleted_by } = obj;
         const sql = `
-      UPDATE users 
-      SET 
-        deleted_at = NOW(),
-        deleted_by = ?,
-        updated_at = NOW(),
-        updated_by = ?
-      WHERE id = ?
-    `;
+            UPDATE users 
+            SET 
+                deleted_at = NOW(),
+                deleted_by = ?,
+                updated_at = NOW(),
+                updated_by = ?
+            WHERE id = ?
+        `;
 
         const result = await executeQuery(sql, [deleted_by, deleted_by, id], "deleteUser");
         return { status: result.affectedRows > 0 };
@@ -290,7 +289,6 @@ const deleteUser = async (obj) => {
     }
 };
 
-// Password Management Functions
 const updateUserPasswordModel = async (userId, newPassword, updatedBy) => {
     try {
         const hashedPassword = await hash(newPassword);
@@ -366,7 +364,6 @@ const resetPasswordModel = async (userId, newPassword) => {
     }
 };
 
-// Profile Management Functions
 const updateUserProfileModel = async (userId, profileData, updatedBy) => {
     try {
         const updateData = {
@@ -403,7 +400,6 @@ const checkUserExistsExceptCurrent = async (email, phone, currentUserId) => {
     }
 };
 
-// User Activity Functions
 const createUserActivityLogModel = async (activityData) => {
     try {
         const logData = {
@@ -463,7 +459,6 @@ const getUserActivityModel = async (userId, page = 1, limit = 10) => {
     }
 };
 
-// User Status Management
 const updateUserStatusModel = async (userId, status, updatedBy) => {
     try {
         const sql = `
@@ -491,7 +486,6 @@ const updateLastLoginModel = async (userId) => {
     }
 };
 
-// Bulk Operations
 const bulkDeleteUsersModel = async (userIds, deletedBy) => {
     try {
         const placeholders = userIds.map(() => '?').join(',');
@@ -512,7 +506,6 @@ const bulkDeleteUsersModel = async (userIds, deletedBy) => {
     }
 };
 
-// Export Functions
 const exportUsersModel = async (format = 'csv') => {
     try {
         const sql = `
@@ -549,7 +542,6 @@ const exportUsersModel = async (format = 'csv') => {
     }
 };
 
-// Login Security Functions
 const checkFailedLoginAttemptsModel = async (username) => {
     try {
         const sql = `

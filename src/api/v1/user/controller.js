@@ -48,16 +48,14 @@ const {
 
 const { ValidationError } = require("../../../helpers/errors");
 const crypto = require("crypto");
-const { sendPasswordResetEmail } = require("../../../services/emailService");
 
 const getUsers = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
 
-        // Check if user can view users
         if (hasPermission(authorize.department_id, "users", "read")) {
-            const result = await getUsersModel(request);
+            const result = await getUsersModel(request, authorize);
 
             if (result && result.data && Array.isArray(result.data)) {
                 callBack(resultObject(true, "success", result));
@@ -105,7 +103,7 @@ const getUserById = async (request, callBack) => {
             return;
         }
 
-        const user = await getUserByIdModel(id);
+        const user = await getUserByIdModel(id, authorize);
         if (user && user?.id) {
             const object = {
                 id: user?.id,
@@ -430,32 +428,25 @@ const forgotPassword = async (request, callBack) => {
 
         const user = await getUserByEmailModel(email);
         if (!user) {
-            // For security, don't reveal if email exists or not
             return callBack(resultObject(true, "If the email exists, a password reset link has been sent"));
         }
 
-        // Generate reset token
         const resetToken = crypto.randomBytes(32).toString("hex");
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+        const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-        // Store the token in database
         await createPasswordResetTokenModel(user.id, resetToken, resetTokenExpiry);
 
-        // ✅ CREATE PROPER RESET LINK - This is what was missing!
         const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
         try {
-            // ✅ CALL SENDGRID SERVICE - Fixed parameter order
             const emailService = require('../../../services/emailService');
             await emailService.sendPasswordResetEmail(user.email, resetLink);
             
             console.log(`📧 Password reset email sent successfully to: ${user.email}`);
         } catch (emailError) {
             console.error("❌ Email sending failed:", emailError);
-            // Don't fail the request if email fails, for security
         }
 
-        // Log the activity
         await createUserActivityLogModel({
             user_id: user.id,
             action: "password_reset_requested",

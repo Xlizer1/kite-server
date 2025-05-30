@@ -51,8 +51,6 @@ const router = express.Router();
  *     summary: Get all users
  *     description: Returns a paginated list of users with optional filtering. Requires 'users' read permission.
  *     tags: [User Management]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -98,8 +96,6 @@ router.get("/", checkUserAuthorized(), requirePermission('users', 'read'), (req,
  *     summary: Get user by ID
  *     description: Returns a specific user by their ID. Users can view their own profile, others need 'users' read permission.
  *     tags: [User Management]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -117,7 +113,7 @@ router.get("/", checkUserAuthorized(), requirePermission('users', 'read'), (req,
  *       404:
  *         description: User not found
  */
-router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (req, res) => {
+router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), requirePermission('users', 'read'), (req, res) => {
   getUserByIdController(req, (result) => {
     res.json(result);
   });
@@ -130,8 +126,6 @@ router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), (r
  *     summary: Register a new user
  *     description: Creates a new user account. Requires 'users' create permission.
  *     tags: [User Management]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -223,8 +217,6 @@ router.post("/", validateRequest(loginUserSchema), (req, res) => {
  *     summary: Update user
  *     description: Updates an existing user's information. Requires 'users' update permission.
  *     tags: [User Management]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -286,8 +278,6 @@ router.put("/:id", checkUserAuthorized(), requirePermission('users', 'update'), 
  *     summary: Delete user
  *     description: Soft deletes a user. Requires 'users' delete permission.
  *     tags: [User Management]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -311,10 +301,6 @@ router.delete("/:id", checkUserAuthorized(), requirePermission('users', 'delete'
   });
 });
 
-// ===============================
-// NEW ROUTES - PASSWORD MANAGEMENT
-// ===============================
-
 /**
  * @swagger
  * /api/v1/users/change-password:
@@ -322,8 +308,6 @@ router.delete("/:id", checkUserAuthorized(), requirePermission('users', 'delete'
  *     summary: Change password
  *     description: Allows authenticated user to change their password
  *     tags: [Authentication]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -365,6 +349,8 @@ router.post("/change-password", validateRequest(changePasswordSchema), (req, res
  *     summary: Request password reset
  *     description: Sends password reset email to user
  *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -427,10 +413,6 @@ router.post("/reset-password", validateRequest(resetPasswordSchema), (req, res) 
   });
 });
 
-// ===============================
-// NEW ROUTES - PROFILE MANAGEMENT
-// ===============================
-
 /**
  * @swagger
  * /api/v1/users/profile:
@@ -438,8 +420,6 @@ router.post("/reset-password", validateRequest(resetPasswordSchema), (req, res) 
  *     summary: Get current user profile
  *     description: Returns the authenticated user's profile information
  *     tags: [Profile]
- *     security:
- *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: User profile retrieved successfully
@@ -459,8 +439,6 @@ router.get("/profile", checkUserAuthorized(), (req, res) => {
  *     summary: Update user profile
  *     description: Updates the authenticated user's profile information
  *     tags: [Profile]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -493,10 +471,6 @@ router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchem
   });
 });
 
-// ===============================
-// NEW ROUTES - USER MANAGEMENT
-// ===============================
-
 /**
  * @swagger
  * /api/v1/users/{id}/activate:
@@ -504,8 +478,6 @@ router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchem
  *     summary: Activate user
  *     description: Activates a disabled user account. Requires 'users' update permission.
  *     tags: [User Management]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -536,8 +508,6 @@ router.post("/:id/activate", checkUserAuthorized(), requirePermission('users', '
  *     summary: Deactivate user
  *     description: Deactivates an active user account. Requires 'users' update permission.
  *     tags: [User Management]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -568,8 +538,6 @@ router.post("/:id/deactivate", checkUserAuthorized(), requirePermission('users',
  *     summary: Get user activity
  *     description: Returns user activity logs with pagination. Admin only.
  *     tags: [Admin]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -610,8 +578,6 @@ router.get("/:id/activity", checkUserAuthorized(), requireAdmin, validateRequest
  *     summary: Get user login history
  *     description: Returns user login/logout history with pagination. Admin only.
  *     tags: [Admin]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -645,10 +611,6 @@ router.get("/:id/login-history", checkUserAuthorized(), requireAdmin, validateRe
   });
 });
 
-// ===============================
-// NEW ROUTES - BULK OPERATIONS
-// ===============================
-
 /**
  * @swagger
  * /api/v1/users/bulk-delete:
@@ -656,8 +618,6 @@ router.get("/:id/login-history", checkUserAuthorized(), requireAdmin, validateRe
  *     summary: Bulk delete users
  *     description: Soft deletes multiple users at once. Admin only.
  *     tags: [Admin]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -695,8 +655,6 @@ router.post("/bulk-delete", checkUserAuthorized(), requireAdmin, (req, res) => {
  *     summary: Bulk update user roles
  *     description: Updates roles for multiple users at once
  *     tags: [Bulk Operations]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -731,10 +689,6 @@ router.post("/bulk-update-roles", checkUserAuthorized(), validateRequest(bulkUpd
   });
 });
 
-// ===============================
-// NEW ROUTES - EXPORT & REPORTS
-// ===============================
-
 /**
  * @swagger
  * /api/v1/users/export:
@@ -742,8 +696,6 @@ router.post("/bulk-update-roles", checkUserAuthorized(), validateRequest(bulkUpd
  *     summary: Export users
  *     description: Exports user data in specified format. Management level access required.
  *     tags: [Management]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: format
@@ -766,10 +718,6 @@ router.get("/export", checkUserAuthorized(), requireManagement, (req, res) => {
   });
 });
 
-// ===============================
-// NEW ROUTES - SESSION MANAGEMENT
-// ===============================
-
 /**
  * @swagger
  * /api/v1/users/logout:
@@ -777,8 +725,6 @@ router.get("/export", checkUserAuthorized(), requireManagement, (req, res) => {
  *     summary: Logout user
  *     description: Logs out the authenticated user
  *     tags: [Authentication]
- *     security:
- *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Logged out successfully
