@@ -18,12 +18,12 @@ const registerUserSchema = Joi.object({
 
 const loginUserSchema = Joi.object({
   username: Joi.string().min(3).max(30).required(),
-  password: Joi.string().min(6).required(),
+  password: Joi.string().min(3).required(),
 });
 
 // New validation schemas
 const changePasswordSchema = Joi.object({
-  currentPassword: Joi.string().min(6).required().messages({
+  currentPassword: Joi.string().min(3).required().messages({
     'string.min': 'Current password must be at least 6 characters long',
     'any.required': 'Current password is required'
   }),

@@ -1,9 +1,9 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('./path-to-your-service-account-key.json');
+const serviceAccount = require('../../kite-be182-firebase-adminsdk-fbsvc-cf98aa7368.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com"
+  databaseURL: "https://kite-be182-default-rtdb.europe-west1.firebasedatabase.app/"
 });
 
 const db = admin.database();

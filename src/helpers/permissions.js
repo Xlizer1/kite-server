@@ -1,3 +1,5 @@
+const { getToken, verifyUserToken } = require("./common");
+
 const DEPARTMENTS = {
     ADMIN: 1,
     RESTAURANT_ADMIN: 2,

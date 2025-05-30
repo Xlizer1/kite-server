@@ -1,8 +1,4 @@
-// Updated src/helpers/common.js - Simplified for department-based permissions
-
 const { executeQuery, executeTransaction, buildInsertQuery, buildUpdateQuery } = require("./db");
-const { hasPermission, isAdmin } = require("./permissions");
-
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -61,6 +57,7 @@ const hash = (text) => {
 const verifyPassword = (password, hashedPassword) => {
     return new Promise(async (resolve, reject) => {
         try {
+            console.log(password, hashedPassword)
             const comparisonResult = await bcrypt.compare(password, hashedPassword);
             resolve(comparisonResult);
         } catch (error) {
@@ -125,7 +122,6 @@ function getToken(req) {
     });
 }
 
-// Simplified authorization check using department_id
 const checkUserAuthorized = () => {
     return async (req, res, next) => {
         try {
@@ -186,7 +182,6 @@ async function checkDataTokenValidation(data, callback) {
     }
 }
 
-// Simplified user fetching with department info
 const getUser = async (username) => {
     try {
         let sql = `

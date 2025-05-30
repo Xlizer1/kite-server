@@ -48,6 +48,7 @@ const {
 
 const { ValidationError } = require("../../../helpers/errors");
 const crypto = require("crypto");
+const { sendPasswordResetEmail } = require("../../../services/emailService");
 
 const getUsers = async (request, callBack) => {
     try {
@@ -394,17 +395,14 @@ const changePassword = async (request, callBack) => {
             return callBack(resultObject(false, "User not found"));
         }
 
-        // Verify current password
-        const isCurrentPasswordValid = await verifyPassword(currentPassword, user.password);
+        const isCurrentPasswordValid = await verifyPassword(currentPassword, user?.password);
         if (!isCurrentPasswordValid) {
             return callBack(resultObject(false, "Current password is incorrect"));
         }
 
-        // Update password
         const result = await updateUserPasswordModel(authorize.id, newPassword, authorize.id);
 
         if (result) {
-            // Log password change
             await createUserActivityLogModel({
                 user_id: authorize.id,
                 action: "password_changed",
@@ -430,26 +428,20 @@ const forgotPassword = async (request, callBack) => {
 
         const user = await getUserByEmailModel(email);
         if (!user) {
-            // Don't reveal if email exists or not for security
             return callBack(resultObject(true, "If the email exists, a password reset link has been sent"));
         }
 
-        // Generate reset token
         const resetToken = crypto.randomBytes(32).toString("hex");
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+        const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-        // Save reset token
         await createPasswordResetTokenModel(user.id, resetToken, resetTokenExpiry);
 
-        // Send email
         try {
             await sendPasswordResetEmail(email, resetToken, user.name);
         } catch (emailError) {
             console.error("Email sending failed:", emailError);
-            // Don't expose email errors to user for security
         }
 
-        // Log password reset request
         await createUserActivityLogModel({
             user_id: user.id,
             action: "password_reset_requested",
@@ -474,17 +466,14 @@ const resetPassword = async (request, callBack) => {
             return callBack(resultObject(false, "Password must be at least 6 characters long"));
         }
 
-        // Validate reset token
         const tokenData = await validatePasswordResetTokenModel(token);
         if (!tokenData) {
             return callBack(resultObject(false, "Invalid or expired reset token"));
         }
 
-        // Reset password
         const result = await resetPasswordModel(tokenData.user_id, newPassword);
 
         if (result) {
-            // Log password reset
             await createUserActivityLogModel({
                 user_id: tokenData.user_id,
                 action: "password_reset",

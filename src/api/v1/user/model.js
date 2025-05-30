@@ -141,6 +141,7 @@ const getUserById = async (id) => {
             u.email,
             u.phone,
             u.enabled,
+            u.password,
             u.last_login,
             IF(u.enabled = 1, "enabled", "disabled") AS status,
             u.created_at,
@@ -314,7 +315,6 @@ const createPasswordResetTokenModel = async (userId, token, expiresAt) => {
             "deleteExistingResetTokens"
         );
         
-        // Insert new token
         const sql = `
             INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at)
             VALUES (?, ?, ?, NOW())
