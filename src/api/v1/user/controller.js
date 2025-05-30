@@ -426,22 +426,36 @@ const forgotPassword = async (request, callBack) => {
             return callBack(resultObject(false, "Email is required"));
         }
 
+        console.log(`🔄 Processing password reset for: ${email}`);
+
         const user = await getUserByEmailModel(email);
         if (!user) {
+            // For security, don't reveal if email exists or not
             return callBack(resultObject(true, "If the email exists, a password reset link has been sent"));
         }
 
+        // Generate reset token
         const resetToken = crypto.randomBytes(32).toString("hex");
-        const resetTokenExpiry = new Date(Date.now() + 3600000);
+        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
+        // Store the token in database
         await createPasswordResetTokenModel(user.id, resetToken, resetTokenExpiry);
 
+        // ✅ CREATE PROPER RESET LINK - This is what was missing!
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+
         try {
-            await sendPasswordResetEmail(email, resetToken, user.name);
+            // ✅ CALL SENDGRID SERVICE - Fixed parameter order
+            const emailService = require('../../../services/emailService');
+            await emailService.sendPasswordResetEmail(user.email, resetLink);
+            
+            console.log(`📧 Password reset email sent successfully to: ${user.email}`);
         } catch (emailError) {
-            console.error("Email sending failed:", emailError);
+            console.error("❌ Email sending failed:", emailError);
+            // Don't fail the request if email fails, for security
         }
 
+        // Log the activity
         await createUserActivityLogModel({
             user_id: user.id,
             action: "password_reset_requested",
@@ -450,7 +464,7 @@ const forgotPassword = async (request, callBack) => {
 
         callBack(resultObject(true, "If the email exists, a password reset link has been sent"));
     } catch (error) {
-        console.error("Error in forgotPassword:", error);
+        console.error("❌ Error in forgotPassword:", error);
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
@@ -458,6 +472,7 @@ const forgotPassword = async (request, callBack) => {
 const resetPassword = async (request, callBack) => {
     try {
         const { token, newPassword } = request.body;
+        
         if (!token || !newPassword) {
             return callBack(resultObject(false, "Token and new password are required"));
         }
@@ -466,26 +481,33 @@ const resetPassword = async (request, callBack) => {
             return callBack(resultObject(false, "Password must be at least 6 characters long"));
         }
 
+        console.log(`🔄 Processing password reset with token: ${token.substring(0, 10)}...`);
+
+        // Validate the reset token
         const tokenData = await validatePasswordResetTokenModel(token);
         if (!tokenData) {
             return callBack(resultObject(false, "Invalid or expired reset token"));
         }
 
+        // Reset the password
         const result = await resetPasswordModel(tokenData.user_id, newPassword);
 
         if (result) {
+            // Log the password reset
             await createUserActivityLogModel({
                 user_id: tokenData.user_id,
                 action: "password_reset",
                 description: "Password reset completed via reset token",
             });
 
+            console.log(`✅ Password reset successful for user ID: ${tokenData.user_id}`);
             callBack(resultObject(true, "Password reset successfully"));
         } else {
+            console.error(`❌ Failed to reset password for user ID: ${tokenData.user_id}`);
             callBack(resultObject(false, "Failed to reset password"));
         }
     } catch (error) {
-        console.error("Error in resetPassword:", error);
+        console.error("❌ Error in resetPassword:", error);
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
