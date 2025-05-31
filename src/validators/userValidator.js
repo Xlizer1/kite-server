@@ -13,7 +13,6 @@ const registerUserSchema = Joi.object({
   department_id: Joi.number().integer().positive().required(),
   restaurant_id: Joi.number().integer().positive().required(),
   enabled: Joi.number().integer().positive(),
-  roles: Joi.array().required(),
 });
 
 const loginUserSchema = Joi.object({
