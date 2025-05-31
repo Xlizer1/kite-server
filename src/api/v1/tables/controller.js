@@ -1,7 +1,7 @@
-const { getTablesModel, createTablesModel, updateTablesModel, deleteTablesModel } = require("./model");
+const { getTablesModel, createTablesModel, updateTablesModel, deleteTablesModel, regenerateTableQRCodeModel } = require("./model");
 const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 
-const getTables = async (request, callBack) => {
+const getTablesController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
@@ -25,7 +25,7 @@ const getTables = async (request, callBack) => {
     }
 };
 
-const createTables = async (request, callBack) => {
+const createTablesController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
@@ -58,7 +58,7 @@ const createTables = async (request, callBack) => {
     }
 };
 
-const updateTables = async (request, callBack) => {
+const updateTablesController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
@@ -84,7 +84,7 @@ const updateTables = async (request, callBack) => {
     }
 };
 
-const deleteTables = async (request, callBack) => {
+const deleteTablesController = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
@@ -109,9 +109,52 @@ const deleteTables = async (request, callBack) => {
     }
 };
 
+const regenerateTableQRCodeController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        if (!authorize?.roles?.includes(1)) {
+            callBack(resultObject(false, "You don't have permission to regenerate QR codes!"));
+            return;
+        }
+
+        const { id } = request.params;
+
+        if (!id) {
+            callBack(resultObject(false, "Table ID is required"));
+            return;
+        }
+
+        const result = await regenerateTableQRCodeModel(id, authorize.id);
+
+        if (result && result.status) {
+            callBack(
+                resultObject(true, "QR code regenerated successfully", {
+                    table_id: result.table_id,
+                    table_number: result.table_number,
+                    qr_code: result.qr_code,
+                })
+            );
+        } else {
+            callBack(resultObject(false, "Failed to regenerate QR code"));
+        }
+    } catch (error) {
+        console.error("Error in regenerateTableQRCode:", error);
+
+        if (error instanceof CustomError) {
+            callBack(resultObject(false, error.message, null, error.statusCode));
+            return;
+        }
+
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
 module.exports = {
-    getTablesController: getTables,
-    createTablesController: createTables,
-    updateTablesController: updateTables,
-    deleteTablesController: deleteTables,
+    getTablesController,
+    createTablesController,
+    updateTablesController,
+    deleteTablesController,
+    regenerateTableQRCodeController,
 };

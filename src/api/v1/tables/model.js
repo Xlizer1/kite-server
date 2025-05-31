@@ -10,7 +10,7 @@ const port = PORT || "8000";
 
 const baseUrl = BASE_URL || `http://${ip}:${port}`;
 
-const getTables = async (restaurant_id = 1) => {
+const getTablesModel = async (restaurant_id = 1) => {
     try {
         const sql = `
             SELECT
@@ -32,7 +32,7 @@ const getTables = async (restaurant_id = 1) => {
     }
 };
 
-const createTables = async (obj) => {
+const createTablesModel = async (obj) => {
     return new Promise(async (resolve, reject) => {
         const { restaurant_id, number, creator_id } = obj;
 
@@ -118,7 +118,7 @@ const createTables = async (obj) => {
     });
 };
 
-const updateTables = async (obj) => {
+const updateTablesModel = async (obj) => {
     try {
         const { id, name, seats, updater_id } = obj;
 
@@ -140,7 +140,7 @@ const updateTables = async (obj) => {
     }
 };
 
-const deleteTables = async (id, user_id) => {
+const deleteTablesModel = async (id, user_id) => {
     try {
         const { sql, params } = buildUpdateQuery(
             "tables",
@@ -160,9 +160,81 @@ const deleteTables = async (id, user_id) => {
     }
 };
 
+const regenerateTableQRCodeModel = async (tableId, userId) => {
+    try {
+        // Get table details
+        const tableSql = `
+            SELECT
+                restaurant_id, number
+            FROM
+                tables
+            WHERE
+                id = ? AND deleted_at IS NULL
+        `;
+        const tableResult = await executeQuery(tableSql, [tableId], "getTableForQRRegen");
+
+        if (!tableResult || tableResult.length === 0) {
+            throw new CustomError("Table not found", 404);
+        }
+
+        const { restaurant_id, number } = tableResult[0];
+
+        // Encrypt the data
+        const hash = encryptObject({ restaurant_id, number });
+
+        // Convert the hash object to a URL-compatible format
+        const qrData = `${hash.iv}:${hash.encryptedData}`;
+
+        // Generate QR code
+        const qrCode = await QRCode.toDataURL(`${baseUrl}/menu&key=${qrData}`);
+
+        // Check if QR code exists for this table
+        const checkQRSql = `
+            SELECT id FROM qr_codes WHERE table_id = ?
+        `;
+        const existingQR = await executeQuery(checkQRSql, [tableId], "checkExistingQR");
+
+        if (existingQR && existingQR.length > 0) {
+            // Update existing QR code
+            const updateQRSql = `
+                UPDATE qr_codes
+                SET
+                    qr_code = ?,
+                    updated_at = NOW(),
+                    updated_by = ?
+                WHERE
+                    table_id = ?
+            `;
+            await executeQuery(updateQRSql, [qrCode, userId, tableId], "updateQRCode");
+        } else {
+            // Insert new QR code
+            const insertQRSql = `
+                INSERT INTO qr_codes
+                SET
+                    table_id = ?,
+                    qr_code = ?,
+                    created_at = NOW(),
+                    created_by = ?
+            `;
+            await executeQuery(insertQRSql, [tableId, qrCode, userId], "insertQRCode");
+        }
+
+        return {
+            status: true,
+            table_id: tableId,
+            table_number: number,
+            restaurant_id,
+            qr_code: qrCode,
+        };
+    } catch (error) {
+        throw error instanceof CustomError ? error : new CustomError(error.message, 500);
+    }
+};
+
 module.exports = {
-    getTablesModel: getTables,
-    createTablesModel: createTables,
-    updateTablesModel: updateTables,
-    deleteTablesModel: deleteTables,
+    getTablesModel,
+    createTablesModel,
+    updateTablesModel,
+    deleteTablesModel,
+    regenerateTableQRCodeModel
 };
