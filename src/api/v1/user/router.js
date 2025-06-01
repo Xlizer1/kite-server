@@ -1,5 +1,3 @@
-// src/api/v1/users/router.js
-
 const express = require("express");
 const {
   registerUserController,
@@ -7,8 +5,6 @@ const {
   updateUserController,
   getUserByIdController,
   getUsersController,
-  deleteUserModel,
-  // New controller functions
   changePasswordController,
   forgotPasswordController,
   resetPasswordController,
@@ -43,6 +39,64 @@ const { requireManagement, requirePermission, requireAdmin } = require("../../..
 const validateRequest = require("../../../middleware/validateRequest");
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/v1/users/profile:
+ *   get:
+ *     summary: Get current user profile
+ *     description: Returns the authenticated user's profile information
+ *     tags: [Profile]
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/profile", checkUserAuthorized(), (req, res) => {
+  getCurrentUserProfileController(req, (result) => {
+    res.json(result);
+  });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/profile:
+ *   put:
+ *     summary: Update user profile
+ *     description: Updates the authenticated user's profile information
+ *     tags: [Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - phone
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchema), (req, res) => {
+  updateUserProfileController(req, (result) => {
+    res.json(result);
+  });
+});
 
 /**
  * @swagger
@@ -409,64 +463,6 @@ router.post("/forgot-password", validateRequest(forgotPasswordSchema), (req, res
  */
 router.post("/reset-password", validateRequest(resetPasswordSchema), (req, res) => {
   resetPasswordController(req, (result) => {
-    res.json(result);
-  });
-});
-
-/**
- * @swagger
- * /api/v1/users/profile:
- *   get:
- *     summary: Get current user profile
- *     description: Returns the authenticated user's profile information
- *     tags: [Profile]
- *     responses:
- *       200:
- *         description: User profile retrieved successfully
- *       401:
- *         description: Unauthorized
- */
-router.get("/profile", checkUserAuthorized(), (req, res) => {
-  getCurrentUserProfileController(req, (result) => {
-    res.json(result);
-  });
-});
-
-/**
- * @swagger
- * /api/v1/users/profile:
- *   put:
- *     summary: Update user profile
- *     description: Updates the authenticated user's profile information
- *     tags: [Profile]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - phone
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               phone:
- *                 type: string
- *     responses:
- *       200:
- *         description: Profile updated successfully
- *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
- */
-router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchema), (req, res) => {
-  updateUserProfileController(req, (result) => {
     res.json(result);
   });
 });
