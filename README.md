@@ -56,8 +56,8 @@ A comprehensive Kite system with QR code-based ordering, kitchen management, inv
 ## API Endpoints
 
 ### Authentication
-- POST `/v1/user`: Login
-- POST `/v1/user/register`: Register new user
+- POST `/v1/users`: Login
+- POST `/v1/users/register`: Register new user
 
 ### Menu Management
 - GET `/v1/menu/main`: Get restaurant main menu

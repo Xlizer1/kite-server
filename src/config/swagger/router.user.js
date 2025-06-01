@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerUserController, loginUserController, updateUserController, getUserByIdController, getUsersController, deleteUserModel } = require("../../api/user/controller");
+const { registerUserController, loginUserController, updateUserController, getUserByIdController, getUsersController, deleteUserModel } = require("../../api/v1/user/controller");
 const { registerUserSchema, loginUserSchema } = require("../../validators/userValidator");
 const validateRequest = require("../../middleware/validateRequest");
 const { getEndpoint, postEndpoint, putEndpoint, deleteEndpoint, pathParam, tagDoc } = require('./route-docs');
@@ -10,7 +10,7 @@ const router = express.Router();
 tagDoc('Users', 'User management endpoints');
 
 // GET all users
-getEndpoint('/api/v1/user', 'Get all users', 'Retrieves a list of all users', 'Users', 'User');
+getEndpoint('/api/v1/users', 'Get all users', 'Retrieves a list of all users', 'Users', 'User');
 router.get("/", (req, res) => {
   getUsersController(req, (result) => {
     res.json(result);
@@ -19,7 +19,7 @@ router.get("/", (req, res) => {
 
 // GET user by ID
 getEndpoint(
-  '/api/user/{id}', 
+  '/api/users/{id}', 
   'Get user by ID', 
   'Retrieves a specific user by their ID', 
   'Users', 
@@ -34,7 +34,7 @@ router.get("/:id", (req, res) => {
 
 // UPDATE user
 putEndpoint(
-  '/api/user/{id}', 
+  '/api/users/{id}', 
   'Update user', 
   'Updates an existing user', 
   'Users', 
@@ -50,7 +50,7 @@ router.put("/:id", validateRequest(registerUserSchema), (req, res) => {
 
 // DELETE user
 deleteEndpoint(
-  '/api/user/{id}', 
+  '/api/users/{id}', 
   'Delete user', 
   'Deletes an existing user', 
   'Users', 
@@ -64,7 +64,7 @@ router.delete("/:id", (req, res) => {
 
 // REGISTER user
 postEndpoint(
-  '/api/user/register', 
+  '/api/users/register', 
   'Register new user', 
   'Creates a new user account', 
   'Users', 
@@ -79,7 +79,7 @@ router.post("/register", (req, res) => {
 
 // LOGIN user
 postEndpoint(
-  '/api/user', 
+  '/api/users', 
   'User login', 
   'Authenticates a user and returns a token', 
   'Users', 

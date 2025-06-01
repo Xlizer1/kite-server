@@ -40,7 +40,7 @@ tagDoc('Users', 'User management endpoints');
 
 // Document a GET endpoint
 getEndpoint(
-  '/api/user/{id}', 
+  '/api/users/{id}', 
   'Get user by ID', 
   'Retrieves a specific user by their ID', 
   'Users', 
@@ -53,7 +53,7 @@ router.get("/:id", (req, res) => {
 
 // Document a POST endpoint
 postEndpoint(
-  '/api/user/register', 
+  '/api/users/register', 
   'Register new user', 
   'Creates a new user account', 
   'Users', 
