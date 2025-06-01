@@ -230,8 +230,7 @@ const registerUser = async (request, callBack) => {
                 throw new ValidationError(error.details[0].message);
             }
 
-            const { department_id, restaurant_id, name, username, email, phone, password } =
-                request.body;
+            const { department_id, restaurant_id, name, username, email, phone, password } = request.body;
 
             const checkUserExists = await userExists(username, email, phone);
             if (checkUserExists) {
@@ -287,8 +286,7 @@ const updateUser = async (request, callBack) => {
         // Check if user can update users
         if (hasPermission(authorize.department_id, "users", "update")) {
             const id = request.params.id;
-            const { department_id, restaurant_id, name, username, email, phone, enabled } =
-                request.body;
+            const { department_id, restaurant_id, name, username, email, phone, enabled } = request.body;
 
             const result = await updateUserModel({
                 department_id,
@@ -436,12 +434,12 @@ const forgotPassword = async (request, callBack) => {
 
         await createPasswordResetTokenModel(user.id, resetToken, resetTokenExpiry);
 
-        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+        const resetLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
 
         try {
-            const emailService = require('../../../services/emailService');
+            const emailService = require("../../../services/emailService");
             await emailService.sendPasswordResetEmail(user.email, resetLink);
-            
+
             console.log(`📧 Password reset email sent successfully to: ${user.email}`);
         } catch (emailError) {
             console.error("❌ Email sending failed:", emailError);
@@ -463,7 +461,7 @@ const forgotPassword = async (request, callBack) => {
 const resetPassword = async (request, callBack) => {
     try {
         const { token, newPassword } = request.body;
-        
+
         if (!token || !newPassword) {
             return callBack(resultObject(false, "Token and new password are required"));
         }
@@ -541,18 +539,20 @@ const updateUserProfile = async (request, callBack) => {
 
         const { name, email, phone } = request.body;
 
+        const id = JSON.parse(authorize.id);
+
         // Check if email/phone is already taken by another user
-        const existingUser = await checkUserExistsExceptCurrent(email, phone, authorize.id);
+        const existingUser = await checkUserExistsExceptCurrent(email, phone, id);
         if (existingUser) {
             return callBack(resultObject(false, "Email or phone already taken by another user"));
         }
 
-        const result = await updateUserProfileModel(authorize.id, { name, email, phone }, authorize.id);
+        const result = await updateUserProfileModel(id, { name, email, phone }, id);
 
         if (result.status) {
             // Log profile update
             await createUserActivityLogModel({
-                user_id: authorize.id,
+                user_id: id,
                 action: "profile_updated",
                 description: "User updated their profile",
             });
