@@ -2,8 +2,8 @@ const express = require("express");
 const {
     getItemsController,
     getItemByIDController,
-    getItemsBySubCategoryIDController,
-    getPaginatedItemsBySubCategoryIDController,
+    getItemsByCategoryIDController,
+    getPaginatedItemsByCategoryIDController,
     createItemController,
     updateItemImageController,
 } = require("./controller");
@@ -27,14 +27,16 @@ router.get("/:item_id", (req, res) => {
     });
 });
 
-router.get("/get_by_sub_cat_id", (req, res) => {
-    getItemsBySubCategoryIDController(req, (result) => {
+// Updated route to use category_id instead of sub_cat_id
+router.get("/get_by_category_id", (req, res) => {
+    getItemsByCategoryIDController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
     });
 });
 
-router.get("/get_by_sub_cat_id_paginated", (req, res) => {
-    getPaginatedItemsBySubCategoryIDController(req, (result) => {
+// Updated route to use category_id instead of sub_cat_id
+router.get("/get_by_category_id_paginated", (req, res) => {
+    getPaginatedItemsByCategoryIDController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
     });
 });

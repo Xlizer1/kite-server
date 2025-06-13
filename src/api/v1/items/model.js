@@ -13,8 +13,8 @@ const getItems = async (restaurant_id) => {
                 i.is_shisha,
                 c.code AS currency_code,
                 im.url AS image_url,
-                sc.name AS sub_category_name,
-                cat.name AS category_name
+                cat.name AS category_name,
+                cat.id AS category_id
             FROM
                 items i
             LEFT JOIN
@@ -22,9 +22,7 @@ const getItems = async (restaurant_id) => {
             LEFT JOIN
                 images im ON iim.image_id = im.id AND iim.is_primary = 1
             LEFT JOIN
-                sub_categories sc ON i.sub_category_id = sc.id
-            LEFT JOIN
-                categories cat ON sc.category_id = cat.id
+                categories cat ON i.category_id = cat.id
             LEFT JOIN
                 currencies c ON i.currency_id = c.id
             WHERE
@@ -32,7 +30,7 @@ const getItems = async (restaurant_id) => {
             AND
                 i.deleted_at IS NULL
             GROUP BY
-                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, sc.name, cat.name
+                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, cat.name, cat.id
         `;
 
         const result = await executeQuery(sql, [restaurant_id], "getItems");
@@ -57,8 +55,8 @@ const getItemByID = async (item_id) => {
                 i.is_shisha,
                 c.code AS currency_code,
                 im.url AS image_url,
-                sc.name AS sub_category_name,
-                cat.name AS category_name
+                cat.name AS category_name,
+                cat.id AS category_id
             FROM
                 items i
             LEFT JOIN
@@ -66,9 +64,7 @@ const getItemByID = async (item_id) => {
             LEFT JOIN
                 images im ON iim.image_id = im.id AND iim.is_primary = 1
             LEFT JOIN
-                sub_categories sc ON i.sub_category_id = sc.id
-            LEFT JOIN
-                categories cat ON sc.category_id = cat.id
+                categories cat ON i.category_id = cat.id
             LEFT JOIN
                 currencies c ON i.currency_id = c.id
             WHERE
@@ -76,7 +72,7 @@ const getItemByID = async (item_id) => {
             AND
                 i.deleted_at IS NULL
             GROUP BY
-                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, sc.name, cat.name
+                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, cat.name, cat.id
         `;
 
         const result = await executeQuery(sql, [item_id], "getItemByID");
@@ -90,7 +86,7 @@ const getItemByID = async (item_id) => {
     }
 };
 
-const getItemsBySubCategoryID = async (restaurant_id, sub_category_id) => {
+const getItemsByCategoryID = async (restaurant_id, category_id) => {
     try {
         const sql = `
             SELECT
@@ -101,8 +97,8 @@ const getItemsBySubCategoryID = async (restaurant_id, sub_category_id) => {
                 i.is_shisha,
                 c.code AS currency_code,
                 im.url AS image_url,
-                sc.name AS sub_category_name,
-                cat.name AS category_name
+                cat.name AS category_name,
+                cat.id AS category_id
             FROM
                 items i
             LEFT JOIN
@@ -110,24 +106,22 @@ const getItemsBySubCategoryID = async (restaurant_id, sub_category_id) => {
             LEFT JOIN
                 images im ON iim.image_id = im.id AND iim.is_primary = 1
             LEFT JOIN
-                sub_categories sc ON i.sub_category_id = sc.id
-            LEFT JOIN
-                categories cat ON sc.category_id = cat.id
+                categories cat ON i.category_id = cat.id
             LEFT JOIN
                 currencies c ON i.currency_id = c.id
             WHERE
                 i.restaurant_id = ?
             AND
-                i.sub_category_id = ?
+                i.category_id = ?
             AND
                 i.deleted_at IS NULL
             GROUP BY
-                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, sc.name, cat.name
+                i.id, i.name, i.description, i.price, i.is_shisha, c.code, im.url, cat.name, cat.id
         `;
 
-        const result = await executeQuery(sql, [restaurant_id, sub_category_id], "getItemsBySubCategoryID");
+        const result = await executeQuery(sql, [restaurant_id, category_id], "getItemsByCategoryID");
         if (!result.length) {
-            throw new CustomError("No items found for the given sub-category", 404);
+            throw new CustomError("No items found for the given category", 404);
         }
         return result;
     } catch (error) {
@@ -136,7 +130,7 @@ const getItemsBySubCategoryID = async (restaurant_id, sub_category_id) => {
     }
 };
 
-const getPaginatedItemsBySubCategoryIDModel = async (sub_category_id, restaurant_id, limit, offset) => {
+const getPaginatedItemsByCategoryIDModel = async (category_id, restaurant_id, limit, offset) => {
     try {
         const sql = `
             SELECT
@@ -151,16 +145,17 @@ const getPaginatedItemsBySubCategoryIDModel = async (sub_category_id, restaurant
             LEFT JOIN items_image_map iim ON i.id = iim.item_id
             LEFT JOIN images im ON iim.image_id = im.id AND iim.is_primary = 1
             LEFT JOIN currencies c ON i.currency_id = c.id
-            WHERE i.sub_category_id = ?
+            WHERE i.category_id = ?
             AND i.restaurant_id = ?
+            AND i.deleted_at IS NULL
             ORDER BY i.id
             LIMIT ?, ?
         `;
 
         const result = await executeQuery(
             sql,
-            [sub_category_id, restaurant_id, offset, limit],
-            "getPaginatedItemsBySubCategoryID"
+            [category_id, restaurant_id, offset, limit],
+            "getPaginatedItemsByCategoryID"
         );
 
         return result;
@@ -173,7 +168,7 @@ const getPaginatedItemsBySubCategoryIDModel = async (sub_category_id, restaurant
 const createItem = async (data) => {
     const uploadedFile = data.images?.[0]; // Get the first image if exists
     try {
-        const { name, description, price, currency_id, restaurant_id, sub_category_id, is_shisha, creator_id } = data;
+        const { name, description, price, currency_id, restaurant_id, category_id, is_shisha, creator_id } = data;
 
         // Create items directory if it doesn't exist
         const dir = `${__dirname}/../../../uploads/items`;
@@ -189,7 +184,7 @@ const createItem = async (data) => {
                 price,
                 currency_id,
                 restaurant_id,
-                sub_category_id,
+                category_id,
                 is_shisha,
                 created_at,
                 created_by
@@ -197,7 +192,7 @@ const createItem = async (data) => {
         `;
         const itemResult = await executeQuery(
             itemQuery,
-            [name, description, price, currency_id, restaurant_id, sub_category_id, is_shisha ? 1 : 0, creator_id],
+            [name, description, price, currency_id, restaurant_id, category_id, is_shisha ? 1 : 0, creator_id],
             "createItem"
         );
         const item_id = itemResult.insertId;
@@ -375,8 +370,8 @@ const updateItemImage = async (item_id, image, user_id) => {
 module.exports = {
     getItemsModel: getItems,
     getItemByIDModel: getItemByID,
-    getItemsBySubCategoryIDModel: getItemsBySubCategoryID,
+    getItemsByCategoryIDModel: getItemsByCategoryID,
     createItemModel: createItem,
     updateItemImageModel: updateItemImage,
-    getPaginatedItemsBySubCategoryIDModel: getPaginatedItemsBySubCategoryIDModel,
+    getPaginatedItemsByCategoryIDModel: getPaginatedItemsByCategoryIDModel,
 };

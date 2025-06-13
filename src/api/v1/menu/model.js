@@ -67,12 +67,26 @@ const getRestaurantCategories = async (restaurant_id) => {
                 c.name,
                 i.url AS image_url,
                 JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                        'id', sc.id,
-                        'name', sc.name,
-                        'image_url', isc.url
-                    )
-                ) AS sub_categories
+                    CASE 
+                        WHEN item.id IS NOT NULL THEN
+                            JSON_OBJECT(
+                                'id', item.id,
+                                'name', item.name,
+                                'description', item.description,
+                                'price', item.price,
+                                'currency_code', curr.code,
+                                'is_shisha', item.is_shisha,
+                                'image_url', item_img.url,
+                                'preparation_time', item.preparation_time,
+                                'allergens', item.allergens,
+                                'calories', item.calories,
+                                'is_vegetarian', item.is_vegetarian,
+                                'is_vegan', item.is_vegan,
+                                'is_gluten_free', item.is_gluten_free
+                            )
+                        ELSE NULL
+                    END
+                ) AS items
             FROM
                 categories c
             LEFT JOIN
@@ -80,19 +94,28 @@ const getRestaurantCategories = async (restaurant_id) => {
             LEFT JOIN
                 images AS i ON cim.image_id = i.id AND cim.is_primary = 1
             LEFT JOIN
-                sub_categories AS sc ON sc.category_id = c.id
+                items AS item ON item.category_id = c.id AND item.deleted_at IS NULL
             LEFT JOIN
-                sub_categories_image_map AS scim ON scim.sub_category_id = sc.id
+                currencies AS curr ON item.currency_id = curr.id
             LEFT JOIN
-                images AS isc ON scim.image_id = isc.id AND scim.is_primary = 1
+                items_image_map AS iim ON iim.item_id = item.id AND iim.is_primary = 1
+            LEFT JOIN
+                images AS item_img ON iim.image_id = item_img.id
             WHERE
                 c.restaurant_id = ?
+            AND
+                c.deleted_at IS NULL
             GROUP BY
                 c.id, c.name, i.url
         `;
 
         const result = await executeQuery(sql, [restaurant_id], "getRestaurantCategories");
-        return result;
+
+        // Filter out null items from the JSON array
+        return result.map((category) => ({
+            ...category,
+            items: category.items ? category.items.filter((item) => item !== null) : [],
+        }));
     } catch (error) {
         throw new DatabaseError("Failed to fetch restaurant categories data", error);
     }
@@ -129,6 +152,37 @@ const getRestaurantMainMenu = async (restaurant_id, number) => {
     }
 };
 
+const listAvailableRestaurants = async () => {
+    try {
+        const sql = `
+            SELECT
+                r.id,
+                r.name,
+                r.description,
+                r.tagline,
+                r.lat,
+                r.long,
+                i.url AS image_url
+            FROM
+                restaurants r
+            LEFT JOIN
+                restaurants_image_map AS rim ON rim.restaurant_id = r.id
+            LEFT JOIN
+                images AS i ON rim.image_id = i.id AND rim.is_primary = 1
+            WHERE
+                r.deleted_at IS NULL
+            ORDER BY
+                r.name
+        `;
+
+        const result = await executeQuery(sql, [], "listAvailableRestaurants");
+        return result;
+    } catch (error) {
+        throw new DatabaseError("Failed to fetch available restaurants", error);
+    }
+};
+
 module.exports = {
     getRestaurantMainMenuModel: getRestaurantMainMenu,
+    listAvailableRestaurantsModel: listAvailableRestaurants,
 };

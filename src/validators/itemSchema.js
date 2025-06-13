@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const itemSchema = Joi.object({
     restaurant_id: Joi.number().required(),
-    sub_category_id: Joi.number().required(),
+    category_id: Joi.number().required(), // Changed from sub_category_id to category_id
     name: Joi.string().required(),
     description: Joi.string().required(),
     price: Joi.number().required(),
@@ -16,10 +16,10 @@ const itemSchema = Joi.object({
         destination: Joi.string(),
         filename: Joi.string(),
         path: Joi.string(),
-        size: Joi.number()
-    }).optional()
+        size: Joi.number(),
+    }).optional(),
 });
 
 module.exports = {
-    itemSchema
-}
+    itemSchema,
+};
