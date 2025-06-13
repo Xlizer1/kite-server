@@ -8,7 +8,7 @@ const { CustomError } = require("../../../middleware/errorHandler");
  * @param {Object} request - Request object with query parameters
  * @returns {Object} - Departments with pagination info
  */
-const getDepartmentsModel = async (request) => {
+const getDepartmentsModel = async (request, usr) => {
     try {
         const {
             page = 1,
@@ -16,7 +16,7 @@ const getDepartmentsModel = async (request) => {
             search = "",
             sort_by = "id",
             sort_order = "ASC",
-            include_user_count = false
+            include_user_count = false,
         } = request.query || {};
 
         // Calculate pagination
@@ -33,6 +33,11 @@ const getDepartmentsModel = async (request) => {
             params.push(`%${search.trim()}%`);
         }
 
+        if (usr.department_id) {
+            conditions.push(`d.id > ?`);
+            params.push(`${usr.department_id}`);
+        }
+
         // Validate sort fields to prevent SQL injection
         const allowedSortFields = ["id", "name", "user_count"];
         const sortField = allowedSortFields.includes(sort_by) ? sort_by : "id";
@@ -42,7 +47,7 @@ const getDepartmentsModel = async (request) => {
 
         // Build query based on whether user count is requested
         let dataQuery;
-        if (include_user_count === 'true') {
+        if (include_user_count === "true") {
             dataQuery = `
                 SELECT 
                     d.id,
@@ -55,7 +60,7 @@ const getDepartmentsModel = async (request) => {
                 ${whereClause}
                 GROUP BY d.id, d.name
                 ORDER BY 
-                    ${sortField === 'user_count' ? 'user_count' : `d.${sortField}`} ${sortDirection}
+                    ${sortField === "user_count" ? "user_count" : `d.${sortField}`} ${sortDirection}
                 LIMIT ? OFFSET ?
             `;
         } else {
@@ -105,7 +110,7 @@ const getDepartmentsModel = async (request) => {
                 search,
                 sort_by: sortField,
                 sort_order: sortDirection,
-                include_user_count
+                include_user_count,
             },
         };
     } catch (error) {
@@ -164,7 +169,7 @@ const createDepartmentModel = async (departmentData) => {
             return {
                 status: true,
                 department_id: result.insertId,
-                department: await getDepartmentByIdModel(result.insertId)
+                department: await getDepartmentByIdModel(result.insertId),
             };
         } else {
             throw new CustomError("Failed to create department", 500);
@@ -207,7 +212,7 @@ const updateDepartmentModel = async (id, departmentData) => {
         if (result.affectedRows > 0) {
             return {
                 status: true,
-                department: await getDepartmentByIdModel(id)
+                department: await getDepartmentByIdModel(id),
             };
         } else {
             throw new CustomError("Failed to update department", 500);
@@ -261,7 +266,7 @@ const deleteDepartmentModel = async (id) => {
         if (result.affectedRows > 0) {
             return {
                 status: true,
-                message: `Department '${department.name}' deleted successfully`
+                message: `Department '${department.name}' deleted successfully`,
             };
         } else {
             throw new CustomError("Failed to delete department", 500);
@@ -297,7 +302,7 @@ const getDepartmentUsersModel = async (departmentId, options = {}) => {
         const {
             page = 1,
             limit = 10,
-            status = "" // 'enabled', 'disabled', or empty for all
+            status = "", // 'enabled', 'disabled', or empty for all
         } = options;
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -362,7 +367,7 @@ const getDepartmentUsersModel = async (departmentId, options = {}) => {
                 limit: limitNum,
                 has_next: parseInt(page) < totalPages,
                 has_prev: parseInt(page) > 1,
-            }
+            },
         };
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -390,24 +395,27 @@ const getDepartmentStatsModel = async () => {
         `;
 
         const result = await executeQuery(sql, [], "getDepartmentStats");
-        
+
         // Calculate totals
-        const totals = result.reduce((acc, dept) => {
-            acc.total_users += dept.total_users;
-            acc.active_users += dept.active_users;
-            acc.inactive_users += dept.inactive_users;
-            acc.recently_active_users += dept.recently_active_users;
-            return acc;
-        }, {
-            total_users: 0,
-            active_users: 0,
-            inactive_users: 0,
-            recently_active_users: 0
-        });
+        const totals = result.reduce(
+            (acc, dept) => {
+                acc.total_users += dept.total_users;
+                acc.active_users += dept.active_users;
+                acc.inactive_users += dept.inactive_users;
+                acc.recently_active_users += dept.recently_active_users;
+                return acc;
+            },
+            {
+                total_users: 0,
+                active_users: 0,
+                inactive_users: 0,
+                recently_active_users: 0,
+            }
+        );
 
         return {
             departments: result,
-            summary: totals
+            summary: totals,
         };
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -422,5 +430,5 @@ module.exports = {
     deleteDepartmentModel,
     getDepartmentByNameModel,
     getDepartmentUsersModel,
-    getDepartmentStatsModel
+    getDepartmentStatsModel,
 };

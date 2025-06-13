@@ -1,92 +1,79 @@
-const { getToken, verifyUserToken } = require("./common");
+const { getToken, verifyUserToken, resultObject } = require("./common");
 
 const DEPARTMENTS = {
     ADMIN: 1,
     RESTAURANT_ADMIN: 2,
-    BRANCH_ADMIN: 3,
-    INVENTORY_ADMIN: 4,
-    CAPTAIN: 5,
-    KITCHEN: 6,
-    HOOKAH: 7,
-    FINANCE: 8
+    INVENTORY_ADMIN: 3,
+    CAPTAIN: 4,
+    KITCHEN: 5,
+    FINANCE: 6,
 };
 
 // Define what each department can access
 const DEPARTMENT_PERMISSIONS = {
     [DEPARTMENTS.ADMIN]: {
         // Super admin - can do everything
-        users: ['create', 'read', 'update', 'delete', 'bulk_operations'],
-        restaurants: ['create', 'read', 'update', 'delete'],
-        tables: ['create', 'read', 'update', 'delete'],
-        menu: ['create', 'read', 'update', 'delete'],
-        orders: ['create', 'read', 'update', 'delete', 'approve'],
-        inventory: ['create', 'read', 'update', 'delete'],
-        analytics: ['read', 'export'],
-        finance: ['read', 'update', 'export'],
-        system: ['settings', 'logs', 'backup']
+        users: ["create", "read", "update", "delete", "bulk_operations"],
+        restaurants: ["create", "read", "update", "delete"],
+        tables: ["create", "read", "update", "delete"],
+        menu: ["create", "read", "update", "delete"],
+        orders: ["create", "read", "update", "delete", "approve"],
+        inventory: ["create", "read", "update", "delete"],
+        analytics: ["read", "export"],
+        finance: ["read", "update", "export"],
+        system: ["settings", "logs", "backup"],
     },
-    
+
     [DEPARTMENTS.RESTAURANT_ADMIN]: {
         // Can manage their restaurant
-        users: ['create', 'read', 'update'], // Can manage restaurant staff
-        restaurants: ['read', 'update'], // Can update their restaurant info
-        tables: ['create', 'read', 'update', 'delete'],
-        menu: ['create', 'read', 'update', 'delete'],
-        orders: ['read', 'update', 'approve'],
-        inventory: ['read', 'update'],
-        analytics: ['read', 'export'],
-        finance: ['read']
+        users: ["create", "read", "update"], // Can manage restaurant staff
+        restaurants: ["read", "update"], // Can update their restaurant info
+        tables: ["create", "read", "update", "delete"],
+        menu: ["create", "read", "update", "delete"],
+        orders: ["read", "update", "approve"],
+        inventory: ["read", "update"],
+        analytics: ["read", "export"],
+        finance: ["read"],
     },
-    
-    [DEPARTMENTS.BRANCH_ADMIN]: {
-        // Similar to restaurant admin but for specific branch
-        users: ['read', 'update'], // Limited user management
-        restaurants: ['read'],
-        tables: ['create', 'read', 'update'],
-        menu: ['read', 'update'],
-        orders: ['read', 'update', 'approve'],
-        inventory: ['read', 'update'],
-        analytics: ['read']
-    },
-    
+
     [DEPARTMENTS.INVENTORY_ADMIN]: {
         // Focused on inventory management
-        inventory: ['create', 'read', 'update', 'delete'],
-        menu: ['read'], // Need to see menu for inventory planning
-        orders: ['read'], // Need to see orders for inventory tracking
-        analytics: ['read'] // Inventory analytics
+        inventory: ["create", "read", "update", "delete"],
+        menu: ["read"], // Need to see menu for inventory planning
+        orders: ["read"], // Need to see orders for inventory tracking
+        analytics: ["read"], // Inventory analytics
     },
-    
+
     [DEPARTMENTS.CAPTAIN]: {
         // Restaurant floor management
-        tables: ['read', 'update'], // Can see and update table status
-        orders: ['create', 'read', 'update', 'approve'], // Main order management
-        menu: ['read'], // Need to see menu
-        customers: ['read', 'update'] // Handle customer requests
+        tables: ["read", "update"], // Can see and update table status
+        orders: ["create", "read", "update", "approve"], // Main order management
+        menu: ["read"], // Need to see menu
+        customers: ["read", "update"], // Handle customer requests
     },
-    
+
     [DEPARTMENTS.KITCHEN]: {
         // Kitchen operations
-        orders: ['read', 'update'], // Can see and update order status
-        menu: ['read'], // Need to see menu items
-        inventory: ['read', 'update'] // Can update inventory as items are used
+        orders: ["read", "update"], // Can see and update order status
+        menu: ["read"], // Need to see menu items
+        inventory: ["read", "update"], // Can update inventory as items are used
     },
-    
+
     [DEPARTMENTS.HOOKAH]: {
         // Hookah service management
-        orders: ['create', 'read', 'update'], // Hookah orders
-        tables: ['read'], // Need to see table info
-        menu: ['read'] // Hookah menu items
+        orders: ["create", "read", "update"], // Hookah orders
+        tables: ["read"], // Need to see table info
+        menu: ["read"], // Hookah menu items
     },
-    
+
     [DEPARTMENTS.FINANCE]: {
         // Financial operations
-        orders: ['read'], // Need to see orders for billing
-        analytics: ['read', 'export'], // Financial reports
-        finance: ['create', 'read', 'update', 'export'], // Full financial access
-        invoices: ['create', 'read', 'update'],
-        payments: ['create', 'read', 'update']
-    }
+        orders: ["read"], // Need to see orders for billing
+        analytics: ["read", "export"], // Financial reports
+        finance: ["create", "read", "update", "export"], // Full financial access
+        invoices: ["create", "read", "update"],
+        payments: ["create", "read", "update"],
+    },
 };
 
 /**
@@ -99,10 +86,10 @@ const DEPARTMENT_PERMISSIONS = {
 const hasPermission = (departmentId, resource, action) => {
     const permissions = DEPARTMENT_PERMISSIONS[departmentId];
     if (!permissions) return false;
-    
+
     const resourcePermissions = permissions[resource];
     if (!resourcePermissions) return false;
-    
+
     return resourcePermissions.includes(action);
 };
 
@@ -121,11 +108,7 @@ const isAdmin = (departmentId) => {
  * @returns {boolean}
  */
 const isManagement = (departmentId) => {
-    return [
-        DEPARTMENTS.ADMIN,
-        DEPARTMENTS.RESTAURANT_ADMIN,
-        DEPARTMENTS.BRANCH_ADMIN
-    ].includes(departmentId);
+    return [DEPARTMENTS.ADMIN, DEPARTMENTS.RESTAURANT_ADMIN].includes(departmentId);
 };
 
 /**
@@ -134,11 +117,7 @@ const isManagement = (departmentId) => {
  * @returns {boolean}
  */
 const canAccessFinance = (departmentId) => {
-    return [
-        DEPARTMENTS.ADMIN,
-        DEPARTMENTS.RESTAURANT_ADMIN,
-        DEPARTMENTS.FINANCE
-    ].includes(departmentId);
+    return [DEPARTMENTS.ADMIN, DEPARTMENTS.RESTAURANT_ADMIN, DEPARTMENTS.FINANCE].includes(departmentId);
 };
 
 /**
@@ -147,9 +126,11 @@ const canAccessFinance = (departmentId) => {
  * @returns {boolean}
  */
 const canManageUsers = (departmentId) => {
-    return hasPermission(departmentId, 'users', 'create') || 
-           hasPermission(departmentId, 'users', 'update') || 
-           hasPermission(departmentId, 'users', 'delete');
+    return (
+        hasPermission(departmentId, "users", "create") ||
+        hasPermission(departmentId, "users", "update") ||
+        hasPermission(departmentId, "users", "delete")
+    );
 };
 
 /**
@@ -172,15 +153,15 @@ const requirePermission = (resource, action) => {
         try {
             const token = await getToken(req);
             const user = await verifyUserToken(token);
-            
+
             if (!user || !user.department_id) {
                 return res.status(401).json(resultObject(false, "Authentication required"));
             }
-            
+
             if (!hasPermission(user.department_id, resource, action)) {
                 return res.status(403).json(resultObject(false, "Insufficient permissions"));
             }
-            
+
             next();
         } catch (error) {
             return res.status(401).json(resultObject(false, "Authentication failed"));
@@ -195,11 +176,11 @@ const requireAdmin = async (req, res, next) => {
     try {
         const token = await getToken(req);
         const user = await verifyUserToken(token);
-        
+
         if (!user || !isAdmin(user.department_id)) {
             return res.status(403).json(resultObject(false, "Admin access required"));
         }
-        
+
         next();
     } catch (error) {
         return res.status(401).json(resultObject(false, "Authentication failed"));
@@ -213,11 +194,11 @@ const requireManagement = async (req, res, next) => {
     try {
         const token = await getToken(req);
         const user = await verifyUserToken(token);
-        
+
         if (!user || !isManagement(user.department_id)) {
             return res.status(403).json(resultObject(false, "Management access required"));
         }
-        
+
         next();
     } catch (error) {
         return res.status(401).json(resultObject(false, "Authentication failed"));
@@ -235,5 +216,5 @@ module.exports = {
     getDepartmentPermissions,
     requirePermission,
     requireAdmin,
-    requireManagement
+    requireManagement,
 };

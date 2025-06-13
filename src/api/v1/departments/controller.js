@@ -7,14 +7,10 @@ const {
     updateDepartmentModel,
     deleteDepartmentModel,
     getDepartmentUsersModel,
-    getDepartmentStatsModel
+    getDepartmentStatsModel,
 } = require("./model");
 
-const {
-    resultObject,
-    verifyUserToken,
-    getToken
-} = require("../../../helpers/common");
+const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 
 const { isAdmin, hasPermission } = require("../../../helpers/permissions");
 const { createUserActivityLogModel } = require("../user/model");
@@ -33,7 +29,7 @@ const getDepartments = async (request, callBack) => {
             return callBack(resultObject(false, "Token is invalid!"));
         }
 
-        const result = await getDepartmentsModel(request);
+        const result = await getDepartmentsModel(request, authorize);
 
         if (result && result.data) {
             callBack(resultObject(true, "Departments retrieved successfully", result));
@@ -105,7 +101,7 @@ const createDepartment = async (request, callBack) => {
         const { name } = request.body;
 
         // Validate input
-        if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        if (!name || typeof name !== "string" || name.trim().length === 0) {
             return callBack(resultObject(false, "Department name is required"));
         }
 
@@ -168,7 +164,7 @@ const updateDepartment = async (request, callBack) => {
             return callBack(resultObject(false, "Invalid department ID provided"));
         }
 
-        if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        if (!name || typeof name !== "string" || name.trim().length === 0) {
             return callBack(resultObject(false, "Department name is required"));
         }
 
@@ -275,7 +271,7 @@ const getDepartmentUsers = async (request, callBack) => {
         }
 
         // Only admin and management can view department users
-        if (!hasPermission(authorize.department_id, 'users', 'read')) {
+        if (!hasPermission(authorize.department_id, "users", "read")) {
             return callBack(resultObject(false, "You don't have permission to view department users"));
         }
 
@@ -293,19 +289,21 @@ const getDepartmentUsers = async (request, callBack) => {
         const options = {
             page: request.query.page || 1,
             limit: request.query.limit || 10,
-            status: request.query.status || ""
+            status: request.query.status || "",
         };
 
         const result = await getDepartmentUsersModel(id, options);
 
-        callBack(resultObject(true, "Department users retrieved successfully", {
-            department: {
-                id: department.id,
-                name: department.name
-            },
-            users: result.data,
-            pagination: result.pagination
-        }));
+        callBack(
+            resultObject(true, "Department users retrieved successfully", {
+                department: {
+                    id: department.id,
+                    name: department.name,
+                },
+                users: result.data,
+                pagination: result.pagination,
+            })
+        );
     } catch (error) {
         console.error("Error in getDepartmentUsers:", error);
         if (error instanceof CustomError) {
@@ -330,7 +328,7 @@ const getDepartmentStats = async (request, callBack) => {
         }
 
         // Only admin and management can view statistics
-        if (!hasPermission(authorize.department_id, 'analytics', 'read')) {
+        if (!hasPermission(authorize.department_id, "analytics", "read")) {
             return callBack(resultObject(false, "You don't have permission to view department statistics"));
         }
 
@@ -361,20 +359,20 @@ const getDepartmentsForSelection = async (request, callBack) => {
         }
 
         // Simple query for dropdown options
-        const departments = await getDepartmentsModel({ 
-            query: { 
+        const departments = await getDepartmentsModel({
+            query: {
                 limit: 100, // Get all departments for selection
                 sort_by: "name",
-                sort_order: "ASC"
-            } 
+                sort_order: "ASC",
+            },
         });
 
         // Return simplified format for dropdowns
-        const options = departments.data.map(dept => ({
+        const options = departments.data.map((dept) => ({
             id: dept.id,
             name: dept.name,
             value: dept.id,
-            label: dept.name
+            label: dept.name,
         }));
 
         callBack(resultObject(true, "Department options retrieved successfully", options));
@@ -392,5 +390,5 @@ module.exports = {
     deleteDepartmentController: deleteDepartment,
     getDepartmentUsersController: getDepartmentUsers,
     getDepartmentStatsController: getDepartmentStats,
-    getDepartmentsForSelectionController: getDepartmentsForSelection
+    getDepartmentsForSelectionController: getDepartmentsForSelection,
 };

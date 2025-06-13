@@ -1,39 +1,39 @@
 const express = require("express");
 const {
-  registerUserController,
-  loginUserController,
-  updateUserController,
-  getUserByIdController,
-  getUsersController,
-  changePasswordController,
-  forgotPasswordController,
-  resetPasswordController,
-  getCurrentUserProfileController,
-  updateUserProfileController,
-  getUserActivityController,
-  activateUserController,
-  deactivateUserController,
-  bulkDeleteUsersController,
-  bulkUpdateUserRolesController,
-  exportUsersController,
-  getUserLoginHistoryController,
-  logoutController,
-  deleteUserController
+    registerUserController,
+    loginUserController,
+    updateUserController,
+    getUserByIdController,
+    getUsersController,
+    changePasswordController,
+    forgotPasswordController,
+    resetPasswordController,
+    getCurrentUserProfileController,
+    updateUserProfileController,
+    getUserActivityController,
+    activateUserController,
+    deactivateUserController,
+    bulkDeleteUsersController,
+    bulkUpdateUserRolesController,
+    exportUsersController,
+    getUserLoginHistoryController,
+    logoutController,
+    deleteUserController,
 } = require("./controller");
 const { checkUserAuthorized } = require("../../../helpers/common");
 const {
-  registerUserSchema,
-  loginUserSchema,
-  changePasswordSchema,
-  profileUpdateSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-  userStatusUpdateSchema,
-  bulkDeleteUsersSchema,
-  bulkUpdateUserRolesSchema,
-  exportUsersSchema,
-  getUserActivitySchema,
-  userIdParamSchema
+    registerUserSchema,
+    loginUserSchema,
+    changePasswordSchema,
+    profileUpdateSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+    userStatusUpdateSchema,
+    bulkDeleteUsersSchema,
+    bulkUpdateUserRolesSchema,
+    exportUsersSchema,
+    getUserActivitySchema,
+    userIdParamSchema,
 } = require("../../../validators/userValidator");
 const { requireManagement, requirePermission, requireAdmin } = require("../../../helpers/permissions");
 const validateRequest = require("../../../middleware/validateRequest");
@@ -54,9 +54,9 @@ const router = express.Router();
  *         description: Unauthorized
  */
 router.get("/profile", checkUserAuthorized(), (req, res) => {
-  getCurrentUserProfileController(req, (result) => {
-    res.json(result);
-  });
+    getCurrentUserProfileController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -93,9 +93,9 @@ router.get("/profile", checkUserAuthorized(), (req, res) => {
  *         description: Unauthorized
  */
 router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchema), (req, res) => {
-  updateUserProfileController(req, (result) => {
-    res.json(result);
-  });
+    updateUserProfileController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -137,10 +137,10 @@ router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchem
  *       403:
  *         description: Insufficient permissions
  */
-router.get("/", checkUserAuthorized(), requirePermission('users', 'read'), (req, res) => {
-  getUsersController(req, (result) => {
-    res.json(result);
-  });
+router.get("/", checkUserAuthorized(), requirePermission("users", "read"), (req, res) => {
+    getUsersController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -167,11 +167,17 @@ router.get("/", checkUserAuthorized(), requirePermission('users', 'read'), (req,
  *       404:
  *         description: User not found
  */
-router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), requirePermission('users', 'read'), (req, res) => {
-  getUserByIdController(req, (result) => {
-    res.json(result);
-  });
-});
+router.get(
+    "/:id",
+    checkUserAuthorized(),
+    validateRequest(userIdParamSchema),
+    requirePermission("users", "read"),
+    (req, res) => {
+        getUserByIdController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 /**
  * @swagger
@@ -231,11 +237,17 @@ router.get("/:id", checkUserAuthorized(), validateRequest(userIdParamSchema), re
  *       409:
  *         description: User already exists
  */
-router.post("/register", checkUserAuthorized(), requirePermission('users', 'create'), validateRequest(registerUserSchema), (req, res) => {
-  registerUserController(req, (result) => {
-    res.json(result);
-  });
-});
+router.post(
+    "/register",
+    checkUserAuthorized(),
+    requirePermission("users", "create"),
+    validateRequest(registerUserSchema),
+    (req, res) => {
+        registerUserController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 /**
  * @swagger
@@ -259,9 +271,9 @@ router.post("/register", checkUserAuthorized(), requirePermission('users', 'crea
  *         description: Authentication failed
  */
 router.post("/", validateRequest(loginUserSchema), (req, res) => {
-  loginUserController(req, (result) => {
-    res.json(result);
-  });
+    loginUserController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -319,11 +331,17 @@ router.post("/", validateRequest(loginUserSchema), (req, res) => {
  *       404:
  *         description: User not found
  */
-router.put("/:id", checkUserAuthorized(), requirePermission('users', 'update'), validateRequest(userIdParamSchema), (req, res) => {
-  updateUserController(req, (result) => {
-    res.json(result);
-  });
-});
+router.put(
+    "/:id",
+    checkUserAuthorized(),
+    requirePermission("users", "update"),
+    validateRequest(userIdParamSchema),
+    (req, res) => {
+        updateUserController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 /**
  * @swagger
@@ -349,11 +367,17 @@ router.put("/:id", checkUserAuthorized(), requirePermission('users', 'update'), 
  *       404:
  *         description: User not found
  */
-router.delete("/:id", checkUserAuthorized(), requirePermission('users', 'delete'), validateRequest(userIdParamSchema), (req, res) => {
-  deleteUserController(req, (result) => {
-    res.json(result);
-  });
-});
+router.delete(
+    "/:id",
+    checkUserAuthorized(),
+    requirePermission("users", "delete"),
+    validateRequest(userIdParamSchema),
+    (req, res) => {
+        deleteUserController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 /**
  * @swagger
@@ -391,9 +415,9 @@ router.delete("/:id", checkUserAuthorized(), requirePermission('users', 'delete'
  *         description: Unauthorized
  */
 router.post("/change-password", validateRequest(changePasswordSchema), (req, res) => {
-  changePasswordController(req, (result) => {
-    res.json(result);
-  });
+    changePasswordController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -424,9 +448,9 @@ router.post("/change-password", validateRequest(changePasswordSchema), (req, res
  *         description: Validation error
  */
 router.post("/forgot-password", validateRequest(forgotPasswordSchema), (req, res) => {
-  forgotPasswordController(req, (result) => {
-    res.json(result);
-  });
+    forgotPasswordController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -462,9 +486,9 @@ router.post("/forgot-password", validateRequest(forgotPasswordSchema), (req, res
  *         description: Validation error or invalid/expired token
  */
 router.post("/reset-password", validateRequest(resetPasswordSchema), (req, res) => {
-  resetPasswordController(req, (result) => {
-    res.json(result);
-  });
+    resetPasswordController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -491,11 +515,17 @@ router.post("/reset-password", validateRequest(resetPasswordSchema), (req, res) 
  *       404:
  *         description: User not found
  */
-router.post("/:id/activate", checkUserAuthorized(), requirePermission('users', 'update'), validateRequest(userIdParamSchema), (req, res) => {
-  activateUserController(req, (result) => {
-    res.json(result);
-  });
-});
+router.post(
+    "/:id/activate",
+    checkUserAuthorized(),
+    requirePermission("users", "update"),
+    validateRequest(userIdParamSchema),
+    (req, res) => {
+        activateUserController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 /**
  * @swagger
@@ -521,11 +551,17 @@ router.post("/:id/activate", checkUserAuthorized(), requirePermission('users', '
  *       404:
  *         description: User not found
  */
-router.post("/:id/deactivate", checkUserAuthorized(), requirePermission('users', 'update'), validateRequest(userIdParamSchema), (req, res) => {
-  deactivateUserController(req, (result) => {
-    res.json(result);
-  });
-});
+router.post(
+    "/:id/deactivate",
+    checkUserAuthorized(),
+    requirePermission("users", "update"),
+    validateRequest(userIdParamSchema),
+    (req, res) => {
+        deactivateUserController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 /**
  * @swagger
@@ -562,9 +598,9 @@ router.post("/:id/deactivate", checkUserAuthorized(), requirePermission('users',
  *         description: Admin access required
  */
 router.get("/:id/activity", checkUserAuthorized(), requireAdmin, validateRequest(userIdParamSchema), (req, res) => {
-  getUserActivityController(req, (result) => {
-    res.json(result);
-  });
+    getUserActivityController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -601,11 +637,17 @@ router.get("/:id/activity", checkUserAuthorized(), requireAdmin, validateRequest
  *       403:
  *         description: Admin access required
  */
-router.get("/:id/login-history", checkUserAuthorized(), requireAdmin, validateRequest(userIdParamSchema), (req, res) => {
-  getUserLoginHistoryController(req, (result) => {
-    res.json(result);
-  });
-});
+router.get(
+    "/:id/login-history",
+    checkUserAuthorized(),
+    requireAdmin,
+    validateRequest(userIdParamSchema),
+    (req, res) => {
+        getUserLoginHistoryController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 /**
  * @swagger
@@ -639,9 +681,9 @@ router.get("/:id/login-history", checkUserAuthorized(), requireAdmin, validateRe
  *         description: Admin access required
  */
 router.post("/bulk-delete", checkUserAuthorized(), requireAdmin, (req, res) => {
-  bulkDeleteUsersController(req, (result) => {
-    res.json(result);
-  });
+    bulkDeleteUsersController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -680,9 +722,9 @@ router.post("/bulk-delete", checkUserAuthorized(), requireAdmin, (req, res) => {
  *         description: Insufficient permissions
  */
 router.post("/bulk-update-roles", checkUserAuthorized(), validateRequest(bulkUpdateUserRolesSchema), (req, res) => {
-  bulkUpdateUserRolesController(req, (result) => {
-    res.json(result);
-  });
+    bulkUpdateUserRolesController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -709,9 +751,9 @@ router.post("/bulk-update-roles", checkUserAuthorized(), validateRequest(bulkUpd
  *         description: Management access required
  */
 router.get("/export", checkUserAuthorized(), requireManagement, (req, res) => {
-  exportUsersController(req, (result) => {
-    res.json(result);
-  });
+    exportUsersController(req, (result) => {
+        res.json(result);
+    });
 });
 
 /**
@@ -728,9 +770,9 @@ router.get("/export", checkUserAuthorized(), requireManagement, (req, res) => {
  *         description: Unauthorized
  */
 router.post("/logout", checkUserAuthorized(), (req, res) => {
-  logoutController(req, (result) => {
-    res.json(result);
-  });
+    logoutController(req, (result) => {
+        res.json(result);
+    });
 });
 
 module.exports = router;
