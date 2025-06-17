@@ -17,16 +17,11 @@ const getRestaurants = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (authorize?.roles?.includes(1)) {
-            const result = await getRestaurantsModel(authorize);
-            if (result && result[0] && result?.length > 0) {
-                callBack(resultObject(true, "success", result));
-            } else {
-                callBack(resultObject(true, "No restaurants found.", []));
-            }
+        const result = await getRestaurantsModel(request, authorize);
+        if (result && result.data && Array.isArray(result.data)) {
+            callBack(resultObject(true, "success", result));
         } else {
-            callBack(resultObject(false, "You don't have the permission to view restaurants!"));
-            return;
+            callBack(resultObject(true, "No restaurants found.", []));
         }
     } catch (error) {
         callBack({
@@ -41,17 +36,12 @@ const getRestaurantsByID = async (request, callBack) => {
     try {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
-        if (authorize?.roles?.includes(1)) {
-            const { id } = request.params;
-            const result = await getRestaurantsByIDModel(id, authorize);
-            if (result && result?.id) {
-                callBack(resultObject(true, "success", result));
-            } else {
-                callBack(resultObject(false, "Restaurant not found."));
-            }
+        const { id } = request.params;
+        const result = await getRestaurantsByIDModel(id, authorize);
+        if (result && result?.id) {
+            callBack(resultObject(true, "success", result));
         } else {
-            callBack(resultObject(false, "You don't have the permission to view restaurants!"));
-            return;
+            callBack(resultObject(false, "Restaurant not found."));
         }
     } catch (error) {
         callBack({
@@ -67,12 +57,18 @@ const createRestaurants = async (request, callBack) => {
         const token = await getToken(request);
         const authorize = await verifyUserToken(token);
         if (authorize?.roles?.includes(2)) {
-            const { name, tagline, description } = request?.body;
+            const { name, tagline, tagline_eng, description, description_eng, parent_rest_id, long, lat } =
+                request?.body;
 
             const result = await createRestaurantsModel({
                 name,
                 tagline,
+                tagline_eng,
                 description,
+                description_eng,
+                parent_rest_id,
+                long,
+                lat,
                 images: request?.files,
                 creator_id: authorize?.id,
             });

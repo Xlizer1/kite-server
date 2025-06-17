@@ -7,61 +7,129 @@ const { IP, PORT } = process.env;
 const ip = IP || "localhost";
 const port = PORT || "8000";
 
-const getRestaurants = async (user) => {
+const getRestaurants = async (request, user) => {
     try {
-        let sql = `
-            SELECT
-                r.*,
-                IF(
-                    COUNT(i.id) > 0,
-                    JSON_ARRAYAGG(
-                        JSON_OBJECT(
-                            'id', i.id,
-                            'url', i.url,
-                            'primary', rim.is_primary
-                        )
-                    ),
-                    NULL
-                ) AS images
-            FROM
-                restaurants r
-            LEFT JOIN
-                restaurants_image_map rim ON r.id = rim.restaurant_id
-            LEFT JOIN
-                images i ON i.id = rim.image_id
-            WHERE
-                r.deleted_at IS NULL
-        `;
+        const { page = 1, limit = 10, search = "", sort_by = "created_at", sort_order = "DESC" } = request.query || {};
 
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const limitNum = parseInt(limit);
+
+        const conditions = ["r.deleted_at IS NULL"];
         const params = [];
 
+        // Search functionality
+        if (search && search.trim()) {
+            conditions.push(`(
+                r.name LIKE ? OR
+                r.description LIKE ? OR
+                r.address LIKE ? OR
+                r.phone LIKE ?
+            )`);
+            const searchParam = `%${search.trim()}%`;
+            params.push(searchParam, searchParam, searchParam, searchParam);
+        }
+
+        // Department-based filtering (keeping original logic)
         if (user.department_id !== 1) {
             if (user.department_id === 2) {
-                sql += " AND r.id = ?";
+                conditions.push("r.id = ?");
                 params.push(user.restaurant_id);
             } else {
-                sql += " AND r.parent_rest_id = ?";
+                conditions.push("r.parent_rest_id = ?");
                 params.push(user.restaurant_id);
             }
         }
 
-        sql += " GROUP BY r.id";
+        // Sorting validation
+        const allowedSortFields = ["id", "name", "description", "created_at", "updated_at"];
+        const sortField = allowedSortFields.includes(sort_by) ? sort_by : "created_at";
+        const sortDirection = sort_order.toUpperCase() === "ASC" ? "ASC" : "DESC";
+        const sortColumn = `r.${sortField}`;
 
-        const result = await executeQuery(sql, params, "getRestaurants");
+        const whereClause = conditions.join(" AND ");
 
+        const dataQuery = `
+            SELECT
+                r.*,
+                IF(
+                COUNT(i.id) > 0,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                    'id', i.id,
+                    'url', i.url,
+                    'primary', rim.is_primary
+                    )
+                ),
+                NULL
+                ) AS images
+            FROM
+                restaurants r
+                LEFT JOIN restaurants_image_map rim ON r.id = rim.restaurant_id
+                LEFT JOIN images i ON i.id = rim.image_id
+            WHERE
+                ${whereClause}
+            GROUP BY r.id
+            ORDER BY
+                ${sortColumn} ${sortDirection}
+            LIMIT ? OFFSET ?
+        `;
+
+        const countQuery = `
+            SELECT COUNT(DISTINCT r.id) as total
+            FROM
+                restaurants r
+                LEFT JOIN restaurants_image_map rim ON r.id = rim.restaurant_id
+                LEFT JOIN images i ON i.id = rim.image_id
+            WHERE
+                ${whereClause}
+        `;
+
+        const dataParams = [...params, limitNum, offset];
+        const countParams = [...params];
+
+        const [result, countResult] = await Promise.all([
+            executeQuery(dataQuery, dataParams, "getRestaurants"),
+            executeQuery(countQuery, countParams, "getRestaurantsCount"),
+        ]);
+
+        // Handle executeQuery errors
         if (Array.isArray(result) && result[0] === false) {
             return Promise.reject(new CustomError(result[1], 400));
         }
 
-        if (Array.isArray(result)) {
-            const parsedResult = result.map((row) => ({
-                ...row,
-                images: row.images?.filter((i) => i.id) || [], // Ensure valid JSON for `images`
-            }));
-            return parsedResult;
+        if (Array.isArray(countResult) && countResult[0] === false) {
+            return Promise.reject(new CustomError(countResult[1], 400));
         }
 
-        return Promise.reject(new CustomError("An unknown error occurred during data read.", 500));
+        if (!Array.isArray(result)) {
+            return Promise.reject(new CustomError("An unknown error occurred during data read.", 500));
+        }
+
+        // Parse result to ensure valid JSON for images
+        const parsedResult = result.map((row) => ({
+            ...row,
+            images: row.images?.filter((i) => i.id) || [], // Ensure valid JSON for images
+        }));
+
+        const total = countResult[0]?.total || 0;
+        const totalPages = Math.ceil(total / limitNum);
+
+        return {
+            data: parsedResult,
+            pagination: {
+                current_page: parseInt(page),
+                total_pages: totalPages,
+                total_records: total,
+                limit: limitNum,
+                has_next: parseInt(page) < totalPages,
+                has_prev: parseInt(page) > 1,
+            },
+            filters: {
+                search,
+                sort_by: sortField,
+                sort_order: sortDirection,
+            },
+        };
     } catch (error) {
         throw new CustomError(error.message, 500);
     }
@@ -72,17 +140,17 @@ const getRestaurantsByID = async (id, user) => {
         const sql = `
             SELECT
                 r.*,
-                if(
-                    i.id > 0,
-                    JSON_ARRAYAGG(
-                        JSON_OBJECT(
-                            'id', i.id,
-                            'url', i.url,
-                            'primary', rim.is_primary
+                CASE 
+                    WHEN COUNT(i.id) > 0 THEN
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'id', i.id,
+                                'url', i.url,
+                                'primary', rim.is_primary
+                            )
                         )
-                    ),
-                    NULL
-                ) AS images
+                    ELSE NULL
+                END AS images
             FROM
                 restaurants r
             LEFT JOIN
@@ -116,7 +184,7 @@ const getRestaurantsByID = async (id, user) => {
         if (Array.isArray(result)) {
             const parsedResult = result.map((row) => ({
                 ...row,
-                images: row.images?.filter((i) => i.id), // Ensure valid JSON for `images`
+                images: row.images?.filter((i) => i.id) || [], // Ensure valid JSON for `images`
             }));
             return parsedResult[0];
         }

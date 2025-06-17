@@ -84,7 +84,7 @@ const DEPARTMENT_PERMISSIONS = {
  * @returns {boolean} - True if user has permission
  */
 const hasPermission = (departmentId, resource, action) => {
-    const permissions = DEPARTMENT_PERMISSIONS[departmentId];
+    const permissions = DEPARTMENT_PERMISSIONS[JSON.stringify(departmentId)];
     if (!permissions) return false;
 
     const resourcePermissions = permissions[resource];

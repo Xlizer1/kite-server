@@ -11,12 +11,11 @@ const { restaurantSchema } = require("../../../validators/restaurantValidator");
 const validateRequest = require("../../../middleware/validateRequest");
 const multer = require("../../../middleware/multer");
 const { checkUserAuthorized } = require("../../../helpers/common");
+const { requirePermission } = require("../../../helpers/permissions");
 
 const router = express.Router();
 
-// Swagger documentation moved to src/config/swagger/restaurant.routes.js
-
-router.get("/", checkUserAuthorized(), (req, res) => {
+router.get("/", checkUserAuthorized(), requirePermission("restaurants", "read"), (req, res) => {
     getRestaurantsController(req, (result) => {
         res.json(result);
     });
@@ -28,11 +27,17 @@ router.get("/:id", checkUserAuthorized(), (req, res) => {
     });
 });
 
-router.post("/", checkUserAuthorized(), multer.upload.array("logo_file"), (req, res) => {
-    createRestaurantsController(req, (result) => {
-        res.json(result);
-    });
-});
+router.post(
+    "/",
+    checkUserAuthorized(),
+    multer.upload.array("logo_file"),
+    validateRequest(restaurantSchema),
+    (req, res) => {
+        createRestaurantsController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
 
 router.put("/:id", checkUserAuthorized(), (req, res) => {
     updateRestaurantsController(req, (result) => {
