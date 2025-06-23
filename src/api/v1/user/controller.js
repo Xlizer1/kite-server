@@ -283,38 +283,32 @@ const updateUser = async (request, callBack) => {
             return;
         }
 
-        // Check if user can update users
-        if (hasPermission(authorize.department_id, "users", "update")) {
-            const id = request.params.id;
-            const { department_id, restaurant_id, name, username, email, phone, enabled } = request.body;
+        const id = request.params.id;
+        const { department_id, restaurant_id, name, username, email, phone } = request.body;
 
-            const result = await updateUserModel({
-                department_id,
-                restaurant_id,
-                name,
-                username,
-                email,
-                phone,
-                enabled,
-                id,
-                updated_by: authorize?.id,
+        const result = await updateUserModel({
+            department_id,
+            restaurant_id,
+            name,
+            username,
+            email,
+            phone,
+            id,
+            updated_by: authorize?.id,
+        });
+
+        if (result?.status === true) {
+            // Log user update
+            await createUserActivityLogModel({
+                user_id: authorize.id,
+                action: "user_updated",
+                description: `Updated user: ${username}`,
+                target_user_id: id,
             });
 
-            if (result?.status === true) {
-                // Log user update
-                await createUserActivityLogModel({
-                    user_id: authorize.id,
-                    action: "user_updated",
-                    description: `Updated user: ${username}`,
-                    target_user_id: id,
-                });
-
-                callBack(resultObject(true, "User updated successfully.", result.user));
-            } else {
-                callBack(resultObject(false, "Failed to update user."));
-            }
+            callBack(resultObject(true, "User updated successfully.", result.user));
         } else {
-            callBack(resultObject(false, "You don't have permission to update users!"));
+            callBack(resultObject(false, "Failed to update user."));
         }
     } catch (error) {
         console.log(error);

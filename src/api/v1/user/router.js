@@ -34,69 +34,12 @@ const {
     exportUsersSchema,
     getUserActivitySchema,
     userIdParamSchema,
+    userUpdateSchema,
 } = require("../../../validators/userValidator");
 const { requireManagement, requirePermission, requireAdmin } = require("../../../helpers/permissions");
 const validateRequest = require("../../../middleware/validateRequest");
 
 const router = express.Router();
-
-/**
- * @swagger
- * /api/v1/users/profile:
- *   get:
- *     summary: Get current user profile
- *     description: Returns the authenticated user's profile information
- *     tags: [Profile]
- *     responses:
- *       200:
- *         description: User profile retrieved successfully
- *       401:
- *         description: Unauthorized
- */
-router.get("/profile", checkUserAuthorized(), (req, res) => {
-    getCurrentUserProfileController(req, (result) => {
-        res.json(result);
-    });
-});
-
-/**
- * @swagger
- * /api/v1/users/profile:
- *   put:
- *     summary: Update user profile
- *     description: Updates the authenticated user's profile information
- *     tags: [Profile]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - phone
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               phone:
- *                 type: string
- *     responses:
- *       200:
- *         description: Profile updated successfully
- *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
- */
-router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchema), (req, res) => {
-    updateUserProfileController(req, (result) => {
-        res.json(result);
-    });
-});
 
 /**
  * @swagger
@@ -184,58 +127,6 @@ router.get(
  * /api/v1/users/register:
  *   post:
  *     summary: Register a new user
- *     description: Creates a new user account. Requires 'users' create permission.
- *     tags: [User Management]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - username
- *               - email
- *               - password
- *               - phone
- *               - department_id
- *               - restaurant_id
- *             properties:
- *               name:
- *                 type: string
- *                 example: "John Doe"
- *               username:
- *                 type: string
- *                 example: "johndoe"
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "john@example.com"
- *               password:
- *                 type: string
- *                 format: password
- *                 example: "password123"
- *               phone:
- *                 type: string
- *                 example: "00964771234567"
- *               department_id:
- *                 type: integer
- *                 example: 5
- *                 description: "Department ID (1=Admin, 2=Restaurant Admin, 3=Branch Admin, 4=Inventory Admin, 5=Captain, 6=Kitchen, 7=Hookah, 8=Finance)"
- *               restaurant_id:
- *                 type: integer
- *                 example: 1
- *     responses:
- *       201:
- *         description: User registered successfully
- *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       409:
- *         description: User already exists
  */
 router.post(
     "/register",
@@ -251,24 +142,129 @@ router.post(
 
 /**
  * @swagger
+ * /api/v1/users/change-password:
+ *   post:
+ *     summary: Change password
+ */
+router.post("/change-password", validateRequest(changePasswordSchema), (req, res) => {
+    changePasswordController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ */
+router.post("/forgot-password", validateRequest(forgotPasswordSchema), (req, res) => {
+    forgotPasswordController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/reset-password:
+ *   post:
+ *     summary: Reset password
+ */
+router.post("/reset-password", validateRequest(resetPasswordSchema), (req, res) => {
+    resetPasswordController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/bulk-delete:
+ *   post:
+ *     summary: Bulk delete users
+ */
+router.post("/bulk-delete", checkUserAuthorized(), requireAdmin, (req, res) => {
+    bulkDeleteUsersController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/bulk-update-roles:
+ *   post:
+ *     summary: Bulk update user roles
+ */
+router.post("/bulk-update-roles", checkUserAuthorized(), validateRequest(bulkUpdateUserRolesSchema), (req, res) => {
+    bulkUpdateUserRolesController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/export:
+ *   get:
+ *     summary: Export users
+ */
+router.get("/export", checkUserAuthorized(), requireManagement, (req, res) => {
+    exportUsersController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/logout:
+ *   post:
+ *     summary: Logout user
+ */
+router.post("/logout", checkUserAuthorized(), (req, res) => {
+    logoutController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/profile:
+ *   get:
+ *     summary: Get current user profile
+ */
+router.get("/profile", checkUserAuthorized(), (req, res) => {
+    getCurrentUserProfileController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users/profile:
+ *   put:
+ *     summary: Update user profile
+ */
+router.put("/profile", checkUserAuthorized(), validateRequest(profileUpdateSchema), (req, res) => {
+    updateUserProfileController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/users:
+ *   get:
+ *     summary: Get all users
+ */
+router.get("/", checkUserAuthorized(), requirePermission("users", "read"), (req, res) => {
+    getUsersController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
  * /api/v1/users:
  *   post:
  *     summary: User login
- *     description: Authenticates a user and returns a token
- *     tags: [Authentication]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/UserLogin'
- *     responses:
- *       200:
- *         description: Login successful
- *       400:
- *         description: Invalid credentials
- *       401:
- *         description: Authentication failed
  */
 router.post("/", validateRequest(loginUserSchema), (req, res) => {
     loginUserController(req, (result) => {
@@ -279,63 +275,32 @@ router.post("/", validateRequest(loginUserSchema), (req, res) => {
 /**
  * @swagger
  * /api/v1/users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ */
+router.get(
+    "/:id",
+    checkUserAuthorized(),
+    validateRequest(userIdParamSchema),
+    requirePermission("users", "read"),
+    (req, res) => {
+        getUserByIdController(req, (result) => {
+            res.json(result);
+        });
+    }
+);
+
+/**
+ * @swagger
+ * /api/v1/users/{id}:
  *   put:
  *     summary: Update user
- *     description: Updates an existing user's information. Requires 'users' update permission.
- *     tags: [User Management]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 example: "John Doe"
- *               username:
- *                 type: string
- *                 example: "johndoe"
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "john@example.com"
- *               phone:
- *                 type: string
- *                 example: "00964771234567"
- *               department_id:
- *                 type: integer
- *                 example: 5
- *               restaurant_id:
- *                 type: integer
- *                 example: 1
- *               enabled:
- *                 type: boolean
- *                 example: true
- *     responses:
- *       200:
- *         description: User updated successfully
- *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       404:
- *         description: User not found
  */
 router.put(
     "/:id",
     checkUserAuthorized(),
     requirePermission("users", "update"),
-    validateRequest(userIdParamSchema),
+    validateRequest(userUpdateSchema),
     (req, res) => {
         updateUserController(req, (result) => {
             res.json(result);
@@ -348,24 +313,6 @@ router.put(
  * /api/v1/users/{id}:
  *   delete:
  *     summary: Delete user
- *     description: Soft deletes a user. Requires 'users' delete permission.
- *     tags: [User Management]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *     responses:
- *       200:
- *         description: User deleted successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       404:
- *         description: User not found
  */
 router.delete(
     "/:id",
@@ -381,139 +328,9 @@ router.delete(
 
 /**
  * @swagger
- * /api/v1/users/change-password:
- *   post:
- *     summary: Change password
- *     description: Allows authenticated user to change their password
- *     tags: [Authentication]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - currentPassword
- *               - newPassword
- *               - confirmPassword
- *             properties:
- *               currentPassword:
- *                 type: string
- *                 format: password
- *               newPassword:
- *                 type: string
- *                 format: password
- *               confirmPassword:
- *                 type: string
- *                 format: password
- *     responses:
- *       200:
- *         description: Password changed successfully
- *       400:
- *         description: Validation error or incorrect current password
- *       401:
- *         description: Unauthorized
- */
-router.post("/change-password", validateRequest(changePasswordSchema), (req, res) => {
-    changePasswordController(req, (result) => {
-        res.json(result);
-    });
-});
-
-/**
- * @swagger
- * /api/v1/users/forgot-password:
- *   post:
- *     summary: Request password reset
- *     description: Sends password reset email to user
- *     tags: [Authentication]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *     responses:
- *       200:
- *         description: Password reset email sent (if email exists)
- *       400:
- *         description: Validation error
- */
-router.post("/forgot-password", validateRequest(forgotPasswordSchema), (req, res) => {
-    forgotPasswordController(req, (result) => {
-        res.json(result);
-    });
-});
-
-/**
- * @swagger
- * /api/v1/users/reset-password:
- *   post:
- *     summary: Reset password
- *     description: Resets password using reset token
- *     tags: [Authentication]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - token
- *               - newPassword
- *               - confirmPassword
- *             properties:
- *               token:
- *                 type: string
- *               newPassword:
- *                 type: string
- *                 format: password
- *               confirmPassword:
- *                 type: string
- *                 format: password
- *     responses:
- *       200:
- *         description: Password reset successfully
- *       400:
- *         description: Validation error or invalid/expired token
- */
-router.post("/reset-password", validateRequest(resetPasswordSchema), (req, res) => {
-    resetPasswordController(req, (result) => {
-        res.json(result);
-    });
-});
-
-/**
- * @swagger
  * /api/v1/users/{id}/activate:
  *   post:
  *     summary: Activate user
- *     description: Activates a disabled user account. Requires 'users' update permission.
- *     tags: [User Management]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *     responses:
- *       200:
- *         description: User activated successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       404:
- *         description: User not found
  */
 router.post(
     "/:id/activate",
@@ -532,24 +349,6 @@ router.post(
  * /api/v1/users/{id}/deactivate:
  *   post:
  *     summary: Deactivate user
- *     description: Deactivates an active user account. Requires 'users' update permission.
- *     tags: [User Management]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *     responses:
- *       200:
- *         description: User deactivated successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       404:
- *         description: User not found
  */
 router.post(
     "/:id/deactivate",
@@ -568,34 +367,6 @@ router.post(
  * /api/v1/users/{id}/activity:
  *   get:
  *     summary: Get user activity
- *     description: Returns user activity logs with pagination. Admin only.
- *     tags: [Admin]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of records per page
- *     responses:
- *       200:
- *         description: User activity retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
  */
 router.get("/:id/activity", checkUserAuthorized(), requireAdmin, validateRequest(userIdParamSchema), (req, res) => {
     getUserActivityController(req, (result) => {
@@ -608,34 +379,6 @@ router.get("/:id/activity", checkUserAuthorized(), requireAdmin, validateRequest
  * /api/v1/users/{id}/login-history:
  *   get:
  *     summary: Get user login history
- *     description: Returns user login/logout history with pagination. Admin only.
- *     tags: [Admin]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of records per page
- *     responses:
- *       200:
- *         description: Login history retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
  */
 router.get(
     "/:id/login-history",

@@ -40,7 +40,7 @@ const getUsers = async (request, user) => {
             params.push(enabledValue);
         }
 
-        if(user.department_id === 2) {
+        if (user.department_id === 2) {
             conditions.push("r.id = ?");
             params.push(user.restaurant_id);
         }
@@ -159,14 +159,14 @@ const getUserById = async (id, user) => {
                 u.deleted_at IS NULL
         `;
 
-        if(user?.department_id === 2 && user?.restaurant_id) {
-            sql += ` AND r.id = ${user?.restaurant_id}`
+        if (user?.department_id === 2 && user?.restaurant_id) {
+            sql += ` AND r.id = ${user?.restaurant_id}`;
         }
 
         const result = await executeQuery(sql, [id], "getUserById");
         return result?.[0] || null;
     } catch (error) {
-        console.log(error)
+        console.log(error);
         throw new CustomError(error.message, 500);
     }
 };
@@ -241,8 +241,8 @@ const registerUser = async (obj) => {
 
 const updateUser = async (obj) => {
     try {
-        const { id, username, email, phone, name, department_id, restaurant_id, enabled, updated_by } = obj;
-        
+        const { id, username, email, phone, name, department_id, restaurant_id, updated_by } = obj;
+
         const updateData = {
             username,
             email,
@@ -250,7 +250,6 @@ const updateUser = async (obj) => {
             name,
             department_id,
             restaurant_id,
-            enabled,
             updated_by,
             updated_at: new Date(),
         };
@@ -262,7 +261,7 @@ const updateUser = async (obj) => {
             const user = await getUserById(id);
             return { status: true, user };
         }
-        
+
         return { status: false };
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -308,11 +307,11 @@ const createPasswordResetTokenModel = async (userId, token, expiresAt) => {
     try {
         // First, delete any existing tokens for this user
         await executeQuery(
-            "DELETE FROM password_reset_tokens WHERE user_id = ?", 
-            [userId], 
+            "DELETE FROM password_reset_tokens WHERE user_id = ?",
+            [userId],
             "deleteExistingResetTokens"
         );
-        
+
         const sql = `
             INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at)
             VALUES (?, ?, ?, NOW())
@@ -341,7 +340,7 @@ const validatePasswordResetTokenModel = async (token) => {
 const resetPasswordModel = async (userId, newPassword) => {
     try {
         const hashedPassword = await hash(newPassword);
-        
+
         // Update password
         const updateSql = `
             UPDATE users 
@@ -349,7 +348,7 @@ const resetPasswordModel = async (userId, newPassword) => {
             WHERE id = ? AND deleted_at IS NULL
         `;
         await executeQuery(updateSql, [hashedPassword, userId], "resetPassword");
-        
+
         // Mark token as used
         const markTokenSql = `
             UPDATE password_reset_tokens 
@@ -357,7 +356,7 @@ const resetPasswordModel = async (userId, newPassword) => {
             WHERE user_id = ? AND used_at IS NULL
         `;
         await executeQuery(markTokenSql, [userId], "markTokenUsed");
-        
+
         return true;
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -369,12 +368,12 @@ const updateUserProfileModel = async (userId, profileData, updatedBy) => {
         const updateData = {
             ...profileData,
             updated_at: new Date(),
-            updated_by: updatedBy
+            updated_by: updatedBy,
         };
-        
+
         const { sql, params } = buildUpdateQuery("users", updateData, { id: userId });
         const result = await executeQuery(sql, params, "updateUserProfile");
-        
+
         if (result.affectedRows > 0) {
             const user = await getUserById(userId);
             return { status: true, user };
@@ -408,9 +407,9 @@ const createUserActivityLogModel = async (activityData) => {
             description: activityData.description,
             ip_address: activityData.ip_address || null,
             target_user_id: activityData.target_user_id || null,
-            created_at: new Date()
+            created_at: new Date(),
         };
-        
+
         const { sql, params } = buildInsertQuery("user_activity_logs", logData);
         const result = await executeQuery(sql, params, "createUserActivityLog");
         return result.insertId;
@@ -422,7 +421,7 @@ const createUserActivityLogModel = async (activityData) => {
 const getUserActivityModel = async (userId, page = 1, limit = 10) => {
     try {
         const offset = (page - 1) * limit;
-        
+
         const dataSql = `
             SELECT 
                 id, action, description, ip_address, target_user_id, created_at
@@ -431,28 +430,28 @@ const getUserActivityModel = async (userId, page = 1, limit = 10) => {
             ORDER BY created_at DESC 
             LIMIT ? OFFSET ?
         `;
-        
+
         const countSql = `
             SELECT COUNT(*) as total 
             FROM user_activity_logs 
             WHERE user_id = ?
         `;
-        
+
         const [activities, countResult] = await Promise.all([
             executeQuery(dataSql, [userId, limit, offset], "getUserActivity"),
-            executeQuery(countSql, [userId], "getUserActivityCount")
+            executeQuery(countSql, [userId], "getUserActivityCount"),
         ]);
-        
+
         const total = countResult[0]?.total || 0;
-        
+
         return {
             data: activities,
             pagination: {
                 current_page: page,
                 total_pages: Math.ceil(total / limit),
                 total_records: total,
-                limit: limit
-            }
+                limit: limit,
+            },
         };
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -488,7 +487,7 @@ const updateLastLoginModel = async (userId) => {
 
 const bulkDeleteUsersModel = async (userIds, deletedBy) => {
     try {
-        const placeholders = userIds.map(() => '?').join(',');
+        const placeholders = userIds.map(() => "?").join(",");
         const sql = `
             UPDATE users 
             SET deleted_at = NOW(), deleted_by = ?, updated_at = NOW(), updated_by = ?
@@ -496,17 +495,17 @@ const bulkDeleteUsersModel = async (userIds, deletedBy) => {
         `;
         const params = [deletedBy, deletedBy, ...userIds];
         const result = await executeQuery(sql, params, "bulkDeleteUsers");
-        
+
         return {
             status: true,
-            deletedCount: result.affectedRows
+            deletedCount: result.affectedRows,
         };
     } catch (error) {
         throw new CustomError(error.message, 500);
     }
 };
 
-const exportUsersModel = async (format = 'csv') => {
+const exportUsersModel = async (format = "csv") => {
     try {
         const sql = `
             SELECT 
@@ -526,16 +525,16 @@ const exportUsersModel = async (format = 'csv') => {
             WHERE u.deleted_at IS NULL
             ORDER BY u.created_at DESC
         `;
-        
+
         const users = await executeQuery(sql, [], "exportUsers");
-        
+
         return {
             status: true,
             data: {
                 users: users,
                 format: format,
-                exported_at: new Date()
-            }
+                exported_at: new Date(),
+            },
         };
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -589,7 +588,7 @@ const resetFailedLoginAttemptsModel = async (username) => {
 const getUserLoginHistoryModel = async (userId, page = 1, limit = 10) => {
     try {
         const offset = (page - 1) * limit;
-        
+
         const dataSql = `
             SELECT 
                 action, description, ip_address, created_at
@@ -598,28 +597,28 @@ const getUserLoginHistoryModel = async (userId, page = 1, limit = 10) => {
             ORDER BY created_at DESC 
             LIMIT ? OFFSET ?
         `;
-        
+
         const countSql = `
             SELECT COUNT(*) as total 
             FROM user_activity_logs 
             WHERE user_id = ? AND action IN ('login', 'logout', 'failed_login')
         `;
-        
+
         const [history, countResult] = await Promise.all([
             executeQuery(dataSql, [userId, limit, offset], "getUserLoginHistory"),
-            executeQuery(countSql, [userId], "getUserLoginHistoryCount")
+            executeQuery(countSql, [userId], "getUserLoginHistoryCount"),
         ]);
-        
+
         const total = countResult[0]?.total || 0;
-        
+
         return {
             data: history,
             pagination: {
                 current_page: page,
                 total_pages: Math.ceil(total / limit),
                 total_records: total,
-                limit: limit
-            }
+                limit: limit,
+            },
         };
     } catch (error) {
         throw new CustomError(error.message, 500);
@@ -635,32 +634,32 @@ module.exports = {
     registerUserModel: registerUser,
     deleteUserModel: deleteUser,
     getUsersModel: getUsers,
-    
+
     // Password Management
     updateUserPasswordModel,
     createPasswordResetTokenModel,
     validatePasswordResetTokenModel,
     resetPasswordModel,
-    
+
     // Profile Management
     updateUserProfileModel,
     checkUserExistsExceptCurrent,
-    
+
     // Activity & Status
     createUserActivityLogModel,
     getUserActivityModel,
     updateUserStatusModel,
     updateLastLoginModel,
-    
+
     // Bulk Operations
     bulkDeleteUsersModel,
-    
+
     // Export & Reports
     exportUsersModel,
     getUserLoginHistoryModel,
-    
+
     // Security
     checkFailedLoginAttemptsModel,
     incrementFailedLoginAttemptsModel,
-    resetFailedLoginAttemptsModel
+    resetFailedLoginAttemptsModel,
 };

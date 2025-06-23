@@ -1,6 +1,5 @@
 const Joi = require("joi");
 
-// Existing schemas (keep these)
 const registerUserSchema = Joi.object({
     name: Joi.string().min(3).max(30).required(),
     username: Joi.string().min(3).max(30).required(),
@@ -20,7 +19,6 @@ const loginUserSchema = Joi.object({
     password: Joi.string().min(3).required(),
 });
 
-// New validation schemas
 const changePasswordSchema = Joi.object({
     currentPassword: Joi.string().min(3).required().messages({
         "string.min": "Current password must be at least 6 characters long",
@@ -54,6 +52,41 @@ const profileUpdateSchema = Joi.object({
                 "Phone number must be a valid Iraqi mobile number (00964 followed by 77/78/79/75 and 8 digits)",
             "any.required": "Phone number is required",
         }),
+});
+
+const userUpdateSchema = Joi.object({
+    id: Joi.number().integer().positive().required().messages({
+        "number.base": "User ID must be a number",
+        "number.integer": "User ID must be an integer",
+        "number.positive": "User ID must be positive",
+        "any.required": "User ID is required",
+    }),
+    name: Joi.string().min(3).max(50).optional().messages({
+        "string.min": "Name must be at least 3 characters long",
+        "string.max": "Name cannot exceed 50 characters",
+    }),
+    email: Joi.string().email().optional().messages({
+        "string.email": "Please provide a valid email address",
+    }),
+    phone: Joi.string()
+        .pattern(/^00964(77|78|79|75)[0-9]{8}$/)
+        .optional()
+        .messages({
+            "string.pattern.base":
+                "Phone number must be a valid Iraqi mobile number (00964 followed by 77/78/79/75 and 8 digits)",
+        }),
+    username: Joi.string().min(3).max(30).optional().messages({
+        "string.min": "Username must be at least 3 characters long",
+        "string.max": "Username cannot exceed 30 characters",
+    }),
+    department_id: Joi.number().integer().positive().optional().messages({
+        "number.base": "Department ID must be a number",
+        "number.positive": "Department ID must be a positive number",
+    }),
+    restaurant_id: Joi.number().integer().positive().optional().messages({
+        "number.base": "Restaurant ID must be a number",
+        "number.positive": "Restaurant ID must be a positive number",
+    }),
 });
 
 const forgotPasswordSchema = Joi.object({
@@ -155,6 +188,7 @@ module.exports = {
     // New schemas
     changePasswordSchema,
     profileUpdateSchema,
+    userUpdateSchema,
     forgotPasswordSchema,
     resetPasswordSchema,
     userStatusUpdateSchema,
