@@ -14,6 +14,7 @@ const DEPARTMENT_PERMISSIONS = {
     [DEPARTMENTS.ADMIN]: {
         // Super admin - can do everything
         users: ["create", "read", "update", "delete", "bulk_operations"],
+        categories: ["create", "read", "update", "delete"],
         restaurants: ["create", "read", "update", "delete"],
         tables: ["create", "read", "update", "delete"],
         menu: ["create", "read", "update", "delete"],
@@ -28,6 +29,7 @@ const DEPARTMENT_PERMISSIONS = {
         // Can manage their restaurant
         users: ["create", "read", "update"], // Can manage restaurant staff
         restaurants: ["read", "update"], // Can update their restaurant info
+        categories: ["create", "read", "update", "delete"],
         tables: ["create", "read", "update", "delete"],
         menu: ["create", "read", "update", "delete"],
         orders: ["read", "update", "approve"],

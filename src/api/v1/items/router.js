@@ -21,12 +21,6 @@ router.get("/", (req, res) => {
     });
 });
 
-router.get("/:item_id", (req, res) => {
-    getItemByIDController(req, (result) => {
-        res.status(result.statusCode || 200).json(result);
-    });
-});
-
 // Updated route to use category_id instead of sub_cat_id
 router.get("/get_by_category_id", (req, res) => {
     getItemsByCategoryIDController(req, (result) => {
@@ -44,6 +38,12 @@ router.get("/get_by_category_id_paginated", (req, res) => {
 // Protected routes
 router.post("/", authenticateToken, upload.single("image"), validateRequest(itemSchema), (req, res) => {
     createItemController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+router.get("/:item_id", (req, res) => {
+    getItemByIDController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
     });
 });

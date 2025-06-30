@@ -85,6 +85,29 @@ const createRestaurantCategory = async (name, restaurant_id, image, creator_id) 
     }
 };
 
+const updateCategory = async (id, name, user_id) => {
+    try {
+        const sql = `
+            UPDATE
+                categories
+            SET
+                name = ?
+                updated_by = ?
+                updated_at = NOW()
+            WHERE
+                id = ?
+        `;
+
+        const result = await executeQuery(sql, [name, user_id, id], "updateCategory");
+
+        console.log("result in modal", result);
+
+        return true;
+    } catch (error) {
+        throw new CustomError(error.message, 500);
+    }
+};
+
 const updateCategoryImage = async (category_id, image, user_id) => {
     try {
         // Validate file type
@@ -182,5 +205,6 @@ const updateCategoryImage = async (category_id, image, user_id) => {
 module.exports = {
     getRestaurantCategoryModel: getRestaurantCategory,
     createRestaurantCategoryModel: createRestaurantCategory,
+    updateCategoryModal: updateCategory,
     updateCategoryImageModel: updateCategoryImage,
 };

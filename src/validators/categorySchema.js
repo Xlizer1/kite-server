@@ -1,13 +1,24 @@
 const Joi = require("joi");
 
-const restaurantSchema = Joi.object({
-    parent_rest_id: Joi.number().required(),
+const categoryCreateSchema = Joi.object({
     name: Joi.string().required(),
-    tagline: Joi.string().required(),
-    description: Joi.string().required(),
-    image: Joi.binary().required(),
+    restaurant_id: Joi.number().required(),
+    image: Joi.any(),
+});
+
+const categoryUpdateSchema = Joi.object({
+    name: Joi.string().required(),
+    restaurant_id: Joi.number().required(),
+    image: Joi.any(),
+});
+
+const categoryImageUpdateSchema = Joi.object({
+    category_id: Joi.number().required(),
+    image: Joi.any(),
 });
 
 module.exports = {
-    restaurantSchema
-}
+    categoryCreateSchema,
+    categoryUpdateSchema,
+    categoryImageUpdateSchema,
+};

@@ -57,7 +57,7 @@ const hash = (text) => {
 const verifyPassword = (password, hashedPassword) => {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log(password, hashedPassword)
+            console.log(password, hashedPassword);
             const comparisonResult = await bcrypt.compare(password, hashedPassword);
             resolve(comparisonResult);
         } catch (error) {
@@ -110,13 +110,18 @@ const userExists = async (username, email, phone) => {
 
 function getToken(req) {
     return new Promise(async (resolve, reject) => {
-        const authHeader = req?.headers?.authorization || "";
-        const parts = await authHeader.split(" ");
-        const headerAuthorization = parts.length === 2 ? parts[1] : null;
-        const token = headerAuthorization || req?.headers["jwt"] || req?.headers["token"];
-        if (typeof token === "string" && token.length > 1) {
-            resolve(token);
-        } else {
+        try {
+            const authHeader = req?.headers?.authorization || "";
+            const parts = await authHeader.split(" ");
+            const headerAuthorization = parts.length === 2 ? parts[1] : null;
+            const token = headerAuthorization || req?.headers["jwt"] || req?.headers["token"];
+            if (typeof token === "string" && token.length > 1) {
+                resolve(token);
+            } else {
+                reject(false);
+            }
+        } catch (error) {
+            console.log(error);
             reject(false);
         }
     });

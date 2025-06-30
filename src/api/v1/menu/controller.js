@@ -1,4 +1,4 @@
-const { getRestaurantMainMenuModel, listAvailableRestaurantsModel } = require("./model");
+const { getRestaurantMainMenuModel, listAvailableRestaurantsModel, getRestaurantCategoryModel } = require("./model");
 const {
     resultObject,
     verifyUserToken,
@@ -9,6 +9,7 @@ const { DatabaseError } = require("../../../errors/customErrors");
 const { isWithinRange } = require("../../../helpers/geoUtils");
 const { v4: uuidv4 } = require("uuid");
 const { executeQuery } = require("../../../helpers/db");
+const { CustomError } = require("../../../middleware/errorHandler");
 
 const getRestaurantMainMenu = async (request, callBack) => {
     try {
@@ -143,10 +144,39 @@ const listAvailableRestaurants = async (request, callBack) => {
     }
 };
 
-const getCartItems = async () => {};
+const getCategories = async (request, callBack) => {
+    try {
+        const { key } = request.query;
+
+        if (!key || typeof key !== "string") {
+            callBack(resultObject(false, "Invalid Table Key!"));
+            return;
+        }
+        const { restaurant_id } = await processTableEncryptedKey(key);
+
+        if (!restaurant_id) {
+            callBack(resultObject(false, "Invalid Table"));
+            return;
+        }
+
+        const result = await getRestaurantCategoryModel(restaurant_id);
+
+        if (result) {
+            callBack(resultObject(true, "success", result));
+        } else {
+            callBack(resultObject(false, "Could not get category."));
+        }
+    } catch (error) {
+        callBack({
+            status: false,
+            message: "Something went wrong. Please try again later.",
+        });
+        console.log(error);
+    }
+};
 
 module.exports = {
     getRestaurantMainMenuController: getRestaurantMainMenu,
     listAvailableRestaurantsController: listAvailableRestaurants,
-    getCartItemsController: getCartItems,
+    getCategoriesController: getCategories,
 };

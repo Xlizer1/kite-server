@@ -6,8 +6,9 @@ const validateRequest = (schema) => {
             ...req.body,
             ...req.params,
             ...req.query,
-            // image: req.file || req.files?.image
+            image: req.file || req.files?.image,
         };
+        if (!payload.image) delete payload.image;
         const { error } = schema.validate(payload);
         if (error) {
             return res.status(400).json({

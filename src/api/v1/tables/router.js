@@ -149,6 +149,61 @@ router.get(
 
 /**
  * @swagger
+ * /api/v1/tables/statistics:
+ *   get:
+ *     summary: Get table statistics
+ *     description: Returns table statistics including counts by status and occupancy data.
+ *     tags: [Table Analytics]
+ *     parameters:
+ *       - in: query
+ *         name: restaurant_id
+ *         schema:
+ *           type: integer
+ *         description: Restaurant ID (optional for restaurant admins)
+ *     responses:
+ *       200:
+ *         description: Table statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Table statistics retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total_tables:
+ *                       type: integer
+ *                     available_tables:
+ *                       type: integer
+ *                     occupied_tables:
+ *                       type: integer
+ *                     reserved_tables:
+ *                       type: integer
+ *                     maintenance_tables:
+ *                       type: integer
+ *                     total_customers:
+ *                       type: integer
+ *                     avg_customers_per_table:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions
+ */
+router.get("/statistics", checkUserAuthorized(), requirePermission("tables", "read"), (req, res) => {
+    getTableStatisticsController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
  * /api/v1/tables/{id}:
  *   get:
  *     summary: Get table by ID
@@ -503,60 +558,5 @@ router.put(
         });
     }
 );
-
-/**
- * @swagger
- * /api/v1/tables/statistics:
- *   get:
- *     summary: Get table statistics
- *     description: Returns table statistics including counts by status and occupancy data.
- *     tags: [Table Analytics]
- *     parameters:
- *       - in: query
- *         name: restaurant_id
- *         schema:
- *           type: integer
- *         description: Restaurant ID (optional for restaurant admins)
- *     responses:
- *       200:
- *         description: Table statistics
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Table statistics retrieved successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     total_tables:
- *                       type: integer
- *                     available_tables:
- *                       type: integer
- *                     occupied_tables:
- *                       type: integer
- *                     reserved_tables:
- *                       type: integer
- *                     maintenance_tables:
- *                       type: integer
- *                     total_customers:
- *                       type: integer
- *                     avg_customers_per_table:
- *                       type: number
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- */
-router.get("/statistics", checkUserAuthorized(), requirePermission("tables", "read"), (req, res) => {
-    getTableStatisticsController(req, (result) => {
-        res.json(result);
-    });
-});
 
 module.exports = router;
