@@ -43,6 +43,157 @@ const getInventoryItems = async () => {
     }
 };
 
+const getInventoryWithBatchesByRestaurant = async (restaurantId, pagination = {}) => {
+    try {
+        const {
+            page = 1,
+            limit = 10,
+            search = "",
+            sort_by = "name",
+            sort_order = "ASC",
+            status_filter = "all", // all, low_stock, out_of_stock
+        } = pagination;
+
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const limitNum = parseInt(limit);
+
+        const conditions = ["inv.restaurant_id = ?", "inv.deleted_at IS NULL"];
+        const params = [restaurantId];
+
+        // Add search condition
+        if (search && search.trim()) {
+            conditions.push("inv.name LIKE ?");
+            params.push(`%${search.trim()}%`);
+        }
+
+        // Add status filter
+        if (status_filter === "low_stock") {
+            conditions.push(
+                "COALESCE(SUM(CASE WHEN ib.status = 'active' THEN ib.current_quantity ELSE 0 END), 0) <= inv.threshold"
+            );
+        } else if (status_filter === "out_of_stock") {
+            conditions.push("COALESCE(SUM(CASE WHEN ib.status = 'active' THEN ib.current_quantity ELSE 0 END), 0) = 0");
+        }
+
+        const allowedSortFields = ["id", "name", "total_quantity", "available_quantity", "created_at"];
+        const sortField = allowedSortFields.includes(sort_by) ? sort_by : "name";
+        const sortDirection = sort_order.toUpperCase() === "DESC" ? "DESC" : "ASC";
+
+        const whereClause = conditions.join(" AND ");
+
+        const dataQuery = `
+            SELECT 
+                inv.id,
+                inv.name,
+                inv.quantity AS total_quantity,
+                inv.threshold,
+                inv.price,
+                c.code AS currency_code,
+                u.name AS unit_name,
+                u.unit_symbol,
+                COALESCE(SUM(CASE WHEN ib.status = 'active' THEN ib.current_quantity ELSE 0 END), 0) AS available_quantity,
+                COUNT(CASE WHEN ib.status = 'active' THEN 1 END) AS active_batches_count,
+                CASE 
+                    WHEN COALESCE(SUM(CASE WHEN ib.status = 'active' THEN ib.current_quantity ELSE 0 END), 0) = 0 THEN 'out_of_stock'
+                    WHEN COALESCE(SUM(CASE WHEN ib.status = 'active' THEN ib.current_quantity ELSE 0 END), 0) <= inv.threshold THEN 'low_stock'
+                    ELSE 'in_stock'
+                END AS stock_status,
+                JSON_ARRAYAGG(
+                    CASE WHEN ib.id IS NOT NULL THEN
+                        JSON_OBJECT(
+                            'id', ib.id,
+                            'batch_number', ib.batch_number,
+                            'quantity', ib.current_quantity,
+                            'initial_quantity', ib.initial_quantity,
+                            'purchase_date', ib.purchase_date,
+                            'expiry_date', ib.expiry_date,
+                            'status', ib.status,
+                            'supplier_name', s.name,
+                            'purchase_price', ib.purchase_price,
+                            'selling_price', ib.selling_price,
+                            'days_until_expiry', DATEDIFF(ib.expiry_date, CURDATE()),
+                            'alert_status', CASE 
+                                WHEN ib.expiry_date < CURDATE() THEN 'expired'
+                                WHEN ib.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 'expiring_soon'
+                                WHEN ib.current_quantity <= 0 THEN 'consumed'
+                                ELSE 'active'
+                            END
+                        )
+                    END
+                ) AS batches,
+                inv.created_at,
+                inv.updated_at
+            FROM 
+                inventory inv
+            LEFT JOIN inventory_batches ib ON inv.id = ib.inventory_id 
+                AND ib.deleted_at IS NULL
+            LEFT JOIN units u ON inv.unit_id = u.id
+            LEFT JOIN currencies c ON inv.currency_id = c.id
+            LEFT JOIN suppliers s ON ib.supplier_id = s.id
+            WHERE 
+                ${whereClause}
+            GROUP BY 
+                inv.id
+            ORDER BY 
+                ${sortField === "available_quantity" ? "available_quantity" : `inv.${sortField}`} ${sortDirection}
+            LIMIT ? OFFSET ?
+        `;
+
+        const countQuery = `
+            SELECT COUNT(DISTINCT inv.id) as total
+            FROM 
+                inventory inv
+            LEFT JOIN inventory_batches ib ON inv.id = ib.inventory_id 
+                AND ib.deleted_at IS NULL
+            WHERE 
+                ${whereClause}
+        `;
+
+        const dataParams = [...params, limitNum, offset];
+        const countParams = [...params];
+
+        const [result, countResult] = await Promise.all([
+            executeQuery(dataQuery, dataParams, "getInventoryWithBatchesByRestaurant"),
+            executeQuery(countQuery, countParams, "getInventoryWithBatchesCount"),
+        ]);
+
+        // Clean up the batches array to remove null entries
+        const cleanedResult = result.map((item) => ({
+            ...item,
+            batches: item.batches ? item.batches.filter((batch) => batch !== null) : [],
+        }));
+
+        const total = countResult[0]?.total || 0;
+        const totalPages = Math.ceil(total / limitNum);
+
+        return {
+            data: cleanedResult,
+            pagination: {
+                current_page: parseInt(page),
+                total_pages: totalPages,
+                total_records: total,
+                limit: limitNum,
+                has_next: parseInt(page) < totalPages,
+                has_prev: parseInt(page) > 1,
+            },
+            filters: {
+                search,
+                status_filter,
+                sort_by: sortField,
+                sort_order: sortDirection,
+            },
+            summary: {
+                total_items: total,
+                low_stock_items: cleanedResult.filter((item) => item.stock_status === "low_stock").length,
+                out_of_stock_items: cleanedResult.filter((item) => item.stock_status === "out_of_stock").length,
+                total_batches: cleanedResult.reduce((sum, item) => sum + item.batches.length, 0),
+            },
+        };
+    } catch (error) {
+        throw new DatabaseError("Failed to fetch inventory with batches", error);
+    }
+};
+
 const getInventoryItemsByRestaurantID = async (restaurant_id) => {
     try {
         const sql = `
@@ -466,4 +617,5 @@ module.exports = {
     getInventoryWithBatchesModel: getInventoryWithBatches,
     validateRecipeAvailabilityModel: validateRecipeAvailability,
     consumeIngredientsForOrderModel: consumeIngredientsForOrder,
+    getInventoryWithBatchesByRestaurantModel: getInventoryWithBatchesByRestaurant,
 };

@@ -261,6 +261,54 @@ const getInventoryHistory = async (request, callBack) => {
     }
 };
 
+const getInventoryWithBatchesByRestaurant = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        if (!authorize?.roles?.includes(1) && authorize?.department_id !== 2 && authorize?.department_id !== 4) {
+            throw new CustomError("You don't have permission to view inventory with batches!", 403);
+        }
+
+        const { restaurant_id } = request.params;
+
+        // Use restaurant_id from params or user's restaurant_id
+        const actualRestaurantId = restaurant_id || authorize.restaurant_id;
+
+        if (!actualRestaurantId) {
+            throw new CustomError("Restaurant ID is required", 400);
+        }
+
+        // Restrict restaurant admins to their own restaurant
+        if (authorize?.department_id === 2 && actualRestaurantId != authorize.restaurant_id) {
+            throw new CustomError("You can only view inventory for your own restaurant", 403);
+        }
+
+        const pagination = {
+            page: request.query.page || 1,
+            limit: request.query.limit || 10,
+            search: request.query.search || "",
+            sort_by: request.query.sort_by || "name",
+            sort_order: request.query.sort_order || "ASC",
+            status_filter: request.query.status_filter || "all",
+        };
+
+        const result = await getInventoryWithBatchesByRestaurantModel(actualRestaurantId, pagination);
+
+        callBack(resultObject(true, "Inventory with batches retrieved successfully", result));
+    } catch (error) {
+        console.error("Error in getInventoryWithBatchesByRestaurant:", error);
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
+    }
+};
+
 module.exports = {
     getInventoryItemsController: getInventoryItems,
     getInventoryItemsByRestaurantIDController: getInventoryItemsByRestaurantID,
@@ -269,4 +317,5 @@ module.exports = {
     updateInventoryItemController: updateInventoryItem,
     deleteInventoryItemController: deleteInventoryItem,
     getInventoryHistoryController: getInventoryHistory,
+    getInventoryWithBatchesByRestaurantController: getInventoryWithBatchesByRestaurant,
 };

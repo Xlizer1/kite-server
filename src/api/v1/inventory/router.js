@@ -8,6 +8,7 @@ const {
     updateInventoryItemController,
     deleteInventoryItemController,
     getInventoryHistoryController,
+    getInventoryWithBatchesByRestaurantController,
 } = require("./controller");
 const { authenticateToken } = require("../../../middleware/auth");
 const validateRequest = require("../../../middleware/validateRequest");
@@ -58,6 +59,20 @@ router.put("/:id", authenticateToken, validateRequest(inventorySchema), (req, re
 // Delete inventory item
 router.delete("/:id", authenticateToken, (req, res) => {
     deleteInventoryItemController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+// Get inventory with batches for restaurant (paginated)
+router.get("/restaurant/:restaurant_id/with-batches", authenticateToken, (req, res) => {
+    getInventoryWithBatchesByRestaurantController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+// Alternative route for current user's restaurant
+router.get("/with-batches", authenticateToken, (req, res) => {
+    getInventoryWithBatchesByRestaurantController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
     });
 });
