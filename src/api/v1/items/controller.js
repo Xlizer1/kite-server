@@ -14,6 +14,7 @@ const {
     getToken,
 } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
+const { validateMenuItemAvailabilityModel } = require("../ingredients/model");
 
 const getItems = async (request, callBack) => {
     try {
@@ -47,6 +48,97 @@ const getItemByID = async (request, callBack) => {
         callBack(resultObject(true, "Items retrieved successfully", result));
     } catch (error) {
         console.error("Error in getItems:", error);
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
+    }
+};
+
+// Add new function to get items with availability status
+const getItemsWithAvailability = async (request, callBack) => {
+    try {
+        const { key } = request.query;
+
+        if (!key || typeof key !== "string") {
+            throw new CustomError("Invalid key!", 400);
+        }
+
+        const { restaurant_id } = await processTableEncryptedKey(key);
+        const result = await getItemsModel(restaurant_id);
+
+        // Add availability status to each item
+        const itemsWithAvailability = await Promise.all(
+            result.map(async (item) => {
+                try {
+                    const availability = await validateMenuItemAvailabilityModel(item.id, 1);
+                    return {
+                        ...item,
+                        available: availability.available,
+                        can_prepare_quantity: availability.can_prepare_quantity || 0,
+                        missing_ingredients: availability.missing_ingredients || [],
+                    };
+                } catch (error) {
+                    // If no recipe exists, item is considered available
+                    return {
+                        ...item,
+                        available: true,
+                        can_prepare_quantity: 999,
+                        missing_ingredients: [],
+                        no_recipe: true,
+                    };
+                }
+            })
+        );
+
+        callBack(resultObject(true, "Items with availability retrieved successfully", itemsWithAvailability));
+    } catch (error) {
+        console.error("Error in getItemsWithAvailability:", error);
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
+    }
+};
+
+// Add function to check item availability before adding to cart
+const checkItemAvailability = async (request, callBack) => {
+    try {
+        const { item_id, quantity = 1 } = request.query;
+
+        if (!item_id) {
+            throw new CustomError("Item ID is required", 400);
+        }
+
+        if (isNaN(quantity) || quantity <= 0) {
+            throw new CustomError("Quantity must be a positive number", 400);
+        }
+
+        try {
+            const availability = await validateMenuItemAvailabilityModel(item_id, parseInt(quantity));
+            callBack(resultObject(true, "Item availability checked", availability));
+        } catch (error) {
+            // If no recipe exists, item is considered available
+            callBack(
+                resultObject(true, "Item availability checked", {
+                    available: true,
+                    reason: "No recipe required",
+                    missing_ingredients: [],
+                    can_prepare_quantity: parseInt(quantity),
+                    no_recipe: true,
+                })
+            );
+        }
+    } catch (error) {
+        console.error("Error in checkItemAvailability:", error);
         callBack(
             resultObject(
                 false,
@@ -210,4 +302,6 @@ module.exports = {
     createItemController: createItem,
     updateItemImageController: updateItemImage,
     getPaginatedItemsByCategoryIDController: getPaginatedItemsByCategoryID,
+    getItemsWithAvailabilityController: getItemsWithAvailability,
+    checkItemAvailabilityController: checkItemAvailability,
 };

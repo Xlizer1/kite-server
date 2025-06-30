@@ -6,6 +6,8 @@ const {
     getPaginatedItemsByCategoryIDController,
     createItemController,
     updateItemImageController,
+    getItemsWithAvailabilityController,
+    checkItemAvailabilityController,
 } = require("./controller");
 const validateRequest = require("../../../middleware/validateRequest");
 const { itemSchema } = require("../../../validators/itemSchema");
@@ -50,6 +52,20 @@ router.get("/:item_id", (req, res) => {
 
 router.put("/:id/image", authenticateToken, upload.single("image"), (req, res) => {
     updateItemImageController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+// Get items with availability status (for customer menu)
+router.get("/with-availability", (req, res) => {
+    getItemsWithAvailabilityController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+// Check specific item availability before adding to cart
+router.get("/check-availability", (req, res) => {
+    checkItemAvailabilityController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
     });
 });

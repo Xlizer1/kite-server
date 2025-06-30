@@ -18,6 +18,7 @@ const captainRouter = require("./captain/router");
 const kitchenRouter = require("./kitchen/router");
 const cashierRouter = require("./cashier/router");
 const analyticsRouter = require("./analytics/router");
+const inventoryBatchesRouter = require("./inventory-batches/router");
 
 router.use("/", homeRouter);
 router.use("/users", userRouter);
@@ -36,5 +37,6 @@ router.use("/captain", captainRouter);
 router.use("/kitchen", kitchenRouter);
 router.use("/cashier", cashierRouter);
 router.use("/analytics", analyticsRouter);
+router.use("/inventory-batches", inventoryBatchesRouter);
 
 module.exports = router;

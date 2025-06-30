@@ -1,11 +1,15 @@
 const express = require("express");
-const { 
+const {
     getPendingKitchenOrdersController,
     getInProgressKitchenOrdersController,
     startProcessingOrderController,
     completeOrderController,
     getLowInventoryItemsController,
-    getKitchenOrderHistoryController
+    getKitchenOrderHistoryController,
+    getKitchenOrdersWithIngredientsController,
+    startOrderPreparationController,
+    getKitchenInventoryAlertsController,
+    getOrderPreparationDetailsController,
 } = require("./controller");
 
 const { checkUserAuthorized } = require("../../../helpers/common");
@@ -159,6 +163,34 @@ router.get("/inventory/low", (req, res) => {
 router.get("/history", (req, res) => {
     getKitchenOrderHistoryController(req, (result) => {
         res.json(result);
+    });
+});
+
+// Get kitchen orders with ingredient availability status
+router.get("/orders-with-ingredients", (req, res) => {
+    getKitchenOrdersWithIngredientsController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+// Start order preparation with ingredient consumption
+router.post("/start-preparation", validateRequest(startProcessingOrderSchema), (req, res) => {
+    startOrderPreparationController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+// Get kitchen inventory alerts (low stock and expiring items)
+router.get("/inventory-alerts", (req, res) => {
+    getKitchenInventoryAlertsController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+// Get detailed order preparation information
+router.get("/order-details/:order_id", validateRequest(orderIdParamSchema), (req, res) => {
+    getOrderPreparationDetailsController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
     });
 });
 

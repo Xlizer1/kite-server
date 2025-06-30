@@ -311,6 +311,149 @@ const getInventoryHistory = async (inventory_id) => {
     }
 };
 
+const checkStockAvailability = async (inventoryId, requiredQuantity) => {
+    try {
+        const sql = `
+            SELECT 
+                inv.id,
+                inv.name,
+                inv.quantity AS total_quantity,
+                COALESCE(SUM(ib.current_quantity), 0) AS available_in_batches,
+                CASE 
+                    WHEN COALESCE(SUM(ib.current_quantity), 0) >= ? THEN true 
+                    ELSE false 
+                END AS sufficient_stock
+            FROM 
+                inventory inv
+            LEFT JOIN inventory_batches ib ON inv.id = ib.inventory_id 
+                AND ib.status = 'active' 
+                AND ib.current_quantity > 0
+                AND ib.deleted_at IS NULL
+            WHERE 
+                inv.id = ? 
+                AND inv.deleted_at IS NULL
+            GROUP BY 
+                inv.id, inv.name, inv.quantity
+        `;
+
+        const result = await executeQuery(sql, [requiredQuantity, inventoryId], "checkStockAvailability");
+        return result[0] || null;
+    } catch (error) {
+        throw new DatabaseError("Failed to check stock availability", error);
+    }
+};
+
+// Add this function to get inventory with batch summary
+const getInventoryWithBatches = async (inventoryId) => {
+    try {
+        const sql = `
+            SELECT 
+                inv.id,
+                inv.restaurant_id,
+                inv.name,
+                inv.quantity AS total_quantity,
+                inv.threshold,
+                inv.price,
+                c.code AS currency_code,
+                u.name AS unit_name,
+                u.unit_symbol,
+                COUNT(ib.id) AS total_batches,
+                COUNT(CASE WHEN ib.status = 'active' THEN 1 END) AS active_batches,
+                COALESCE(SUM(CASE WHEN ib.status = 'active' THEN ib.current_quantity ELSE 0 END), 0) AS available_quantity,
+                COALESCE(SUM(CASE WHEN ib.expiry_date < CURDATE() THEN ib.current_quantity ELSE 0 END), 0) AS expired_quantity,
+                MIN(CASE WHEN ib.status = 'active' AND ib.expiry_date > CURDATE() THEN ib.expiry_date END) AS next_expiry_date,
+                AVG(CASE WHEN ib.status = 'active' THEN ib.purchase_price END) AS avg_purchase_price,
+                AVG(CASE WHEN ib.status = 'active' THEN ib.selling_price END) AS avg_selling_price
+            FROM 
+                inventory inv
+            LEFT JOIN inventory_batches ib ON inv.id = ib.inventory_id AND ib.deleted_at IS NULL
+            LEFT JOIN units u ON inv.unit_id = u.id
+            LEFT JOIN currencies c ON inv.currency_id = c.id
+            WHERE 
+                inv.id = ? 
+                AND inv.deleted_at IS NULL
+            GROUP BY 
+                inv.id
+        `;
+
+        const result = await executeQuery(sql, [inventoryId], "getInventoryWithBatches");
+        return result[0] || null;
+    } catch (error) {
+        throw new DatabaseError("Failed to fetch inventory with batches", error);
+    }
+};
+
+// Add this function to validate recipe availability
+const validateRecipeAvailability = async (recipeItems) => {
+    try {
+        const unavailableItems = [];
+
+        for (const item of recipeItems) {
+            const { inventory_id, required_quantity } = item;
+
+            const availability = await checkStockAvailability(inventory_id, required_quantity);
+
+            if (!availability || !availability.sufficient_stock) {
+                unavailableItems.push({
+                    inventory_id,
+                    inventory_name: availability?.name || "Unknown",
+                    required_quantity,
+                    available_quantity: availability?.available_in_batches || 0,
+                    shortage: required_quantity - (availability?.available_in_batches || 0),
+                });
+            }
+        }
+
+        return {
+            all_available: unavailableItems.length === 0,
+            unavailable_items: unavailableItems,
+        };
+    } catch (error) {
+        throw new DatabaseError("Failed to validate recipe availability", error);
+    }
+};
+
+// Add this function to auto-consume ingredients for orders
+const consumeIngredientsForOrder = async (orderId, ingredients, userId) => {
+    try {
+        const queries = [];
+        const consumptionDetails = [];
+
+        for (const ingredient of ingredients) {
+            const { inventory_id, quantity } = ingredient;
+
+            // Check availability first
+            const availability = await checkStockAvailability(inventory_id, quantity);
+            if (!availability || !availability.sufficient_stock) {
+                throw new BusinessLogicError(
+                    `Insufficient stock for ${availability?.name || "ingredient"}. Required: ${quantity}, Available: ${
+                        availability?.available_in_batches || 0
+                    }`
+                );
+            }
+
+            // Consume from batches (FIFO)
+            const { consumeFromBatchesModel } = require("../inventory-batches/model");
+            const consumptionResult = await consumeFromBatchesModel(inventory_id, quantity, "order", orderId, userId);
+
+            consumptionDetails.push({
+                inventory_id,
+                inventory_name: availability.name,
+                consumed_quantity: quantity,
+                batches_used: consumptionResult.batches_affected,
+            });
+        }
+
+        return {
+            success: true,
+            consumption_details: consumptionDetails,
+        };
+    } catch (error) {
+        if (error instanceof BusinessLogicError) throw error;
+        throw new DatabaseError("Failed to consume ingredients for order", error);
+    }
+};
+
 module.exports = {
     getInventoryItemsModel: getInventoryItems,
     getInventoryItemsByRestaurantIDModel: getInventoryItemsByRestaurantID,
@@ -319,4 +462,8 @@ module.exports = {
     updateInventoryItemModel: updateInventoryItem,
     deleteInventoryItemModel: deleteInventoryItem,
     getInventoryHistoryModel: getInventoryHistory,
+    checkStockAvailabilityModel: checkStockAvailability,
+    getInventoryWithBatchesModel: getInventoryWithBatches,
+    validateRecipeAvailabilityModel: validateRecipeAvailability,
+    consumeIngredientsForOrderModel: consumeIngredientsForOrder,
 };
