@@ -24,6 +24,7 @@ const getRestaurantMainMenu = async (request, callBack) => {
             callBack(resultObject(false, "Please provide a key!"));
             return;
         }
+
         const { restaurant_id, number } = await processTableEncryptedKey(key);
         if (!number || !restaurant_id) {
             callBack(resultObject(false, "Invalid Table Key!"));
@@ -32,87 +33,88 @@ const getRestaurantMainMenu = async (request, callBack) => {
 
         const restaurantLocation = await getRestaurantLocation(restaurant_id);
 
-        if (!isWithinRange(latitude, longitude, restaurantLocation, 20000000)) {
-            callBack(resultObject(false, "Menu only available within restaurant."));
+        // ✅ Location validation (100m range)
+        if (!isWithinRange(latitude, longitude, restaurantLocation, 100)) {
+            callBack(resultObject(false, "Menu only available within restaurant premises."));
             return;
         }
 
         const result = await getRestaurantMainMenuModel(restaurant_id, number);
 
         if (result) {
-            // Get session ID from cookies if it exists
             let sessionId = request.query.sessionId || request.cookies.cartSessionId;
             let needsNewSession = true;
 
-            // Check if the session exists and is still valid
+            // Check if session exists and is still valid
             if (sessionId) {
                 const checkSessionQuery = `
-                    SELECT id, updated_at 
-                    FROM carts 
-                    WHERE session_id = ? AND table_id = ? AND restaurant_id = ?
+                    SELECT c.id, c.updated_at, c.table_id, c.restaurant_id
+                    FROM carts c 
+                    WHERE c.session_id = ? AND c.table_id = ? AND c.restaurant_id = ?
                 `;
 
                 const sessionResult = await executeQuery(checkSessionQuery, [sessionId, number, restaurant_id]);
 
                 if (sessionResult && sessionResult.length > 0) {
-                    const sessionData = sessionResult[0];
-                    const updatedAt = new Date(sessionData.updated_at);
-                    const currentTime = new Date();
+                    // ✅ CHANGED: No 2-hour timeout check!
+                    // Session is valid as long as it exists
+                    needsNewSession = false;
 
-                    // Check if session hasn't expired (2 hours = 7200000 milliseconds)
-                    const sessionAge = currentTime - updatedAt;
-                    if (sessionAge < 7200000) {
-                        needsNewSession = false;
-
-                        // Update the timestamp to extend the session
-                        const updateTimestampQuery = `
-                            UPDATE carts 
-                            SET updated_at = CURRENT_TIMESTAMP 
-                            WHERE session_id = ?
-                        `;
-                        await executeQuery(updateTimestampQuery, [sessionId]);
-                    }
+                    // Update activity timestamp
+                    const updateTimestampQuery = `
+                        UPDATE carts 
+                        SET updated_at = CURRENT_TIMESTAMP 
+                        WHERE session_id = ?
+                    `;
+                    await executeQuery(updateTimestampQuery, [sessionId]);
                 }
             }
 
-            // Create a new session if needed
+            // Create new session only if no valid session exists
             if (needsNewSession) {
                 sessionId = uuidv4();
 
-                // Create a new cart entry or update existing one
-                const upsertCartQuery = `
-                    INSERT INTO carts (table_id, restaurant_id, session_id)
-                    VALUES (?, ?, ?)
-                    ON DUPLICATE KEY UPDATE 
-                    table_id = VALUES(table_id), 
-                    restaurant_id = VALUES(restaurant_id),
-                    updated_at = CURRENT_TIMESTAMP
+                // Get table ID
+                const getTableIdQuery = `
+                    SELECT id FROM tables 
+                    WHERE number = ? AND restaurant_id = ? AND deleted_at IS NULL
                 `;
+                const tableResult = await executeQuery(getTableIdQuery, [number, restaurant_id]);
 
-                await executeQuery(upsertCartQuery, [number, restaurant_id, sessionId]);
+                if (!tableResult || tableResult.length === 0) {
+                    callBack(resultObject(false, "Table not found"));
+                    return;
+                }
 
-                //Update table status
+                const tableId = tableResult[0].id;
 
+                // Create new cart
+                const createCartQuery = `
+                    INSERT INTO carts (table_id, restaurant_id, session_id, created_at, updated_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                `;
+                await executeQuery(createCartQuery, [tableId, restaurant_id, sessionId]);
+
+                // ✅ FIXED: Update specific table status
                 const updateTableStatusQuery = `
-                    UPDATE 
-                        tables
-                    SET
-                        status = 2
+                    UPDATE tables
+                    SET status = 'occupied', 
+                        customer_count = 1, 
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND restaurant_id = ?
                 `;
+                await executeQuery(updateTableStatusQuery, [tableId, restaurant_id]);
 
-                await executeQuery(updateTableStatusQuery);
-
-                // Set the cookie in the response
+                // Set cookie (longer expiry since no aggressive timeout)
                 if (request.res) {
                     request.res.cookie("cartSessionId", sessionId, {
-                        maxAge: 2 * 60 * 60 * 1000,
+                        maxAge: 24 * 60 * 60 * 1000, // 24 hours (safety net)
                         httpOnly: true,
                         secure: process.env.NODE_ENV === "production",
                     });
                 }
             }
 
-            // Add the session ID to the response
             callBack(
                 resultObject(true, "success", {
                     ...result,
@@ -124,12 +126,6 @@ const getRestaurantMainMenu = async (request, callBack) => {
         }
     } catch (error) {
         console.error("Error in getRestaurantMainMenu:", error);
-
-        if (error instanceof DatabaseError) {
-            callBack(resultObject(false, error.message));
-            return;
-        }
-
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };

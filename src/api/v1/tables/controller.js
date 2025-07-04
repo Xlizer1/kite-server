@@ -378,6 +378,89 @@ const getTableStatisticsController = async (request, callBack) => {
     }
 };
 
+/**
+ * Manual table reset for staff (for edge cases like walkouts)
+ */
+const manualTableResetController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        if (!authorize?.id || !authorize?.email) {
+            return callBack(resultObject(false, "Token is invalid!"));
+        }
+
+        // Check if user can manage tables
+        if (!hasPermission(authorize.department_id, "tables", "update")) {
+            return callBack(resultObject(false, "You don't have permission to reset tables!"));
+        }
+
+        const { id } = request.params;
+        const { reason } = request.body; // Why staff is manually resetting
+
+        // Get current table info
+        const tableQuery = `
+            SELECT t.id, t.number, t.restaurant_id, t.status
+            FROM tables t
+            WHERE t.id = ? AND t.deleted_at IS NULL
+        `;
+        const tableResult = await executeQuery(tableQuery, [id], "getTableForReset");
+
+        if (!tableResult || tableResult.length === 0) {
+            return callBack(resultObject(false, "Table not found"));
+        }
+
+        const table = tableResult[0];
+
+        // Clear any existing sessions for this table
+        await executeQuery(
+            `
+            DELETE FROM cart_items 
+            WHERE cart_id IN (SELECT id FROM carts WHERE table_id = ? AND restaurant_id = ?)
+        `,
+            [table.id, table.restaurant_id],
+            "clearCartItemsManual"
+        );
+
+        await executeQuery(
+            `
+            DELETE FROM carts 
+            WHERE table_id = ? AND restaurant_id = ?
+        `,
+            [table.id, table.restaurant_id],
+            "clearCartsManual"
+        );
+
+        // Reset table status
+        const resetQuery = `
+            UPDATE tables 
+            SET status = 'available', 
+                customer_count = 0, 
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE id = ?
+        `;
+        await executeQuery(resetQuery, [authorize.id, table.id], "manualTableReset");
+
+        // Log the manual reset
+        await createUserActivityLogModel({
+            user_id: authorize.id,
+            action: "table_manual_reset",
+            description: `Manually reset Table ${table.number}${reason ? `: ${reason}` : ""}`,
+            metadata: JSON.stringify({
+                table_id: table.id,
+                previous_status: table.status,
+                reason: reason || "No reason provided",
+            }),
+        });
+
+        callBack(resultObject(true, `Table ${table.number} has been reset successfully`));
+    } catch (error) {
+        console.error("Error in manualTableResetController:", error);
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
 module.exports = {
     getTablesController,
     getTableByIdController,
@@ -387,4 +470,5 @@ module.exports = {
     regenerateTableQRCodeController,
     updateTableStatusController,
     getTableStatisticsController,
+    manualTableResetController,
 };

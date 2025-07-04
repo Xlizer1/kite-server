@@ -11,10 +11,10 @@ const { CustomError } = require("../../../middleware/errorHandler");
 const getTablesWithActiveBillsModel = async (req) => {
     try {
         const { restaurant_id } = req.params;
-        
+
         // Use restaurant_id from the authenticated user if not specified
         const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
-        
+
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
         }
@@ -63,7 +63,7 @@ const getTablesWithActiveBillsModel = async (req) => {
 const getOrdersForBillingModel = async (req) => {
     try {
         const { table_id } = req.params;
-        
+
         if (!table_id) {
             throw new CustomError("Table ID is required", 400);
         }
@@ -131,10 +131,10 @@ const getOrdersForBillingModel = async (req) => {
 const getAvailableDiscountsModel = async (req) => {
     try {
         const { restaurant_id } = req.params;
-        
+
         // Use restaurant_id from the authenticated user if not specified
         const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
-        
+
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
         }
@@ -180,11 +180,11 @@ const getAvailableDiscountsModel = async (req) => {
 const createInvoiceModel = async (data) => {
     try {
         const { order_ids, discount_id, payment_method_id, payment_status_id, notes, user_id } = data;
-        
+
         if (!order_ids || !order_ids.length) {
             throw new CustomError("At least one order ID is required", 400);
         }
-        
+
         // Get orders information first
         const ordersQuery = `
             SELECT 
@@ -204,27 +204,27 @@ const createInvoiceModel = async (data) => {
             AND 
                 o.deleted_at IS NULL
         `;
-        
+
         const orders = await executeQuery(ordersQuery, [order_ids], "getOrdersForInvoice");
-        
+
         if (!orders || orders.length === 0) {
             throw new CustomError("No valid orders found", 404);
         }
-        
+
         // Check if all orders are from the same table and restaurant
         const tableId = orders[0].table_id;
         const restaurantId = orders[0].restaurant_id;
-        
-        if (!orders.every(o => o.table_id === tableId && o.restaurant_id === restaurantId)) {
+
+        if (!orders.every((o) => o.table_id === tableId && o.restaurant_id === restaurantId)) {
             throw new CustomError("All orders must be from the same table and restaurant", 400);
         }
-        
+
         // Calculate subtotal
         const subtotal = orders.reduce((total, order) => total + parseFloat(order.order_total), 0);
-        
+
         // Calculate discount if applicable
         let discountAmount = 0;
-        
+
         if (discount_id) {
             const discountQuery = `
                 SELECT 
@@ -245,37 +245,41 @@ const createInvoiceModel = async (data) => {
                 AND 
                     (d.ends_at IS NULL OR d.ends_at >= NOW())
             `;
-            
+
             const discounts = await executeQuery(discountQuery, [discount_id], "getDiscountForInvoice");
-            
+
             if (discounts && discounts.length > 0) {
                 const discount = discounts[0];
-                
+
                 // Check minimum order value
                 if (discount.min_order_value && subtotal < discount.min_order_value) {
-                    throw new CustomError(`Minimum order value of ${discount.min_order_value} not met for this discount`, 400);
+                    throw new CustomError(
+                        `Minimum order value of ${discount.min_order_value} not met for this discount`,
+                        400
+                    );
                 }
-                
+
                 // Calculate discount amount
-                if (discount.discount_type === 'percentage') {
+                if (discount.discount_type === "percentage") {
                     discountAmount = subtotal * (discount.discount_value / 100);
-                } else { // fixed amount
+                } else {
+                    // fixed amount
                     discountAmount = discount.discount_value;
                 }
-                
+
                 // Don't allow discount to exceed subtotal
                 if (discountAmount > subtotal) {
                     discountAmount = subtotal;
                 }
             }
         }
-        
+
         // Calculate total
         const totalAmount = subtotal - discountAmount;
-        
+
         // Start transaction
         const queries = [];
-        
+
         // Create invoice
         queries.push({
             sql: `
@@ -290,9 +294,9 @@ const createInvoiceModel = async (data) => {
                     created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             `,
-            params: [restaurantId, tableId, subtotal, discountAmount, totalAmount, notes, user_id]
+            params: [restaurantId, tableId, subtotal, discountAmount, totalAmount, notes, user_id],
         });
-        
+
         // Link orders to invoice
         for (const orderId of order_ids) {
             queries.push({
@@ -305,9 +309,9 @@ const createInvoiceModel = async (data) => {
                         updated_at = NOW()
                     WHERE id = ?
                 `,
-                params: [user_id, orderId]
+                params: [user_id, orderId],
             });
-            
+
             // Record status change in history
             queries.push({
                 sql: `
@@ -315,10 +319,10 @@ const createInvoiceModel = async (data) => {
                     (order_id, status_id, changed_by, notes, created_at)
                     VALUES (?, 7, ?, 'Order completed and invoiced', NOW())
                 `,
-                params: [orderId, user_id]
+                params: [orderId, user_id],
             });
         }
-        
+
         // Add discount to invoice if applicable
         if (discount_id && discountAmount > 0) {
             queries.push({
@@ -327,10 +331,10 @@ const createInvoiceModel = async (data) => {
                     (invoice_id, discount_id, discount_amount)
                     VALUES (LAST_INSERT_ID(), ?, ?)
                 `,
-                params: [discount_id, discountAmount]
+                params: [discount_id, discountAmount],
             });
         }
-        
+
         // Create payment record
         queries.push({
             sql: `
@@ -338,15 +342,13 @@ const createInvoiceModel = async (data) => {
                 (invoice_id, payment_status_id, payment_method, amount, created_by, created_at)
                 VALUES (LAST_INSERT_ID(), ?, ?, ?, ?, NOW())
             `,
-            params: [payment_status_id, payment_method_id, totalAmount, user_id]
+            params: [payment_status_id, payment_method_id, totalAmount, user_id],
         });
-        
+
         // Execute transaction
         const result = await executeTransaction(queries, "createInvoice");
-        
-        // Get invoice details
         const invoiceId = result[0].insertId;
-        
+
         const invoiceQuery = `
             SELECT 
                 i.id,
@@ -375,13 +377,52 @@ const createInvoiceModel = async (data) => {
             WHERE 
                 i.id = ?
         `;
-        
+
         const invoiceDetails = await executeQuery(invoiceQuery, [invoiceId], "getInvoiceDetails");
-        
+
         if (!invoiceDetails || invoiceDetails.length === 0) {
             throw new CustomError("Failed to retrieve invoice details", 500);
         }
-        
+
+        // Get table information from the orders
+        const tableInfoQuery = `
+            SELECT DISTINCT o.table_id, o.restaurant_id, t.number
+            FROM orders o
+            JOIN tables t ON o.table_id = t.id
+            WHERE o.id IN (?)
+        `;
+        const tableInfo = await executeQuery(tableInfoQuery, [order_ids], "getTableInfoForSessionEnd");
+
+        if (tableInfo && tableInfo.length > 0) {
+            const { table_id, restaurant_id, number } = tableInfo[0];
+
+            // 1. Clear all cart sessions for this table
+            const clearSessionsQuery = `
+                DELETE FROM cart_items 
+                WHERE cart_id IN (SELECT id FROM carts WHERE table_id = ? AND restaurant_id = ?)
+            `;
+            await executeQuery(clearSessionsQuery, [table_id, restaurant_id], "clearCartItems");
+
+            const clearCartsQuery = `
+                DELETE FROM carts 
+                WHERE table_id = ? AND restaurant_id = ?
+            `;
+            await executeQuery(clearCartsQuery, [table_id, restaurant_id], "clearCarts");
+
+            // 2. Reset table status to available
+            const resetTableQuery = `
+                UPDATE tables 
+                SET status = 'available', 
+                    customer_count = 0, 
+                    updated_at = CURRENT_TIMESTAMP,
+                    updated_by = ?
+                WHERE id = ? AND restaurant_id = ?
+            `;
+            await executeQuery(resetTableQuery, [user_id, table_id, restaurant_id], "resetTableAfterCheckout");
+
+            console.log(`✅ Session ended for Table ${number} after checkout`);
+        }
+
         return invoiceDetails[0];
     } catch (error) {
         throw new CustomError(error.message, error.statusCode || 500);
@@ -396,7 +437,7 @@ const createInvoiceModel = async (data) => {
 const getInvoiceDetailsModel = async (req) => {
     try {
         const { invoice_id } = req.params;
-        
+
         if (!invoice_id) {
             throw new CustomError("Invoice ID is required", 400);
         }
@@ -437,13 +478,13 @@ const getInvoiceDetailsModel = async (req) => {
             WHERE 
                 i.id = ?
         `;
-        
+
         const invoiceHeader = await executeQuery(invoiceQuery, [invoice_id], "getInvoiceHeader");
-        
+
         if (!invoiceHeader || invoiceHeader.length === 0) {
             throw new CustomError("Invoice not found", 404);
         }
-        
+
         // Get orders included in this invoice
         const ordersQuery = `
             SELECT 
@@ -474,9 +515,9 @@ const getInvoiceDetailsModel = async (req) => {
             ORDER BY 
                 o.created_at ASC
         `;
-        
+
         const orders = await executeQuery(ordersQuery, [invoice_id], "getInvoiceOrders");
-        
+
         // Get discounts applied to this invoice
         const discountsQuery = `
             SELECT 
@@ -494,9 +535,9 @@ const getInvoiceDetailsModel = async (req) => {
             WHERE 
                 id.invoice_id = ?
         `;
-        
+
         const discounts = await executeQuery(discountsQuery, [invoice_id], "getInvoiceDiscounts");
-        
+
         // Combine all data
         return {
             ...invoiceHeader[0],
@@ -516,11 +557,11 @@ const getInvoiceDetailsModel = async (req) => {
 const generateReceiptPdfModel = async (req) => {
     try {
         const { invoice_id } = req.params;
-        
+
         if (!invoice_id) {
             throw new CustomError("Invoice ID is required", 400);
         }
-        
+
         // Check if receipt already exists
         const receiptQuery = `
             SELECT 
@@ -532,23 +573,23 @@ const generateReceiptPdfModel = async (req) => {
             WHERE 
                 r.invoice_id = ?
         `;
-        
+
         const existingReceipt = await executeQuery(receiptQuery, [invoice_id], "checkExistingReceipt");
-        
+
         if (existingReceipt && existingReceipt.length > 0) {
             return existingReceipt[0];
         }
-        
+
         // Get invoice details to generate receipt
         const invoiceDetails = await getInvoiceDetailsModel({ params: { invoice_id } });
-        
+
         if (!invoiceDetails) {
             throw new CustomError("Failed to get invoice details", 500);
         }
-        
+
         // Generate receipt number
         const receiptNumber = `REC-${invoiceDetails.restaurant_id}-${Date.now()}`;
-        
+
         // In a real implementation, you would generate a PDF here
         // For this example, we'll just store the receipt number
         const createReceiptQuery = `
@@ -570,25 +611,25 @@ const generateReceiptPdfModel = async (req) => {
                 ?
             )
         `;
-        
+
         const placeholderPdfPath = `/receipts/${receiptNumber}.pdf`;
-        
+
         await executeQuery(
-            createReceiptQuery, 
+            createReceiptQuery,
             [
-                invoice_id, 
-                receiptNumber, 
-                invoiceDetails.total_amount, 
+                invoice_id,
+                receiptNumber,
+                invoiceDetails.total_amount,
                 invoiceDetails.payment_id,
                 req.user.id,
-                placeholderPdfPath
-            ], 
+                placeholderPdfPath,
+            ],
             "createReceipt"
         );
-        
+
         return {
             receipt_number: receiptNumber,
-            receipt_pdf: placeholderPdfPath
+            receipt_pdf: placeholderPdfPath,
         };
     } catch (error) {
         throw new CustomError(error.message, error.statusCode || 500);
@@ -603,17 +644,17 @@ const generateReceiptPdfModel = async (req) => {
 const getCashierReportModel = async (req) => {
     try {
         const { restaurant_id, date } = req.query;
-        
+
         // Use restaurant_id from the authenticated user if not specified
         const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
-        
+
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
         }
-        
+
         // Use today's date if not specified
-        const reportDate = date || new Date().toISOString().split('T')[0];
-        
+        const reportDate = date || new Date().toISOString().split("T")[0];
+
         // Get sales summary for the day
         const summaryQuery = `
             SELECT 
@@ -629,9 +670,9 @@ const getCashierReportModel = async (req) => {
             AND 
                 DATE(i.created_at) = ?
         `;
-        
+
         const summary = await executeQuery(summaryQuery, [actualRestaurantId, reportDate], "getCashierReportSummary");
-        
+
         // Get payment method breakdown
         const paymentMethodsQuery = `
             SELECT 
@@ -653,9 +694,13 @@ const getCashierReportModel = async (req) => {
             ORDER BY 
                 total_amount DESC
         `;
-        
-        const paymentMethods = await executeQuery(paymentMethodsQuery, [actualRestaurantId, reportDate], "getCashierReportPaymentMethods");
-        
+
+        const paymentMethods = await executeQuery(
+            paymentMethodsQuery,
+            [actualRestaurantId, reportDate],
+            "getCashierReportPaymentMethods"
+        );
+
         // Get hourly sales breakdown
         const hourlyQuery = `
             SELECT 
@@ -673,9 +718,13 @@ const getCashierReportModel = async (req) => {
             ORDER BY 
                 hour ASC
         `;
-        
-        const hourlySales = await executeQuery(hourlyQuery, [actualRestaurantId, reportDate], "getCashierReportHourlySales");
-        
+
+        const hourlySales = await executeQuery(
+            hourlyQuery,
+            [actualRestaurantId, reportDate],
+            "getCashierReportHourlySales"
+        );
+
         // Get top selling items
         const topItemsQuery = `
             SELECT 
@@ -701,15 +750,19 @@ const getCashierReportModel = async (req) => {
                 quantity_sold DESC
             LIMIT 10
         `;
-        
-        const topItems = await executeQuery(topItemsQuery, [actualRestaurantId, reportDate], "getCashierReportTopItems");
-        
+
+        const topItems = await executeQuery(
+            topItemsQuery,
+            [actualRestaurantId, reportDate],
+            "getCashierReportTopItems"
+        );
+
         return {
             date: reportDate,
             summary: summary[0],
             payment_methods: paymentMethods,
             hourly_sales: hourlySales,
-            top_items: topItems
+            top_items: topItems,
         };
     } catch (error) {
         throw new CustomError(error.message, error.statusCode || 500);
@@ -723,5 +776,5 @@ module.exports = {
     createInvoiceModel,
     getInvoiceDetailsModel,
     generateReceiptPdfModel,
-    getCashierReportModel
+    getCashierReportModel,
 };

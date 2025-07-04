@@ -8,6 +8,7 @@ const {
     regenerateTableQRCodeController,
     updateTableStatusController,
     getTableStatisticsController,
+    manualTableResetController,
 } = require("./controller");
 
 const { checkUserAuthorized } = require("../../../helpers/common");
@@ -558,5 +559,46 @@ router.put(
         });
     }
 );
+
+/**
+ * @swagger
+ * /api/v1/tables/{id}/reset:
+ *   post:
+ *     summary: Manually reset table (for staff)
+ *     description: Clears session and resets table to available. Used for edge cases like customer walkouts.
+ *     tags: [Table Operations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Table ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for manual reset (optional)
+ *                 example: "Customer left without paying"
+ *     responses:
+ *       200:
+ *         description: Table reset successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient permissions
+ *       404:
+ *         description: Table not found
+ */
+router.post("/:id/reset", checkUserAuthorized(), requirePermission("tables", "update"), (req, res) => {
+    manualTableResetController(req, (result) => {
+        res.json(result);
+    });
+});
 
 module.exports = router;
