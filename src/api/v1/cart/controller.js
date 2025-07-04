@@ -139,11 +139,29 @@ const addCartItem = async (request, callBack) => {
             return callBack(resultObject(false, "Item ID is required"));
         }
 
-        // Get cart ID
+        // ✅ IMPROVED: Get cart and validate it exists
         const cart = await getCartModel(sessionId);
 
         if (!cart) {
-            return callBack(resultObject(false, "Cart not found. Please initialize cart first"));
+            return callBack(
+                resultObject(false, "Cart not found. Please scan the QR code again to start a new session.")
+            );
+        }
+
+        // ✅ ADDED: Validate item belongs to same restaurant
+        const itemValidationQuery = `
+            SELECT i.restaurant_id 
+            FROM items i 
+            WHERE i.id = ? AND i.deleted_at IS NULL
+        `;
+        const itemResult = await executeQuery(itemValidationQuery, [itemId]);
+
+        if (!itemResult || itemResult.length === 0) {
+            return callBack(resultObject(false, "Item not found"));
+        }
+
+        if (itemResult[0].restaurant_id !== cart.restaurant_id) {
+            return callBack(resultObject(false, "Item does not belong to this restaurant"));
         }
 
         const result = await addCartItemModel({
@@ -284,8 +302,19 @@ const callCaptain = async (request, callBack) => {
         const cart = await getCartModel(sessionId);
 
         if (!cart || !cart.id) {
-            return callBack(resultObject(false, "Cart not found. Please initialize cart first"));
+            return callBack(
+                resultObject(false, "Cart not found. Please scan the QR code again to start a new session.")
+            );
         }
+
+        // ✅ IMPROVED: Get table number for better UX
+        const tableInfoQuery = `
+            SELECT t.number 
+            FROM tables t 
+            WHERE t.id = ? AND t.restaurant_id = ?
+        `;
+        const tableInfo = await executeQuery(tableInfoQuery, [cart.table_id, cart.restaurant_id]);
+        const tableNumber = tableInfo?.[0]?.number || cart.table_id;
 
         const result = await createCaptainCallModel({
             tableId: cart.table_id,
@@ -298,8 +327,8 @@ const callCaptain = async (request, callBack) => {
             await firebaseRealtimeService.sendCaptainCallNotification(cart.restaurant_id, {
                 id: result.id,
                 table_id: cart.table_id,
-                table_number: cart.table_number || `Table ${cart.table_id}`,
-                created_at: new Date()
+                table_number: tableNumber,
+                created_at: new Date(),
             });
 
             return callBack(resultObject(true, result.message || "Captain has been called", { callId: result.id }));
@@ -422,6 +451,97 @@ const createOrderFromCart = async (request, callBack) => {
     }
 };
 
+const validateCartSessionController = async (request, callBack) => {
+    try {
+        const sessionId = request.query.sessionId || request.cookies.cartSessionId;
+
+        if (!sessionId) {
+            return callBack(
+                resultObject(false, "No session ID provided", {
+                    hasSession: false,
+                    sessionId: null,
+                })
+            );
+        }
+
+        const { validateSession } = require("../../../helpers/sessionHelpers");
+        const sessionData = await validateSession(sessionId);
+
+        if (sessionData) {
+            return callBack(
+                resultObject(true, "Session is valid", {
+                    hasSession: true,
+                    sessionId: sessionData.session_id,
+                    tableId: sessionData.table_id,
+                    tableNumber: sessionData.table_number,
+                    restaurantId: sessionData.restaurant_id,
+                    restaurantName: sessionData.restaurant_name,
+                    tableStatus: sessionData.table_status,
+                })
+            );
+        } else {
+            return callBack(
+                resultObject(false, "Session not found or invalid", {
+                    hasSession: false,
+                    sessionId: sessionId,
+                })
+            );
+        }
+    } catch (error) {
+        console.error("Error in validateCartSessionController:", error);
+        return callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
+const getCartSessionInfoController = async (request, callBack) => {
+    try {
+        const sessionId = request.query.sessionId || request.cookies.cartSessionId;
+
+        if (!sessionId) {
+            return callBack(resultObject(false, "Session ID is required"));
+        }
+
+        const { validateSession, getTableActiveSessions } = require("../../../helpers/sessionHelpers");
+        const sessionData = await validateSession(sessionId);
+
+        if (!sessionData) {
+            return callBack(resultObject(false, "Session not found"));
+        }
+
+        // Get all active sessions for this table
+        const activeSessions = await getTableActiveSessions(sessionData.table_id, sessionData.restaurant_id);
+
+        return callBack(
+            resultObject(true, "Session info retrieved successfully", {
+                currentSession: {
+                    sessionId: sessionData.session_id,
+                    cartId: sessionData.cart_id,
+                    createdAt: sessionData.created_at,
+                    updatedAt: sessionData.updated_at,
+                },
+                table: {
+                    id: sessionData.table_id,
+                    number: sessionData.table_number,
+                    name: sessionData.table_name,
+                    status: sessionData.table_status,
+                },
+                restaurant: {
+                    id: sessionData.restaurant_id,
+                    name: sessionData.restaurant_name,
+                },
+                sessionSharing: {
+                    totalActiveSessions: activeSessions.length,
+                    isShared: activeSessions.length > 1,
+                    sessions: activeSessions,
+                },
+            })
+        );
+    } catch (error) {
+        console.error("Error in getCartSessionInfoController:", error);
+        return callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
 module.exports = {
     getCartController: getCart,
     // initializeCartController: initializeCart,
@@ -433,4 +553,6 @@ module.exports = {
     getCaptainCallsController: getCaptainCalls,
     updateCaptainCallController: updateCaptainCall,
     createOrderFromCartController: createOrderFromCart,
+    validateCartSessionController: validateCartSessionController,
+    getCartSessionInfoController: getCartSessionInfoController,
 };

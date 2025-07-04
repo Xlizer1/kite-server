@@ -5,8 +5,19 @@ const { resultObject } = require("../../../helpers/common");
 const getCartModel = async (sessionId) => {
     try {
         const cartQuery = `
-            SELECT c.id, c.table_id, c.restaurant_id, c.session_id, c.created_at, c.updated_at
+            SELECT 
+                c.id, 
+                c.table_id, 
+                c.restaurant_id, 
+                c.session_id, 
+                c.created_at, 
+                c.updated_at,
+                t.number as table_number,
+                t.name as table_name,
+                r.name as restaurant_name
             FROM carts c
+            JOIN tables t ON c.table_id = t.id
+            JOIN restaurants r ON c.restaurant_id = r.id
             WHERE c.session_id = ?
         `;
 
@@ -14,22 +25,38 @@ const getCartModel = async (sessionId) => {
 
         if (cart && cart.length > 0) {
             const cartItemsQuery = `
-                SELECT ci.id, ci.item_id, ci.quantity, ci.special_instructions, 
-                    i.name as item_name, i.price, i.description,
+                SELECT 
+                    ci.id, 
+                    ci.item_id, 
+                    ci.quantity, 
+                    ci.special_instructions, 
+                    i.name as item_name, 
+                    i.price, 
+                    i.description,
+                    curr.code as currency_code,
                     (SELECT url FROM images img 
                         JOIN items_image_map iim ON img.id = iim.image_id 
                         WHERE iim.item_id = i.id AND iim.is_primary = 1 
-                        LIMIT 1) as image_url
+                        LIMIT 1) as image_url,
+                    (i.price * ci.quantity) as total_price
                 FROM cart_items ci
                 JOIN items i ON ci.item_id = i.id
+                LEFT JOIN currencies curr ON i.currency_id = curr.id
                 WHERE ci.cart_id = ?
             `;
 
             const cartItems = await executeQuery(cartItemsQuery, [cart[0].id]);
 
+            // Calculate totals
+            const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
             return {
                 ...cart[0],
                 items: cartItems || [],
+                subtotal: subtotal,
+                item_count: itemCount,
+                currency_code: cartItems[0]?.currency_code || "USD",
             };
         }
 
@@ -84,10 +111,38 @@ const getCartModel = async (sessionId) => {
 // Add item to cart
 const addCartItemModel = async ({ cartId, itemId, quantity, specialInstructions }) => {
     try {
+        // First validate the cart exists and get restaurant info
+        const cartValidationQuery = `
+            SELECT c.restaurant_id 
+            FROM carts c 
+            WHERE c.id = ?
+        `;
+        const cartResult = await executeQuery(cartValidationQuery, [cartId]);
+
+        if (!cartResult || cartResult.length === 0) {
+            return { status: false, message: "Cart not found" };
+        }
+
+        // Validate item exists and belongs to same restaurant
+        const itemValidationQuery = `
+            SELECT i.restaurant_id, i.price 
+            FROM items i 
+            WHERE i.id = ? AND i.deleted_at IS NULL
+        `;
+        const itemResult = await executeQuery(itemValidationQuery, [itemId]);
+
+        if (!itemResult || itemResult.length === 0) {
+            return { status: false, message: "Item not found" };
+        }
+
+        if (itemResult[0].restaurant_id !== cartResult[0].restaurant_id) {
+            return { status: false, message: "Item does not belong to this restaurant" };
+        }
+
         // Check if item already exists in cart
         const existingItemQuery = `
-      SELECT id, quantity FROM cart_items WHERE cart_id = ? AND item_id = ?
-    `;
+            SELECT id, quantity FROM cart_items WHERE cart_id = ? AND item_id = ?
+        `;
 
         const existingItem = await executeQuery(existingItemQuery, [cartId, itemId]);
 
@@ -96,19 +151,19 @@ const addCartItemModel = async ({ cartId, itemId, quantity, specialInstructions 
             const newQuantity = existingItem[0].quantity + quantity;
 
             const updateItemQuery = `
-        UPDATE cart_items 
-        SET quantity = ?, special_instructions = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `;
+                UPDATE cart_items 
+                SET quantity = ?, special_instructions = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
 
             await executeQuery(updateItemQuery, [newQuantity, specialInstructions, existingItem[0].id]);
             return { id: existingItem[0].id, status: true };
         } else {
             // Add new item to cart
             const addItemQuery = `
-        INSERT INTO cart_items (cart_id, item_id, quantity, special_instructions)
-        VALUES (?, ?, ?, ?)
-      `;
+                INSERT INTO cart_items (cart_id, item_id, quantity, special_instructions)
+                VALUES (?, ?, ?, ?)
+            `;
 
             const result = await executeQuery(addItemQuery, [cartId, itemId, quantity, specialInstructions]);
 

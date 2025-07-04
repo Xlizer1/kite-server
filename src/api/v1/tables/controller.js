@@ -412,24 +412,36 @@ const manualTableResetController = async (request, callBack) => {
 
         const table = tableResult[0];
 
-        // Clear any existing sessions for this table
-        await executeQuery(
-            `
-            DELETE FROM cart_items 
-            WHERE cart_id IN (SELECT id FROM carts WHERE table_id = ? AND restaurant_id = ?)
-        `,
+        // ✅ IMPROVED: Get all sessions for this table (in case of multiple sessions)
+        const getActiveSessionsQuery = `
+            SELECT c.id, c.session_id 
+            FROM carts c 
+            WHERE c.table_id = ? AND c.restaurant_id = ?
+        `;
+        const activeSessions = await executeQuery(
+            getActiveSessionsQuery,
             [table.id, table.restaurant_id],
-            "clearCartItemsManual"
+            "getActiveSessions"
         );
 
-        await executeQuery(
-            `
-            DELETE FROM carts 
-            WHERE table_id = ? AND restaurant_id = ?
-        `,
-            [table.id, table.restaurant_id],
-            "clearCartsManual"
-        );
+        // Clear ALL sessions for this table (not just one)
+        if (activeSessions && activeSessions.length > 0) {
+            for (const session of activeSessions) {
+                // Clear cart items for each session
+                await executeQuery(`DELETE FROM cart_items WHERE cart_id = ?`, [session.id], "clearCartItemsManual");
+
+                console.log(`🧹 Cleared cart items for session: ${session.session_id}`);
+            }
+
+            // Clear all carts for this table
+            await executeQuery(
+                `DELETE FROM carts WHERE table_id = ? AND restaurant_id = ?`,
+                [table.id, table.restaurant_id],
+                "clearCartsManual"
+            );
+
+            console.log(`🧹 Cleared ${activeSessions.length} sessions for Table ${table.number}`);
+        }
 
         // Reset table status
         const resetQuery = `
@@ -450,13 +462,86 @@ const manualTableResetController = async (request, callBack) => {
             metadata: JSON.stringify({
                 table_id: table.id,
                 previous_status: table.status,
+                sessions_cleared: activeSessions?.length || 0,
                 reason: reason || "No reason provided",
             }),
         });
 
-        callBack(resultObject(true, `Table ${table.number} has been reset successfully`));
+        callBack(
+            resultObject(
+                true,
+                `Table ${table.number} has been reset successfully. ${activeSessions?.length || 0} sessions cleared.`
+            )
+        );
     } catch (error) {
         console.error("Error in manualTableResetController:", error);
+        callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
+const getTableSessionStatusController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        if (!authorize?.id || !authorize?.email) {
+            return callBack(resultObject(false, "Token is invalid!"));
+        }
+
+        if (!hasPermission(authorize.department_id, "tables", "read")) {
+            return callBack(resultObject(false, "You don't have permission to view table sessions!"));
+        }
+
+        const { id } = request.params;
+
+        // Get table with session information
+        const tableSessionQuery = `
+            SELECT 
+                t.id,
+                t.number,
+                t.name,
+                t.status,
+                t.customer_count,
+                t.updated_at as table_updated,
+                COUNT(c.id) as active_sessions,
+                GROUP_CONCAT(c.session_id) as session_ids,
+                MAX(c.updated_at) as last_activity,
+                SUM(COALESCE(cart_totals.item_count, 0)) as total_items,
+                SUM(COALESCE(cart_totals.total_amount, 0)) as total_amount
+            FROM tables t
+            LEFT JOIN carts c ON t.id = c.table_id
+            LEFT JOIN (
+                SELECT 
+                    ci.cart_id,
+                    COUNT(ci.id) as item_count,
+                    SUM(i.price * ci.quantity) as total_amount
+                FROM cart_items ci
+                JOIN items i ON ci.item_id = i.id
+                GROUP BY ci.cart_id
+            ) cart_totals ON c.id = cart_totals.cart_id
+            WHERE t.id = ? AND t.deleted_at IS NULL
+            GROUP BY t.id
+        `;
+
+        const result = await executeQuery(tableSessionQuery, [id], "getTableSessionStatus");
+
+        if (!result || result.length === 0) {
+            return callBack(resultObject(false, "Table not found"));
+        }
+
+        const tableData = result[0];
+
+        // Parse session IDs if they exist
+        if (tableData.session_ids) {
+            tableData.session_list = tableData.session_ids.split(",");
+        } else {
+            tableData.session_list = [];
+        }
+        delete tableData.session_ids;
+
+        callBack(resultObject(true, "Table session status retrieved successfully", tableData));
+    } catch (error) {
+        console.error("Error in getTableSessionStatusController:", error);
         callBack(resultObject(false, "Something went wrong. Please try again later."));
     }
 };
@@ -471,4 +556,5 @@ module.exports = {
     updateTableStatusController,
     getTableStatisticsController,
     manualTableResetController,
+    getTableSessionStatusController,
 };

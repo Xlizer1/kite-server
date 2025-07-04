@@ -384,7 +384,7 @@ const createInvoiceModel = async (data) => {
             throw new CustomError("Failed to retrieve invoice details", 500);
         }
 
-        // Get table information from the orders
+        // ✅ ENHANCED: Clear ALL sessions for this table (not just one)
         const tableInfoQuery = `
             SELECT DISTINCT o.table_id, o.restaurant_id, t.number
             FROM orders o
@@ -395,6 +395,15 @@ const createInvoiceModel = async (data) => {
 
         if (tableInfo && tableInfo.length > 0) {
             const { table_id, restaurant_id, number } = tableInfo[0];
+
+            // ✅ IMPROVED: Get count of sessions being cleared for logging
+            const sessionCountQuery = `
+                SELECT COUNT(*) as session_count
+                FROM carts 
+                WHERE table_id = ? AND restaurant_id = ?
+            `;
+            const sessionCount = await executeQuery(sessionCountQuery, [table_id, restaurant_id], "getSessionCount");
+            const sessionsCleared = sessionCount[0]?.session_count || 0;
 
             // 1. Clear all cart sessions for this table
             const clearSessionsQuery = `
@@ -420,7 +429,9 @@ const createInvoiceModel = async (data) => {
             `;
             await executeQuery(resetTableQuery, [user_id, table_id, restaurant_id], "resetTableAfterCheckout");
 
-            console.log(`✅ Session ended for Table ${number} after checkout`);
+            console.log(
+                `✅ Checkout completed for Table ${number}: ${sessionsCleared} sessions cleared, table reset to available`
+            );
         }
 
         return invoiceDetails[0];

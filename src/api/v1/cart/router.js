@@ -10,6 +10,8 @@ const {
     getCaptainCallsController,
     updateCaptainCallController,
     createOrderFromCartController,
+    validateCartSessionController,
+    getCartSessionInfoController,
 } = require("./controller");
 const {
     cartSchema,
@@ -77,6 +79,29 @@ router.put("/captain-calls/:callId", validateRequest(captainCallSchema), (req, r
 
 router.post("/create-order", validateRequest(createOrderSchema), (req, res) => {
     createOrderFromCartController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/cart/validate-session:
+ *   get:
+ *     summary: Validate cart session
+ *     description: Check if current session is valid and get session info
+ *     tags: [Cart]
+ *     responses:
+ *       200:
+ *         description: Session validation result
+ */
+router.get("/validate-session", (req, res) => {
+    validateCartSessionController(req, (result) => {
+        res.json(result);
+    });
+});
+
+router.get("/session-info", (req, res) => {
+    getCartSessionInfoController(req, (result) => {
         res.json(result);
     });
 });

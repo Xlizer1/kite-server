@@ -9,6 +9,7 @@ const {
     updateTableStatusController,
     getTableStatisticsController,
     manualTableResetController,
+    getTableSessionStatusController,
 } = require("./controller");
 
 const { checkUserAuthorized } = require("../../../helpers/common");
@@ -597,6 +598,30 @@ router.put(
  */
 router.post("/:id/reset", checkUserAuthorized(), requirePermission("tables", "update"), (req, res) => {
     manualTableResetController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/tables/{id}/sessions:
+ *   get:
+ *     summary: Get table session status
+ *     description: Returns active sessions and their details for a table
+ *     tags: [Table Operations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Table ID
+ *     responses:
+ *       200:
+ *         description: Table session status
+ */
+router.get("/:id/sessions", checkUserAuthorized(), requirePermission("tables", "read"), (req, res) => {
+    getTableSessionStatusController(req, (result) => {
         res.json(result);
     });
 });
