@@ -188,10 +188,10 @@ router.get("/inventory-alerts", (req, res) => {
 });
 
 // Get detailed order preparation information
-router.get("/order-details/:order_id", validateRequest(orderIdParamSchema), (req, res) => {
-    getOrderPreparationDetailsController(req, (result) => {
-        res.status(result.statusCode || 200).json(result);
-    });
-});
+// router.get("/order-details/:order_id", validateRequest(orderIdParamSchema), (req, res) => {
+//     getOrderPreparationDetailsController(req, (result) => {
+//         res.status(result.statusCode || 200).json(result);
+//     });
+// });
 
 module.exports = router;

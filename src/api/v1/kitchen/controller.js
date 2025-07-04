@@ -8,7 +8,7 @@ const {
 } = require("./model");
 
 const { getRecipeWithAvailabilityModel } = require("../ingredients/model");
-const { updateOrderStatusWithIngredientsModel, getOrderWithIngredientDetailsModel } = require("../orders/model");
+// const { updateOrderStatusWithIngredientsModel, getOrderWithIngredientDetailsModel } = require("../orders/model");
 const { getExpiringBatchesModel } = require("../inventory-batches/model");
 
 const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
@@ -362,12 +362,12 @@ const startOrderPreparation = async (request, callBack) => {
         }
 
         // Update order status to "in preparation" (status_id = 2) and consume ingredients
-        await updateOrderStatusWithIngredientsModel(
-            order_id,
-            2, // In preparation status
-            authorize.id,
-            `Started preparation${estimated_minutes ? ` - estimated ${estimated_minutes} minutes` : ""}`
-        );
+        // await updateOrderStatusWithIngredientsModel(
+        //     order_id,
+        //     2, // In preparation status
+        //     authorize.id,
+        //     `Started preparation${estimated_minutes ? ` - estimated ${estimated_minutes} minutes` : ""}`
+        // );
 
         // Update estimated ready time if provided
         if (estimated_minutes) {
@@ -476,29 +476,29 @@ const getOrderPreparationDetails = async (request, callBack) => {
             throw new CustomError("Order ID is required", 400);
         }
 
-        const orderDetails = await getOrderWithIngredientDetailsModel(order_id);
+        // const orderDetails = await getOrderWithIngredientDetailsModel(order_id);
 
-        // Get recipe details for each item
-        const itemsWithRecipes = await Promise.all(
-            orderDetails.items.map(async (item) => {
-                try {
-                    const recipe = await getRecipeWithAvailabilityModel(item.item_id);
-                    return {
-                        ...item,
-                        recipe: recipe.ingredients,
-                        total_ingredients: recipe.ingredients.length,
-                        available_ingredients: recipe.ingredients.filter((ing) => ing.sufficient_stock).length,
-                    };
-                } catch (error) {
-                    return {
-                        ...item,
-                        recipe: [],
-                        total_ingredients: 0,
-                        available_ingredients: 0,
-                    };
-                }
-            })
-        );
+        // // Get recipe details for each item
+        // const itemsWithRecipes = await Promise.all(
+        //     orderDetails.items.map(async (item) => {
+        //         try {
+        //             const recipe = await getRecipeWithAvailabilityModel(item.item_id);
+        //             return {
+        //                 ...item,
+        //                 recipe: recipe.ingredients,
+        //                 total_ingredients: recipe.ingredients.length,
+        //                 available_ingredients: recipe.ingredients.filter((ing) => ing.sufficient_stock).length,
+        //             };
+        //         } catch (error) {
+        //             return {
+        //                 ...item,
+        //                 recipe: [],
+        //                 total_ingredients: 0,
+        //                 available_ingredients: 0,
+        //             };
+        //         }
+        //     })
+        // );
 
         callBack(
             resultObject(true, "Order preparation details retrieved successfully", {
