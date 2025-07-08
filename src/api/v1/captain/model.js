@@ -157,7 +157,7 @@ const getActiveOrdersModel = async (restaurant_id) => {
             WHERE 
                 o.restaurant_id = ?
             AND 
-                o.status_id IN (2, 3) -- Captain Approved, In Kitchen
+                o.status_id IN (2, 3, 4) -- Captain Approved, In Kitchen
             AND 
                 o.deleted_at IS NULL
             ORDER BY 
@@ -647,7 +647,7 @@ const updateTableStatusModel = async (data) => {
                 SET status = ?, customer_count = ?, updated_by = ?, updated_at = NOW()
                 WHERE id = ?
             `,
-            params: [status, customer_count, updated_by, table_id]
+            params: [status, customer_count, updated_by, table_id],
         });
 
         // Log the status change
@@ -657,7 +657,7 @@ const updateTableStatusModel = async (data) => {
                 (table_id, status, customer_count, notes, changed_by, created_at)
                 VALUES (?, ?, ?, ?, ?, NOW())
             `,
-            params: [table_id, status, customer_count, notes, updated_by]
+            params: [table_id, status, customer_count, notes, updated_by],
         });
 
         await executeTransaction(queries, "updateTableStatus");
@@ -689,10 +689,11 @@ const getCaptainDashboardModel = async (restaurant_id) => {
                 (SELECT COUNT(*) FROM orders WHERE restaurant_id = ? AND status_id IN (2, 3) AND deleted_at IS NULL) as active_orders
         `;
 
-        const stats = await executeQuery(statsQuery, [
-            restaurant_id, restaurant_id, restaurant_id, 
-            restaurant_id, restaurant_id, restaurant_id
-        ], "getCaptainDashboardStats");
+        const stats = await executeQuery(
+            statsQuery,
+            [restaurant_id, restaurant_id, restaurant_id, restaurant_id, restaurant_id, restaurant_id],
+            "getCaptainDashboardStats"
+        );
 
         // Get recent activities
         const activitiesQuery = `
@@ -729,7 +730,7 @@ const getCaptainDashboardModel = async (restaurant_id) => {
         return {
             stats: stats[0],
             recent_activities: activities,
-            timestamp: new Date()
+            timestamp: new Date(),
         };
     } catch (error) {
         throw new CustomError(`Failed to get dashboard data: ${error.message}`, 500);
@@ -747,7 +748,7 @@ const assignCaptainToTablesModel = async (data) => {
 
         // Validate all tables belong to restaurant
         const tableCheck = await executeQuery(
-            `SELECT id FROM tables WHERE id IN (${table_ids.map(() => '?').join(',')}) AND restaurant_id = ?`,
+            `SELECT id FROM tables WHERE id IN (${table_ids.map(() => "?").join(",")}) AND restaurant_id = ?`,
             [...table_ids, restaurant_id],
             "validateTablesOwnership"
         );
@@ -760,19 +761,19 @@ const assignCaptainToTablesModel = async (data) => {
 
         // Remove existing assignments for these tables
         queries.push({
-            sql: `DELETE FROM captain_table_assignments WHERE table_id IN (${table_ids.map(() => '?').join(',')})`,
-            params: table_ids
+            sql: `DELETE FROM captain_table_assignments WHERE table_id IN (${table_ids.map(() => "?").join(",")})`,
+            params: table_ids,
         });
 
         // Add new assignments
-        table_ids.forEach(table_id => {
+        table_ids.forEach((table_id) => {
             queries.push({
                 sql: `
                     INSERT INTO captain_table_assignments 
                     (captain_id, table_id, assigned_at, assigned_by)
                     VALUES (?, ?, NOW(), ?)
                 `,
-                params: [captain_id, table_id, captain_id]
+                params: [captain_id, table_id, captain_id],
             });
         });
 
@@ -791,9 +792,9 @@ module.exports = {
     getPendingCaptainCallsModel,
     updateCaptainCallModel,
     getTablesWithOrdersStatsModel,
-    createOrderForTableModel,      // Add this
-    getMenuForOrderingModel,        // Add this
+    createOrderForTableModel, // Add this
+    getMenuForOrderingModel, // Add this
     updateTableStatusModel,
     getCaptainDashboardModel,
-    assignCaptainToTablesModel
+    assignCaptainToTablesModel,
 };
