@@ -6,6 +6,7 @@ const {
     consumeFromBatchesModel,
     getBatchMovementsModel,
     getExpiringBatchesModel,
+    getBatchAnalyticsModel,
 } = require("./model");
 const { resultObject, verifyUserToken, getToken } = require("../../../helpers/common");
 const { CustomError } = require("../../../middleware/errorHandler");
@@ -313,6 +314,43 @@ const getExpiringBatches = async (request, callBack) => {
     }
 };
 
+const getBatchAnalyticsController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        if (!authorize?.roles?.includes(1) && authorize?.department_id !== 2 && authorize?.department_id !== 4) {
+            throw new CustomError("You don't have permission to view batch analytics!", 403);
+        }
+
+        const { restaurant_id } = request.params;
+        const { days = 30, include_waste = false, group_by = "week" } = request.query;
+
+        // Validate restaurant access for restaurant admins
+        if (authorize?.department_id === 2 && restaurant_id != authorize.restaurant_id) {
+            throw new CustomError("You can only view analytics for your own restaurant", 403);
+        }
+
+        const result = await getBatchAnalyticsModel(restaurant_id, {
+            days: parseInt(days),
+            include_waste: include_waste === "true",
+            group_by,
+        });
+
+        callBack(resultObject(true, "Batch analytics retrieved successfully", result));
+    } catch (error) {
+        console.error("Error in getBatchAnalytics:", error);
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong. Please try again later.",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
+    }
+};
+
 module.exports = {
     getInventoryBatchesController: getInventoryBatches,
     getInventoryBatchesByInventoryIdController: getInventoryBatchesByInventoryId,
@@ -321,4 +359,5 @@ module.exports = {
     consumeFromBatchesController: consumeFromBatches,
     getBatchMovementsController: getBatchMovements,
     getExpiringBatchesController: getExpiringBatches,
+    getBatchAnalyticsController,
 };

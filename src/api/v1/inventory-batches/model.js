@@ -532,6 +532,317 @@ const getExpiringBatches = async (restaurantId, daysAhead = 7) => {
     }
 };
 
+/**
+ * Get comprehensive batch analytics for a restaurant
+ * @param {number} restaurantId - Restaurant ID
+ * @param {Object} options - Analytics options
+ * @returns {Promise<Object>} - Analytics data
+ */
+const getBatchAnalytics = async (restaurantId, options = {}) => {
+    try {
+        const { days = 30, include_waste = false, group_by = "week" } = options;
+
+        const dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - days);
+
+        // 1. BASIC BATCH STATISTICS
+        const basicStatsQuery = `
+            SELECT 
+                COUNT(*) as total_batches,
+                COUNT(CASE WHEN ib.status = 'active' AND ib.current_quantity > 0 THEN 1 END) as active_batches,
+                COUNT(CASE WHEN ib.status = 'expired' OR ib.expiry_date < CURDATE() THEN 1 END) as expired_batches,
+                COUNT(CASE WHEN ib.status = 'consumed' OR ib.current_quantity = 0 THEN 1 END) as consumed_batches,
+                COUNT(CASE WHEN ib.status = 'damaged' THEN 1 END) as damaged_batches,
+                SUM(ib.initial_quantity) as total_initial_quantity,
+                SUM(ib.current_quantity) as total_current_quantity,
+                SUM(ib.initial_quantity - ib.current_quantity) as total_consumed_quantity,
+                AVG(ib.purchase_price) as avg_purchase_price,
+                AVG(ib.selling_price) as avg_selling_price,
+                COUNT(CASE WHEN ib.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as expiring_soon_count
+            FROM inventory_batches ib
+            LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+            WHERE inv.restaurant_id = ?
+            AND ib.deleted_at IS NULL
+            AND ib.created_at >= ?
+        `;
+
+        const basicStats = await executeQuery(basicStatsQuery, [restaurantId, dateFrom], "getBatchAnalyticsBasicStats");
+
+        // 2. CONSUMPTION TRENDS (grouped by time period)
+        let groupByClause, dateFormat;
+        switch (group_by) {
+            case "day":
+                groupByClause = "DATE(ibm.created_at)";
+                dateFormat = "%Y-%m-%d";
+                break;
+            case "week":
+                groupByClause = "YEARWEEK(ibm.created_at)";
+                dateFormat = "%Y-W%u";
+                break;
+            case "month":
+                groupByClause = 'DATE_FORMAT(ibm.created_at, "%Y-%m")';
+                dateFormat = "%Y-%m";
+                break;
+            default:
+                groupByClause = "YEARWEEK(ibm.created_at)";
+                dateFormat = "%Y-W%u";
+        }
+
+        const consumptionTrendQuery = `
+            SELECT 
+                ${groupByClause} as period,
+                DATE_FORMAT(ibm.created_at, '${dateFormat}') as period_label,
+                SUM(ibm.quantity) as total_consumed,
+                COUNT(DISTINCT ibm.batch_id) as batches_affected,
+                COUNT(ibm.id) as consumption_events,
+                AVG(ibm.quantity) as avg_consumption_per_event
+            FROM inventory_batch_movements ibm
+            LEFT JOIN inventory_batches ib ON ibm.batch_id = ib.id
+            LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+            WHERE inv.restaurant_id = ?
+            AND ibm.movement_type = 'consumption'
+            AND ibm.created_at >= ?
+            GROUP BY ${groupByClause}
+            ORDER BY ibm.created_at ASC
+        `;
+
+        const consumptionTrend = await executeQuery(
+            consumptionTrendQuery,
+            [restaurantId, dateFrom],
+            "getBatchAnalyticsConsumptionTrend"
+        );
+
+        // 3. TOP CONSUMED INVENTORY ITEMS
+        const topConsumedQuery = `
+            SELECT 
+                inv.id,
+                inv.name as item_name,
+                u.name as unit_name,
+                SUM(ibm.quantity) as total_consumed,
+                COUNT(DISTINCT ibm.batch_id) as batches_used,
+                COUNT(ibm.id) as consumption_events,
+                AVG(ib.purchase_price) as avg_cost_per_unit,
+                SUM(ibm.quantity * COALESCE(ib.purchase_price, 0)) as total_cost
+            FROM inventory_batch_movements ibm
+            LEFT JOIN inventory_batches ib ON ibm.batch_id = ib.id
+            LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+            LEFT JOIN units u ON inv.unit_id = u.id
+            WHERE inv.restaurant_id = ?
+            AND ibm.movement_type = 'consumption'
+            AND ibm.created_at >= ?
+            GROUP BY inv.id
+            ORDER BY total_consumed DESC
+            LIMIT 10
+        `;
+
+        const topConsumed = await executeQuery(
+            topConsumedQuery,
+            [restaurantId, dateFrom],
+            "getBatchAnalyticsTopConsumed"
+        );
+
+        // 4. EXPIRY ANALYSIS
+        const expiryAnalysisQuery = `
+            SELECT 
+                COUNT(CASE WHEN ib.expiry_date < CURDATE() THEN 1 END) as already_expired,
+                COUNT(CASE WHEN ib.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY) THEN 1 END) as expiring_3_days,
+                COUNT(CASE WHEN ib.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as expiring_7_days,
+                COUNT(CASE WHEN ib.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as expiring_30_days,
+                SUM(CASE WHEN ib.expiry_date < CURDATE() THEN ib.current_quantity ELSE 0 END) as expired_quantity,
+                SUM(CASE WHEN ib.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN ib.current_quantity ELSE 0 END) as expiring_soon_quantity
+            FROM inventory_batches ib
+            LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+            WHERE inv.restaurant_id = ?
+            AND ib.deleted_at IS NULL
+            AND ib.status = 'active'
+        `;
+
+        const expiryAnalysis = await executeQuery(
+            expiryAnalysisQuery,
+            [restaurantId],
+            "getBatchAnalyticsExpiryAnalysis"
+        );
+
+        // 5. BATCH TURNOVER ANALYSIS
+        const turnoverAnalysisQuery = `
+            SELECT 
+                inv.name as item_name,
+                COUNT(ib.id) as total_batches,
+                AVG(DATEDIFF(
+                    COALESCE(
+                        (SELECT MIN(ibm.created_at) FROM inventory_batch_movements ibm 
+                         WHERE ibm.batch_id = ib.id AND ibm.movement_type = 'consumption'),
+                        CURDATE()
+                    ), 
+                    ib.created_at
+                )) as avg_days_to_first_use,
+                AVG(CASE 
+                    WHEN ib.current_quantity = 0 THEN 
+                        DATEDIFF(
+                            (SELECT MAX(ibm.created_at) FROM inventory_batch_movements ibm 
+                             WHERE ibm.batch_id = ib.id AND ibm.movement_type = 'consumption'),
+                            ib.created_at
+                        )
+                    ELSE NULL 
+                END) as avg_days_to_complete_consumption,
+                ROUND(AVG((ib.initial_quantity - ib.current_quantity) / ib.initial_quantity * 100), 2) as avg_utilization_percentage
+            FROM inventory_batches ib
+            LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+            WHERE inv.restaurant_id = ?
+            AND ib.created_at >= ?
+            AND ib.deleted_at IS NULL
+            GROUP BY inv.id
+            HAVING total_batches > 0
+            ORDER BY avg_utilization_percentage DESC
+        `;
+
+        const turnoverAnalysis = await executeQuery(
+            turnoverAnalysisQuery,
+            [restaurantId, dateFrom],
+            "getBatchAnalyticsTurnoverAnalysis"
+        );
+
+        // 6. COST ANALYSIS
+        const costAnalysisQuery = `
+            SELECT 
+                SUM(ib.initial_quantity * COALESCE(ib.purchase_price, 0)) as total_inventory_value,
+                SUM((ib.initial_quantity - ib.current_quantity) * COALESCE(ib.purchase_price, 0)) as total_consumed_value,
+                SUM(ib.current_quantity * COALESCE(ib.purchase_price, 0)) as current_inventory_value,
+                SUM(CASE WHEN ib.expiry_date < CURDATE() THEN ib.current_quantity * COALESCE(ib.purchase_price, 0) ELSE 0 END) as expired_inventory_value,
+                AVG(COALESCE(ib.selling_price, 0) - COALESCE(ib.purchase_price, 0)) as avg_profit_margin_per_unit
+            FROM inventory_batches ib
+            LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+            WHERE inv.restaurant_id = ?
+            AND ib.created_at >= ?
+            AND ib.deleted_at IS NULL
+        `;
+
+        const costAnalysis = await executeQuery(
+            costAnalysisQuery,
+            [restaurantId, dateFrom],
+            "getBatchAnalyticsCostAnalysis"
+        );
+
+        // 7. WASTE ANALYSIS (if requested)
+        let wasteAnalysis = null;
+        if (include_waste) {
+            const wasteAnalysisQuery = `
+                SELECT 
+                    inv.name as item_name,
+                    SUM(CASE WHEN ib.status = 'damaged' THEN ib.initial_quantity - ib.current_quantity ELSE 0 END) as damaged_quantity,
+                    SUM(CASE WHEN ib.expiry_date < CURDATE() AND ib.current_quantity > 0 THEN ib.current_quantity ELSE 0 END) as expired_waste_quantity,
+                    SUM(CASE WHEN ib.status = 'damaged' THEN (ib.initial_quantity - ib.current_quantity) * COALESCE(ib.purchase_price, 0) ELSE 0 END) as damaged_cost,
+                    SUM(CASE WHEN ib.expiry_date < CURDATE() AND ib.current_quantity > 0 THEN ib.current_quantity * COALESCE(ib.purchase_price, 0) ELSE 0 END) as expired_waste_cost,
+                    COUNT(CASE WHEN ib.status = 'damaged' THEN 1 END) as damaged_batches_count,
+                    COUNT(CASE WHEN ib.expiry_date < CURDATE() AND ib.current_quantity > 0 THEN 1 END) as expired_batches_count
+                FROM inventory_batches ib
+                LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+                WHERE inv.restaurant_id = ?
+                AND ib.created_at >= ?
+                AND ib.deleted_at IS NULL
+                GROUP BY inv.id
+                HAVING (damaged_quantity > 0 OR expired_waste_quantity > 0)
+                ORDER BY (damaged_cost + expired_waste_cost) DESC
+            `;
+
+            wasteAnalysis = await executeQuery(
+                wasteAnalysisQuery,
+                [restaurantId, dateFrom],
+                "getBatchAnalyticsWasteAnalysis"
+            );
+        }
+
+        // 8. RECENT BATCH ACTIVITIES
+        const recentActivitiesQuery = `
+            SELECT 
+                ibm.id,
+                ibm.movement_type,
+                ibm.quantity,
+                ibm.created_at,
+                ib.batch_number,
+                inv.name as item_name,
+                u.name as created_by_user,
+                ibm.reference_type,
+                ibm.reference_id
+            FROM inventory_batch_movements ibm
+            LEFT JOIN inventory_batches ib ON ibm.batch_id = ib.id
+            LEFT JOIN inventory inv ON ib.inventory_id = inv.id
+            LEFT JOIN users u ON ibm.created_by = u.id
+            WHERE inv.restaurant_id = ?
+            AND ibm.created_at >= ?
+            ORDER BY ibm.created_at DESC
+            LIMIT 20
+        `;
+
+        const recentActivities = await executeQuery(
+            recentActivitiesQuery,
+            [restaurantId, dateFrom],
+            "getBatchAnalyticsRecentActivities"
+        );
+
+        // Compile final analytics result
+        const analytics = {
+            // Summary Statistics
+            summary: {
+                ...basicStats[0],
+                utilization_rate:
+                    basicStats[0].total_initial_quantity > 0
+                        ? (
+                              (basicStats[0].total_consumed_quantity / basicStats[0].total_initial_quantity) *
+                              100
+                          ).toFixed(2)
+                        : 0,
+                waste_rate:
+                    include_waste && basicStats[0].total_initial_quantity > 0
+                        ? ((expiryAnalysis[0].expired_quantity / basicStats[0].total_initial_quantity) * 100).toFixed(2)
+                        : null,
+            },
+
+            // Time-based consumption trends
+            consumption_trend: consumptionTrend,
+
+            // Top consumed items
+            top_consumed_items: topConsumed,
+
+            // Expiry warnings and analysis
+            expiry_analysis: expiryAnalysis[0],
+
+            // Batch turnover efficiency
+            turnover_analysis: turnoverAnalysis,
+
+            // Financial analysis
+            cost_analysis: {
+                ...costAnalysis[0],
+                inventory_turnover_rate:
+                    costAnalysis[0].total_inventory_value > 0
+                        ? (
+                              (costAnalysis[0].total_consumed_value / costAnalysis[0].total_inventory_value) *
+                              100
+                          ).toFixed(2)
+                        : 0,
+            },
+
+            // Waste analysis (if requested)
+            waste_analysis: wasteAnalysis,
+
+            // Recent batch activities
+            recent_activities: recentActivities,
+
+            // Metadata
+            analysis_period: {
+                days: days,
+                from_date: dateFrom.toISOString().split("T")[0],
+                to_date: new Date().toISOString().split("T")[0],
+                group_by: group_by,
+            },
+        };
+
+        return analytics;
+    } catch (error) {
+        throw new DatabaseError("Failed to fetch batch analytics", error);
+    }
+};
+
 module.exports = {
     getInventoryBatchesModel: getInventoryBatches,
     getInventoryBatchesByInventoryIdModel: getInventoryBatchesByInventoryId,
@@ -540,4 +851,5 @@ module.exports = {
     consumeFromBatchesModel: consumeFromBatches,
     getBatchMovementsModel: getBatchMovements,
     getExpiringBatchesModel: getExpiringBatches,
+    getBatchAnalyticsModel: getBatchAnalytics,
 };

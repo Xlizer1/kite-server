@@ -8,6 +8,7 @@ const {
     consumeFromBatchesController,
     getBatchMovementsController,
     getExpiringBatchesController,
+    getBatchAnalyticsController,
 } = require("./controller");
 const { authenticateToken } = require("../../../middleware/auth");
 const validateRequest = require("../../../middleware/validateRequest");
