@@ -48,7 +48,17 @@ const getInventoryWithBatchesQuerySchema = Joi.object({
     }),
 });
 
+const stockAvailabilitySchema = {
+    params: Joi.object({
+        inventory_id: Joi.number().integer().required(),
+    }),
+    query: Joi.object({
+        quantity: Joi.number().min(0.01).required(),
+    }),
+};
+
 module.exports = {
     inventorySchema,
     getInventoryWithBatchesQuerySchema,
+    stockAvailabilitySchema,
 };

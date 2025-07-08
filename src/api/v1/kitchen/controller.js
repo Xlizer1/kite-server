@@ -624,6 +624,160 @@ const getOrderPreparationDetails = async (request, callBack) => {
     }
 };
 
+const validateOrderIngredientsController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        if (!authorize?.roles?.includes(1) && authorize?.department_id !== 6) {
+            return callBack(resultObject(false, "You don't have permission to validate orders"));
+        }
+
+        const { order_id } = request.params;
+
+        if (!order_id) {
+            return callBack(resultObject(false, "Order ID is required"));
+        }
+
+        // Import the function from your updated model
+        const { validateOrderIngredientsAvailability } = require("./model");
+
+        const result = await validateOrderIngredientsAvailability(order_id);
+
+        if (result.canPrepare) {
+            callBack(resultObject(true, "Order can be prepared", result));
+        } else {
+            callBack(resultObject(false, "Insufficient ingredients", result));
+        }
+    } catch (error) {
+        console.error("Error in validateOrderIngredients:", error);
+        callBack(resultObject(false, error.message || "Something went wrong"));
+    }
+};
+
+/**
+ * Get order preparation details with batch consumption plan
+ */
+const getOrderPreparationDetailsController = async (request, callBack) => {
+    try {
+        const token = await getToken(request);
+        const authorize = await verifyUserToken(token);
+
+        if (authorize?.department_id !== 6) {
+            throw new CustomError("You don't have permission to view order details!", 403);
+        }
+
+        const { order_id } = request.params;
+
+        if (!order_id) {
+            throw new CustomError("Order ID is required", 400);
+        }
+
+        // Get order details with ingredient breakdown
+        const orderDetailsQuery = `
+            SELECT 
+                o.id as order_id,
+                o.status_id,
+                o.special_request,
+                o.allergy_info,
+                o.created_at,
+                t.number as table_number,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'item_id', oi.item_id,
+                        'item_name', i.name,
+                        'quantity', oi.quantity,
+                        'special_instructions', oi.special_instructions
+                    )
+                ) as items
+            FROM orders o
+            JOIN tables t ON o.table_id = t.id
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN items i ON oi.item_id = i.id
+            WHERE o.id = ? AND o.restaurant_id = ?
+            GROUP BY o.id
+        `;
+
+        const orderDetails = await executeQuery(
+            orderDetailsQuery,
+            [order_id, authorize.restaurant_id],
+            "getOrderPreparationDetails"
+        );
+
+        if (!orderDetails.length) {
+            throw new CustomError("Order not found", 404);
+        }
+
+        const order = orderDetails[0];
+
+        // Get ingredient requirements and batch consumption plan
+        const { getRecipeWithAvailabilityModel } = require("../ingredients/model");
+
+        const itemsWithIngredients = await Promise.all(
+            order.items.map(async (item) => {
+                try {
+                    const recipe = await getRecipeWithAvailabilityModel(item.item_id);
+
+                    // Calculate total requirements for this item quantity
+                    const ingredientsRequired = recipe.ingredients.map((ing) => ({
+                        ...ing,
+                        total_required: ing.required_quantity * item.quantity,
+                        sufficient_for_order: ing.available_in_batches >= ing.required_quantity * item.quantity,
+                    }));
+
+                    return {
+                        ...item,
+                        recipe_available: recipe.recipe_available,
+                        ingredients: ingredientsRequired,
+                        can_prepare_quantity: Math.min(
+                            ...ingredientsRequired.map((ing) =>
+                                Math.floor(ing.available_in_batches / ing.required_quantity)
+                            )
+                        ),
+                    };
+                } catch (error) {
+                    return {
+                        ...item,
+                        recipe_available: true, // No recipe = no ingredient constraints
+                        ingredients: [],
+                        can_prepare_quantity: item.quantity,
+                    };
+                }
+            })
+        );
+
+        const canPrepareFullOrder = itemsWithIngredients.every((item) => item.can_prepare_quantity >= item.quantity);
+
+        callBack(
+            resultObject(true, "Order preparation details retrieved", {
+                order: {
+                    ...order,
+                    items: itemsWithIngredients,
+                },
+                can_prepare_full_order: canPrepareFullOrder,
+                preparation_summary: {
+                    total_items: order.items.length,
+                    items_ready: itemsWithIngredients.filter((item) => item.can_prepare_quantity >= item.quantity)
+                        .length,
+                    missing_ingredients: itemsWithIngredients
+                        .filter((item) => item.can_prepare_quantity < item.quantity)
+                        .flatMap((item) => item.ingredients?.filter((ing) => !ing.sufficient_for_order) || []),
+                },
+            })
+        );
+    } catch (error) {
+        console.error("Error in getOrderPreparationDetails:", error);
+        callBack(
+            resultObject(
+                false,
+                error instanceof CustomError ? error.message : "Something went wrong",
+                null,
+                error instanceof CustomError ? error.statusCode : 500
+            )
+        );
+    }
+};
+
 module.exports = {
     getPendingKitchenOrdersController,
     getInProgressKitchenOrdersController,
@@ -631,4 +785,6 @@ module.exports = {
     completeOrderController,
     getLowInventoryItemsController,
     getKitchenOrderHistoryController,
+    validateOrderIngredientsController,
+    getOrderPreparationDetailsController,
 };

@@ -1,5 +1,3 @@
-// src/api/v1/kitchen/model.js
-
 const { executeQuery, executeTransaction } = require("../../../helpers/db");
 const { CustomError } = require("../../../middleware/errorHandler");
 
@@ -11,10 +9,10 @@ const { CustomError } = require("../../../middleware/errorHandler");
 const getPendingKitchenOrdersModel = async (req) => {
     try {
         const { restaurant_id } = req.params;
-        
+
         // Use restaurant_id from the authenticated user if not specified
         const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
-        
+
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
         }
@@ -85,10 +83,10 @@ const getPendingKitchenOrdersModel = async (req) => {
 const getInProgressKitchenOrdersModel = async (req) => {
     try {
         const { restaurant_id } = req.params;
-        
+
         // Use restaurant_id from the authenticated user if not specified
         const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
-        
+
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
         }
@@ -162,9 +160,9 @@ const startProcessingOrderModel = async (data) => {
     try {
         const { order_id, user_id, estimated_minutes } = data;
 
-        // Start a transaction
+        // Start transaction
         const queries = [];
-        
+
         // Update order status to "In Kitchen" (3)
         queries.push({
             sql: `
@@ -172,9 +170,9 @@ const startProcessingOrderModel = async (data) => {
                 SET status_id = 3, updated_by = ?, updated_at = NOW()
                 WHERE id = ?
             `,
-            params: [user_id, order_id]
+            params: [user_id, order_id],
         });
-        
+
         // Record status change in history
         queries.push({
             sql: `
@@ -182,9 +180,9 @@ const startProcessingOrderModel = async (data) => {
                 (order_id, status_id, changed_by, notes, created_at)
                 VALUES (?, 3, ?, 'Started processing in kitchen', NOW())
             `,
-            params: [order_id, user_id]
+            params: [order_id, user_id],
         });
-        
+
         // Create kitchen assignment
         queries.push({
             sql: `
@@ -192,9 +190,9 @@ const startProcessingOrderModel = async (data) => {
                 (order_id, assigned_to, assigned_by, assigned_at, estimated_completion)
                 VALUES (?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE))
             `,
-            params: [order_id, user_id, user_id, estimated_minutes || 20]
+            params: [order_id, user_id, user_id, estimated_minutes || 20],
         });
-        
+
         // Update estimated ready time if provided
         if (estimated_minutes) {
             queries.push({
@@ -203,76 +201,102 @@ const startProcessingOrderModel = async (data) => {
                     SET estimated_ready_time = DATE_ADD(NOW(), INTERVAL ? MINUTE)
                     WHERE id = ?
                 `,
-                params: [estimated_minutes, order_id]
+                params: [estimated_minutes, order_id],
             });
         }
-        
-        // Process inventory deductions for all items in the order
-        // First, get all items and their quantities in the order
+
+        // ========================================
+        // 🔄 NEW: FIFO BATCH CONSUMPTION SYSTEM
+        // ========================================
+
+        // Get all items and their quantities in the order
         const orderItemsQuery = `
-            SELECT oi.item_id, oi.quantity
+            SELECT oi.item_id, oi.quantity, i.name as item_name
             FROM order_items oi
+            JOIN items i ON oi.item_id = i.id
             WHERE oi.order_id = ?
         `;
-        
+
         const orderItems = await executeQuery(orderItemsQuery, [order_id], "getOrderItems");
-        
-        // For each item, get ingredients and deduct from inventory
+
+        // For each item, get ingredients and consume from batches using FIFO
         for (const item of orderItems) {
             // Get all ingredients for this menu item
             const ingredientsQuery = `
-                SELECT ing.inv_item_id, ing.quantity
+                SELECT 
+                    ing.inv_item_id, 
+                    ing.quantity as recipe_quantity,
+                    inv.name as ingredient_name
                 FROM ingredients ing
-                WHERE ing.menu_item_id = ?
+                JOIN inventory inv ON ing.inv_item_id = inv.id
+                WHERE ing.menu_item_id = ? AND ing.deleted_at IS NULL
             `;
-            
+
             const ingredients = await executeQuery(ingredientsQuery, [item.item_id], "getItemIngredients");
-            
-            // Deduct each ingredient from inventory based on quantity
+
+            // Process each ingredient with FIFO batch consumption
             for (const ingredient of ingredients) {
-                const totalQuantityNeeded = ingredient.quantity * item.quantity;
-                
-                // Deduct from inventory
-                queries.push({
-                    sql: `
-                        UPDATE inventory
-                        SET quantity = quantity - ?, updated_at = NOW(), updated_by = ?
-                        WHERE id = ?
-                    `,
-                    params: [totalQuantityNeeded, user_id, ingredient.inv_item_id]
-                });
-                
-                // Record stock movement
-                queries.push({
-                    sql: `
-                        INSERT INTO stock_movements
-                        (item_id, movement_type_id, reference_id, quantity, created_by, notes)
-                        VALUES (?, 2, ?, ?, ?, CONCAT('Used in order #', ?))
-                    `,
-                    params: [ingredient.inv_item_id, 2, order_id, totalQuantityNeeded, user_id, order_id]
-                });
-                
-                // Check if inventory falls below threshold and create notification if needed
-                queries.push({
-                    sql: `
-                        INSERT INTO inventory_notifications 
-                        (inventory_id, notification_type, message, created_at)
-                        SELECT 
-                            id, 'low_stock', 
-                            CONCAT('Inventory item ', name, ' has fallen below threshold. Current quantity: ', 
-                                quantity - ?, ', Threshold: ', threshold),
-                            NOW()
-                        FROM inventory
-                        WHERE id = ? AND (quantity - ?) <= threshold AND threshold > 0
-                    `,
-                    params: [totalQuantityNeeded, ingredient.inv_item_id, totalQuantityNeeded]
-                });
+                const totalQuantityNeeded = ingredient.recipe_quantity * item.quantity;
+
+                console.log(
+                    `🍳 Processing ${item.item_name}: Need ${totalQuantityNeeded} ${ingredient.ingredient_name}`
+                );
+
+                try {
+                    // ✅ Use FIFO batch consumption instead of simple inventory update
+                    const { consumeFromBatchesModel } = require("../inventory-batches/model");
+
+                    const consumptionResult = await consumeFromBatchesModel(
+                        ingredient.inv_item_id,
+                        totalQuantityNeeded,
+                        "order",
+                        order_id,
+                        user_id
+                    );
+
+                    console.log(
+                        `✅ Consumed ${totalQuantityNeeded} ${ingredient.ingredient_name} from ${consumptionResult.batches_affected.length} batches:`
+                    );
+                    consumptionResult.batches_affected.forEach((batch) => {
+                        console.log(`   - Batch ${batch.batch_number}: ${batch.consumed_quantity}`);
+                    });
+
+                    // Record detailed consumption log
+                    queries.push({
+                        sql: `
+                            INSERT INTO order_ingredient_consumption
+                            (order_id, item_id, inventory_id, quantity_consumed, batches_used, created_by, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, NOW())
+                        `,
+                        params: [
+                            order_id,
+                            item.item_id,
+                            ingredient.inv_item_id,
+                            totalQuantityNeeded,
+                            JSON.stringify(consumptionResult.batches_affected),
+                            user_id,
+                        ],
+                    });
+                } catch (consumptionError) {
+                    // Handle insufficient stock errors
+                    if (consumptionError.message && consumptionError.message.includes("Insufficient stock")) {
+                        throw new CustomError(
+                            `Cannot prepare ${item.item_name}: Insufficient ${ingredient.ingredient_name}. ${consumptionError.message}`,
+                            400
+                        );
+                    }
+                    throw consumptionError;
+                }
             }
         }
-        
-        await executeTransaction(queries, "startProcessingOrder");
+
+        // Execute all queries in transaction
+        await executeTransaction(queries, "startProcessingOrderWithBatches");
+
+        console.log(`🎯 Order ${order_id} started processing with FIFO batch consumption`);
         return true;
     } catch (error) {
+        console.error(`❌ Failed to start processing order ${order_id}:`, error);
         throw new CustomError(`Failed to start processing order: ${error.message}`, 500);
     }
 };
@@ -288,7 +312,7 @@ const completeOrderModel = async (data) => {
 
         // Start a transaction
         const queries = [];
-        
+
         // Update order status to "Ready" (4)
         queries.push({
             sql: `
@@ -296,9 +320,9 @@ const completeOrderModel = async (data) => {
                 SET status_id = 4, updated_by = ?, updated_at = NOW(), actual_ready_time = NOW()
                 WHERE id = ?
             `,
-            params: [user_id, order_id]
+            params: [user_id, order_id],
         });
-        
+
         // Record status change in history
         queries.push({
             sql: `
@@ -306,9 +330,9 @@ const completeOrderModel = async (data) => {
                 (order_id, status_id, changed_by, notes, created_at)
                 VALUES (?, 4, ?, ?, NOW())
             `,
-            params: [order_id, user_id, notes || 'Completed in kitchen']
+            params: [order_id, user_id, notes || "Completed in kitchen"],
         });
-        
+
         // Update kitchen assignment
         queries.push({
             sql: `
@@ -316,9 +340,9 @@ const completeOrderModel = async (data) => {
                 SET completed_at = NOW()
                 WHERE order_id = ? AND completed_at IS NULL
             `,
-            params: [order_id]
+            params: [order_id],
         });
-        
+
         await executeTransaction(queries, "completeOrder");
         return true;
     } catch (error) {
@@ -334,10 +358,10 @@ const completeOrderModel = async (data) => {
 const getLowInventoryItemsModel = async (req) => {
     try {
         const { restaurant_id } = req.params;
-        
+
         // Use restaurant_id from the authenticated user if not specified
         const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
-        
+
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
         }
@@ -387,12 +411,12 @@ const getLowInventoryItemsModel = async (req) => {
 const getKitchenOrderHistoryModel = async (req) => {
     try {
         const { restaurant_id, date, limit } = req.query;
-        
+
         // Use restaurant_id from the authenticated user if not specified
         const actualRestaurantId = restaurant_id || req.user?.restaurant_id;
-        const actualDate = date || new Date().toISOString().split('T')[0]; // Today if not specified
+        const actualDate = date || new Date().toISOString().split("T")[0]; // Today if not specified
         const actualLimit = limit || 20;
-        
+
         if (!actualRestaurantId) {
             throw new CustomError("Restaurant ID is required", 400);
         }
@@ -432,9 +456,82 @@ const getKitchenOrderHistoryModel = async (req) => {
             LIMIT ?
         `;
 
-        return await executeQuery(sql, [actualRestaurantId, actualDate, parseInt(actualLimit)], "getKitchenOrderHistoryModel");
+        return await executeQuery(
+            sql,
+            [actualRestaurantId, actualDate, parseInt(actualLimit)],
+            "getKitchenOrderHistoryModel"
+        );
     } catch (error) {
         throw new CustomError(error.message, 500);
+    }
+};
+
+const validateOrderIngredientsAvailability = async (order_id) => {
+    try {
+        const orderItemsQuery = `
+            SELECT oi.item_id, oi.quantity, i.name as item_name
+            FROM order_items oi
+            JOIN items i ON oi.item_id = i.id
+            WHERE oi.order_id = ?
+        `;
+
+        const orderItems = await executeQuery(orderItemsQuery, [order_id], "getOrderItemsValidation");
+        const validationResults = [];
+
+        for (const item of orderItems) {
+            // Get recipe requirements
+            const ingredientsQuery = `
+                SELECT 
+                    ing.inv_item_id, 
+                    ing.quantity as recipe_quantity,
+                    inv.name as ingredient_name
+                FROM ingredients ing
+                JOIN inventory inv ON ing.inv_item_id = inv.id
+                WHERE ing.menu_item_id = ? AND ing.deleted_at IS NULL
+            `;
+
+            const ingredients = await executeQuery(ingredientsQuery, [item.item_id], "getRecipeIngredients");
+
+            for (const ingredient of ingredients) {
+                const totalQuantityNeeded = ingredient.recipe_quantity * item.quantity;
+
+                // Check batch availability
+                const batchAvailabilityQuery = `
+                    SELECT 
+                        SUM(current_quantity) as total_available
+                    FROM inventory_batches 
+                    WHERE inventory_id = ? 
+                    AND current_quantity > 0 
+                    AND status = 'active'
+                    AND deleted_at IS NULL
+                `;
+
+                const availabilityResult = await executeQuery(
+                    batchAvailabilityQuery,
+                    [ingredient.inv_item_id],
+                    "checkBatchAvailability"
+                );
+
+                const available = availabilityResult[0]?.total_available || 0;
+
+                if (available < totalQuantityNeeded) {
+                    validationResults.push({
+                        item_name: item.item_name,
+                        ingredient_name: ingredient.ingredient_name,
+                        required: totalQuantityNeeded,
+                        available: available,
+                        shortage: totalQuantityNeeded - available,
+                    });
+                }
+            }
+        }
+
+        return {
+            canPrepare: validationResults.length === 0,
+            shortages: validationResults,
+        };
+    } catch (error) {
+        throw new CustomError(`Failed to validate ingredients: ${error.message}`, 500);
     }
 };
 
@@ -442,7 +539,8 @@ module.exports = {
     getPendingKitchenOrdersModel,
     getInProgressKitchenOrdersModel,
     startProcessingOrderModel,
+    validateOrderIngredientsAvailability,
     completeOrderModel,
     getLowInventoryItemsModel,
-    getKitchenOrderHistoryModel
+    getKitchenOrderHistoryModel,
 };

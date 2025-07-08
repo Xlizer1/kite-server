@@ -9,12 +9,16 @@ const {
     getKitchenOrdersWithIngredientsController,
     startOrderPreparationController,
     getKitchenInventoryAlertsController,
-    getOrderPreparationDetailsController,
+    validateOrderIngredientsController,
 } = require("./controller");
 
 const { checkUserAuthorized } = require("../../../helpers/common");
 const validateRequest = require("../../../middleware/validateRequest");
-const { startProcessingOrderSchema, completeOrderSchema } = require("../../../validators/kitchenValidator");
+const {
+    startProcessingOrderSchema,
+    completeOrderSchema,
+    orderIdParamSchema,
+} = require("../../../validators/kitchenValidator");
 
 const router = express.Router();
 
@@ -122,51 +126,66 @@ router.post("/orders/:order_id/complete", validateRequest(completeOrderSchema), 
 
 /**
  * @swagger
- * /api/v1/kitchen/inventory/low:
+ * /api/v1/kitchen/orders/{order_id}/validate:
  *   get:
- *     summary: Get low inventory items
- *     description: Returns inventory items that are below their threshold
+ *     summary: Validate order ingredients availability
+ *     description: Check if order can be prepared with current batch inventory using FIFO
  *     tags: [Kitchen]
+ *     parameters:
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     responses:
  *       200:
- *         description: List of low inventory items
+ *         description: Order validation result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     canPrepare:
+ *                       type: boolean
+ *                     shortages:
+ *                       type: array
  */
-router.get("/inventory/low", (req, res) => {
-    getLowInventoryItemsController(req, (result) => {
+router.get("/orders/:order_id/validate", (req, res) => {
+    validateOrderIngredientsController(req, (result) => {
         res.json(result);
     });
 });
 
 /**
  * @swagger
- * /api/v1/kitchen/history:
+ * /api/v1/kitchen/orders/{order_id}/details:
  *   get:
- *     summary: Get kitchen order history
- *     description: Returns completed kitchen orders
+ *     summary: Get detailed order preparation information
+ *     description: Get order with ingredient breakdown and batch consumption plan
  *     tags: [Kitchen]
  *     parameters:
- *       - in: query
- *         name: date
- *         schema:
- *           type: string
- *           format: date
- *         description: Date to filter by (YYYY-MM-DD)
- *       - in: query
- *         name: limit
+ *       - in: path
+ *         name: order_id
+ *         required: true
  *         schema:
  *           type: integer
- *         description: Maximum number of orders to return
  *     responses:
  *       200:
- *         description: Kitchen order history
+ *         description: Detailed order preparation info
  */
-router.get("/history", (req, res) => {
-    getKitchenOrderHistoryController(req, (result) => {
+router.get("/orders/:order_id/details", (req, res) => {
+    getOrderPreparationDetailsController(req, (result) => {
         res.json(result);
     });
 });
 
-// Get kitchen orders with ingredient availability status
 router.get("/orders-with-ingredients", (req, res) => {
     getKitchenOrdersWithIngredientsController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
@@ -187,11 +206,16 @@ router.get("/inventory-alerts", (req, res) => {
     });
 });
 
-// Get detailed order preparation information
-// router.get("/order-details/:order_id", validateRequest(orderIdParamSchema), (req, res) => {
-//     getOrderPreparationDetailsController(req, (result) => {
-//         res.status(result.statusCode || 200).json(result);
-//     });
-// });
+router.get("/inventory/low", (req, res) => {
+    getLowInventoryItemsController(req, (result) => {
+        res.json(result);
+    });
+});
+
+router.get("/history", (req, res) => {
+    getKitchenOrderHistoryController(req, (result) => {
+        res.json(result);
+    });
+});
 
 module.exports = router;

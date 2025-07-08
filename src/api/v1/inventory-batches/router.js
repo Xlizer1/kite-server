@@ -18,6 +18,7 @@ const {
     batchIdParamSchema,
     inventoryIdParamSchema,
     getExpiringBatchesSchema,
+    batchAnalyticsSchema,
 } = require("../../../validators/inventoryBatchSchema");
 
 // Get all inventory batches with filtering
@@ -65,6 +66,12 @@ router.post("/consume", authenticateToken, validateRequest(batchConsumptionSchem
 // Update inventory batch
 router.put("/:id", authenticateToken, validateRequest(batchUpdateSchema), (req, res) => {
     updateInventoryBatchController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+router.get("/analytics/:restaurant_id", authenticateToken, validateRequest(batchAnalyticsSchema), (req, res) => {
+    getBatchAnalyticsController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
     });
 });

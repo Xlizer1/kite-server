@@ -204,6 +204,17 @@ const getBatchesQuerySchema = Joi.object({
     }),
 });
 
+const batchAnalyticsSchema = {
+    params: Joi.object({
+        restaurant_id: Joi.number().integer().required(),
+    }),
+    query: Joi.object({
+        days: Joi.number().integer().min(1).max(365).optional(),
+        include_waste: Joi.boolean().optional(),
+        group_by: Joi.string().valid("week", "month", "day").optional(),
+    }),
+};
+
 // Constants for validation
 const BATCH_STATUSES = ["active", "expired", "consumed", "damaged"];
 const MOVEMENT_TYPES = ["consumption", "adjustment", "damage", "return"];
@@ -220,4 +231,5 @@ module.exports = {
     BATCH_STATUSES,
     MOVEMENT_TYPES,
     REFERENCE_TYPES,
+    batchAnalyticsSchema,
 };

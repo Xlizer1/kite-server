@@ -567,7 +567,6 @@ const validateRecipeAvailability = async (recipeItems) => {
 // Add this function to auto-consume ingredients for orders
 const consumeIngredientsForOrder = async (orderId, ingredients, userId) => {
     try {
-        const queries = [];
         const consumptionDetails = [];
 
         for (const ingredient of ingredients) {
@@ -576,14 +575,10 @@ const consumeIngredientsForOrder = async (orderId, ingredients, userId) => {
             // Check availability first
             const availability = await checkStockAvailability(inventory_id, quantity);
             if (!availability || !availability.sufficient_stock) {
-                throw new BusinessLogicError(
-                    `Insufficient stock for ${availability?.name || "ingredient"}. Required: ${quantity}, Available: ${
-                        availability?.available_in_batches || 0
-                    }`
-                );
+                throw new BusinessLogicError(`Insufficient stock for ${availability?.name || "ingredient"}`);
             }
 
-            // Consume from batches (FIFO)
+            // 🔄 Consume from batches using FIFO
             const { consumeFromBatchesModel } = require("../inventory-batches/model");
             const consumptionResult = await consumeFromBatchesModel(inventory_id, quantity, "order", orderId, userId);
 
@@ -600,7 +595,6 @@ const consumeIngredientsForOrder = async (orderId, ingredients, userId) => {
             consumption_details: consumptionDetails,
         };
     } catch (error) {
-        if (error instanceof BusinessLogicError) throw error;
         throw new DatabaseError("Failed to consume ingredients for order", error);
     }
 };

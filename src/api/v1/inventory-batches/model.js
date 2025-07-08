@@ -392,14 +392,10 @@ const consumeFromBatches = async (inventoryId, quantityToConsume, referenceType,
             AND current_quantity > 0 
             AND status = 'active'
             AND deleted_at IS NULL
-            ORDER BY purchase_date ASC, created_at ASC
+            ORDER BY purchase_date ASC, created_at ASC  -- 🔄 FIFO: Oldest first
         `;
 
         const batches = await executeQuery(batchesSql, [inventoryId], "getAvailableBatches");
-
-        if (!batches.length) {
-            throw new BusinessLogicError("No available batches for consumption");
-        }
 
         // Calculate total available quantity
         const totalAvailable = batches.reduce((sum, batch) => sum + batch.current_quantity, 0);
@@ -414,7 +410,7 @@ const consumeFromBatches = async (inventoryId, quantityToConsume, referenceType,
         let remainingToConsume = quantityToConsume;
         const consumedBatches = [];
 
-        // Consume from batches (FIFO)
+        // 🎯 Consume from batches using FIFO
         for (const batch of batches) {
             if (remainingToConsume <= 0) break;
 
@@ -458,34 +454,6 @@ const consumeFromBatches = async (inventoryId, quantityToConsume, referenceType,
 
             remainingToConsume -= consumeFromThisBatch;
         }
-
-        // Update main inventory quantity
-        queries.push({
-            sql: `
-                UPDATE inventory 
-                SET quantity = quantity - ?, updated_at = NOW(), updated_by = ?
-                WHERE id = ?
-            `,
-            params: [quantityToConsume, userId, inventoryId],
-        });
-
-        // Add main stock movement
-        queries.push({
-            sql: `
-                INSERT INTO stock_movements (
-                    item_id, movement_type_id, quantity, reference_id, 
-                    notes, created_by, created_at
-                )
-                VALUES (?, 2, ?, ?, ?, ?, NOW())
-            `,
-            params: [
-                inventoryId,
-                -quantityToConsume,
-                referenceId,
-                `Consumed from ${consumedBatches.length} batches`,
-                userId,
-            ],
-        });
 
         // Execute transaction
         await executeTransaction(queries, "consumeFromBatches");

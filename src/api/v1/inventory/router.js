@@ -9,10 +9,12 @@ const {
     deleteInventoryItemController,
     getInventoryHistoryController,
     getInventoryWithBatchesByRestaurantController,
+    checkStockAvailabilityController,
+    getInventoryDashboardController,
 } = require("./controller");
 const { authenticateToken } = require("../../../middleware/auth");
 const validateRequest = require("../../../middleware/validateRequest");
-const { inventorySchema } = require("../../../validators/inventorySchema");
+const { inventorySchema, stockAvailabilitySchema } = require("../../../validators/inventorySchema");
 
 // Get all inventory items
 router.get("/", authenticateToken, (req, res) => {
@@ -73,6 +75,44 @@ router.get("/restaurant/:restaurant_id/with-batches", authenticateToken, (req, r
 // Alternative route for current user's restaurant
 router.get("/with-batches", authenticateToken, (req, res) => {
     getInventoryWithBatchesByRestaurantController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+router.get("/:inventory_id/availability", authenticateToken, validateRequest(stockAvailabilitySchema), (req, res) => {
+    checkStockAvailabilityController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/inventory/dashboard/{restaurant_id}:
+ *   get:
+ *     summary: Get inventory dashboard data
+ *     description: Get combined dashboard data - low stock, expiring batches, recent movements
+ *     tags: [Inventory]
+ *     parameters:
+ *       - in: path
+ *         name: restaurant_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Dashboard data
+ */
+router.get("/dashboard/:restaurant_id", authenticateToken, (req, res) => {
+    getInventoryDashboardController(req, (result) => {
+        res.status(result.statusCode || 200).json(result);
+    });
+});
+
+/**
+ * Alternative route for current user's restaurant dashboard
+ */
+router.get("/dashboard", authenticateToken, (req, res) => {
+    getInventoryDashboardController(req, (result) => {
         res.status(result.statusCode || 200).json(result);
     });
 });
