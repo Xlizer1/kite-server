@@ -388,9 +388,118 @@ const createOrderFromCartModel = async ({ cartId, userId }) => {
     }
 };
 
+/**
+ * Place order from cart (Customer-facing)
+ * @param {Object} data - Order data
+ * @returns {Promise<Object>} - Order result
+ */
+const placeOrderFromCartModel = async (data) => {
+    try {
+        const { sessionId, cartId, tableId, restaurantId, special_request, allergy_info, customer_name } = data;
+
+        // Validate cart exists and has items
+        const cartItemsQuery = `
+            SELECT 
+                ci.id,
+                ci.item_id,
+                ci.quantity,
+                ci.special_instructions,
+                i.price,
+                i.name as item_name
+            FROM cart_items ci
+            JOIN items i ON ci.item_id = i.id
+            WHERE ci.cart_id = ?
+        `;
+
+        const cartItems = await executeQuery(cartItemsQuery, [cartId], "getCartItemsForOrder");
+
+        if (!cartItems || cartItems.length === 0) {
+            return { status: false, message: "Cart is empty" };
+        }
+
+        // Calculate total amount
+        const totalAmount = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+        // Create order with status 1 (Pending - waiting for captain approval)
+        const createOrderQuery = `
+            INSERT INTO orders (
+                table_id, 
+                restaurant_id, 
+                status_id, 
+                special_request, 
+                allergy_info, 
+                customer_name,
+                total_amount,
+                created_at
+            ) VALUES (?, ?, 1, ?, ?, ?, ?, NOW())
+        `;
+
+        const orderResult = await executeQuery(
+            createOrderQuery,
+            [tableId, restaurantId, special_request, allergy_info, customer_name, totalAmount],
+            "createCustomerOrder"
+        );
+
+        if (!orderResult || !orderResult.insertId) {
+            return { status: false, message: "Failed to create order" };
+        }
+
+        const orderId = orderResult.insertId;
+
+        // Transfer cart items to order items
+        for (const item of cartItems) {
+            const addOrderItemQuery = `
+                INSERT INTO order_items (
+                    order_id, 
+                    item_id, 
+                    quantity, 
+                    special_instructions,
+                    unit_price,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, NOW())
+            `;
+
+            await executeQuery(
+                addOrderItemQuery,
+                [orderId, item.item_id, item.quantity, item.special_instructions, item.price],
+                "addOrderItem"
+            );
+        }
+
+        // Record initial order status in history
+        const statusHistoryQuery = `
+            INSERT INTO order_status_history (
+                order_id, 
+                status_id, 
+                notes, 
+                created_at
+            ) VALUES (?, 1, 'Order placed by customer', NOW())
+        `;
+
+        await executeQuery(statusHistoryQuery, [orderId], "recordOrderStatusHistory");
+
+        // Clear the cart after successful order creation
+        await executeQuery("DELETE FROM cart_items WHERE cart_id = ?", [cartId], "clearCartAfterOrder");
+        await executeQuery("DELETE FROM carts WHERE id = ?", [cartId], "deleteCartAfterOrder");
+
+        console.log(`✅ Customer order created: Order #${orderId}, Table ${tableId}, ${cartItems.length} items`);
+
+        return {
+            status: true,
+            orderId: orderId,
+            itemsCount: cartItems.length,
+            totalAmount: totalAmount,
+            message: "Order placed successfully",
+        };
+    } catch (error) {
+        console.error("Error in placeOrderFromCartModel:", error);
+        return { status: false, message: "An error occurred while placing your order" };
+    }
+};
+
 module.exports = {
     getCartModel,
-    // upsertCartModel,
+    placeOrderFromCartModel,
     addCartItemModel,
     updateCartItemModel,
     removeCartItemModel,

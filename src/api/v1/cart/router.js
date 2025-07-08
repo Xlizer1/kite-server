@@ -1,7 +1,7 @@
 const express = require("express");
 const {
     getCartController,
-    initializeCartController,
+    placeOrderFromCartController,
     addCartItemController,
     updateCartItemController,
     removeCartItemController,
@@ -102,6 +102,81 @@ router.get("/validate-session", (req, res) => {
 
 router.get("/session-info", (req, res) => {
     getCartSessionInfoController(req, (result) => {
+        res.json(result);
+    });
+});
+
+/**
+ * @swagger
+ * /api/v1/cart/place-order:
+ *   post:
+ *     summary: Place order from cart (Customer)
+ *     description: Converts customer's cart items into an order. No authentication required - uses session validation.
+ *     tags: [Cart]
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         schema:
+ *           type: string
+ *         description: Cart session ID (can also be from cookies)
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               special_request:
+ *                 type: string
+ *                 description: Special request for the order
+ *                 example: "Extra spicy, no onions"
+ *               allergy_info:
+ *                 type: string
+ *                 description: Allergy information
+ *                 example: "Allergic to nuts and dairy"
+ *               customer_name:
+ *                 type: string
+ *                 description: Customer name (optional)
+ *                 example: "John Doe"
+ *     responses:
+ *       200:
+ *         description: Order placed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Order placed successfully! Please wait for captain approval."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: integer
+ *                       example: 123
+ *                     tableNumber:
+ *                       type: integer
+ *                       example: 5
+ *                     itemsCount:
+ *                       type: integer
+ *                       example: 3
+ *                     totalAmount:
+ *                       type: number
+ *                       example: 45.50
+ *                     estimatedTime:
+ *                       type: string
+ *                       example: "15-20 minutes"
+ *       400:
+ *         description: Invalid request (empty cart, missing session, etc.)
+ *       404:
+ *         description: Cart/session not found
+ */
+router.post("/place-order", (req, res) => {
+    placeOrderFromCartController(req, (result) => {
         res.json(result);
     });
 });

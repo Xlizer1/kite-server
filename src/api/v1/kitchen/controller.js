@@ -71,7 +71,7 @@ const getInProgressKitchenOrdersController = async (request, callBack) => {
 };
 
 /**
- * Start processing an order in the kitchen
+ * Start processing an order in the kitchen (ENHANCED with notifications)
  * @param {Object} request - Express request object
  * @param {Function} callBack - Callback function
  */
@@ -91,6 +91,26 @@ const startProcessingOrderController = async (request, callBack) => {
             return callBack(resultObject(false, "Order ID is required"));
         }
 
+        // Get order details for notifications
+        const orderDetailsQuery = `
+            SELECT 
+                o.id,
+                o.table_id,
+                o.restaurant_id,
+                t.number as table_number
+            FROM orders o
+            JOIN tables t ON o.table_id = t.id
+            WHERE o.id = ?
+        `;
+
+        const orderDetails = await executeQuery(orderDetailsQuery, [order_id], "getOrderDetailsForProcessing");
+
+        if (!orderDetails || orderDetails.length === 0) {
+            return callBack(resultObject(false, "Order not found"));
+        }
+
+        const order = orderDetails[0];
+
         const result = await startProcessingOrderModel({
             order_id,
             user_id: authorize.id,
@@ -98,6 +118,33 @@ const startProcessingOrderController = async (request, callBack) => {
         });
 
         if (result) {
+            // 🔥 NOTIFICATION: Optional - notify captains that order is being prepared
+            try {
+                const firebaseRealtimeService = require("../../../services/firebaseRealtimeService");
+
+                await firebaseRealtimeService.sendNotification({
+                    restaurantId: order.restaurant_id,
+                    departments: [5], // CAPTAIN department
+                    type: "ORDER_PROCESSING",
+                    title: "Order Being Prepared",
+                    message: `Table ${order.table_number} order is now being prepared${
+                        estimated_minutes ? ` (Est. ${estimated_minutes} min)` : ""
+                    }`,
+                    data: {
+                        orderId: order.id,
+                        tableNumber: order.table_number,
+                        estimatedMinutes: estimated_minutes || null,
+                        kitchenStaff: authorize.name || `User ${authorize.id}`,
+                    },
+                    priority: "low", // Low priority since it's just an update
+                });
+
+                console.log(`📧 Order processing notification sent - Order #${order_id}`);
+            } catch (notificationError) {
+                console.error("Failed to send processing notification:", notificationError);
+                // Don't fail the operation if notification fails
+            }
+
             callBack(resultObject(true, "Order processing started successfully"));
         } else {
             callBack(resultObject(false, "Failed to start processing order"));
@@ -115,7 +162,7 @@ const startProcessingOrderController = async (request, callBack) => {
 };
 
 /**
- * Complete an order in the kitchen
+ * Complete an order in the kitchen (ENHANCED with notifications)
  * @param {Object} request - Express request object
  * @param {Function} callBack - Callback function
  */
@@ -135,6 +182,29 @@ const completeOrderController = async (request, callBack) => {
             return callBack(resultObject(false, "Order ID is required"));
         }
 
+        // Get order details before completing (for notifications)
+        const orderDetailsQuery = `
+            SELECT 
+                o.id,
+                o.table_id,
+                o.restaurant_id,
+                t.number as table_number,
+                COUNT(oi.id) as items_count
+            FROM orders o
+            JOIN tables t ON o.table_id = t.id
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            WHERE o.id = ? AND o.status_id = 3
+            GROUP BY o.id
+        `;
+
+        const orderDetails = await executeQuery(orderDetailsQuery, [order_id], "getOrderDetailsForCompletion");
+
+        if (!orderDetails || orderDetails.length === 0) {
+            return callBack(resultObject(false, "Order not found or not in kitchen"));
+        }
+
+        const order = orderDetails[0];
+
         const result = await completeOrderModel({
             order_id,
             user_id: authorize.id,
@@ -142,6 +212,41 @@ const completeOrderController = async (request, callBack) => {
         });
 
         if (result) {
+            // 🔥 NOTIFICATION: Send order ready notification to captains
+            try {
+                const firebaseRealtimeService = require("../../../services/firebaseRealtimeService");
+
+                console.log(`📧 Sending order ready notification for order #${order_id}`);
+
+                await firebaseRealtimeService.sendNotification({
+                    restaurantId: order.restaurant_id,
+                    departments: [5], // CAPTAIN department
+                    type: "ORDER_READY_PICKUP",
+                    title: "🍽️ Order Ready for Pickup!",
+                    message: `Table ${order.table_number} order is ready for pickup`,
+                    data: {
+                        orderId: order.id,
+                        tableId: order.table_id,
+                        tableNumber: order.table_number,
+                        itemsCount: order.items_count,
+                        completedBy: authorize.name || `User ${authorize.id}`,
+                        notes: notes || null,
+                    },
+                    priority: "high",
+                    actionRequired: true,
+                    sound: "notification",
+                    actions: [
+                        { action: "pickup", title: "Mark as Picked Up" },
+                        { action: "view", title: "View Order" },
+                    ],
+                });
+
+                console.log(`✅ Order ready notification sent to captains - Order #${order_id}`);
+            } catch (notificationError) {
+                console.error("Failed to send order ready notification:", notificationError);
+                // Don't fail the completion if notification fails
+            }
+
             callBack(resultObject(true, "Order completed successfully"));
         } else {
             callBack(resultObject(false, "Failed to complete order"));

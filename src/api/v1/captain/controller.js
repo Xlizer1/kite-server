@@ -91,7 +91,7 @@ const getActiveOrdersController = async (request, callBack) => {
 };
 
 /**
- * Update order status
+ * Update order status (ENHANCED with notifications)
  * @param {Object} request - Express request object
  * @param {Function} callBack - Callback function
  */
@@ -107,6 +107,30 @@ const updateOrderStatusController = async (request, callBack) => {
             return callBack(resultObject(false, "Order ID and status ID are required"));
         }
 
+        // Get order details before updating (for notifications)
+        const orderDetailsQuery = `
+            SELECT 
+                o.id,
+                o.table_id,
+                o.restaurant_id,
+                t.number as table_number,
+                COUNT(oi.id) as items_count,
+                o.status_id as current_status
+            FROM orders o
+            JOIN tables t ON o.table_id = t.id
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            WHERE o.id = ?
+            GROUP BY o.id
+        `;
+
+        const orderDetails = await executeQuery(orderDetailsQuery, [order_id], "getOrderDetailsForNotification");
+
+        if (!orderDetails || orderDetails.length === 0) {
+            return callBack(resultObject(false, "Order not found"));
+        }
+
+        const order = orderDetails[0];
+
         const result = await updateOrderStatusModel({
             order_id,
             status_id,
@@ -115,6 +139,81 @@ const updateOrderStatusController = async (request, callBack) => {
         });
 
         if (result) {
+            // 🔥 NOTIFICATION INTEGRATION: Send notifications based on status change
+            try {
+                const firebaseRealtimeService = require("../../../services/firebaseRealtimeService");
+
+                // Status 2 = Captain Approved → Notify Kitchen
+                if (parseInt(status_id) === 2) {
+                    console.log(`📧 Sending kitchen notification for approved order #${order_id}`);
+
+                    // Send notification to kitchen staff
+                    await firebaseRealtimeService.sendNotification({
+                        restaurantId: order.restaurant_id,
+                        departments: [6], // KITCHEN department
+                        type: "NEW_ORDER_KITCHEN",
+                        title: "New Order for Kitchen",
+                        message: `Table ${order.table_number} - ${order.items_count} items approved`,
+                        data: {
+                            orderId: order.id,
+                            tableId: order.table_id,
+                            tableNumber: order.table_number,
+                            itemsCount: order.items_count,
+                        },
+                        priority: "high",
+                        actionRequired: true,
+                        sound: "notification",
+                    });
+
+                    console.log(`✅ Kitchen notification sent for order #${order_id}`);
+                }
+
+                // Status 3 = In Kitchen → Could send update to captains
+                else if (parseInt(status_id) === 3) {
+                    console.log(`📧 Order #${order_id} moved to kitchen`);
+
+                    // Optional: Notify captains that order is being prepared
+                    await firebaseRealtimeService.sendNotification({
+                        restaurantId: order.restaurant_id,
+                        departments: [5], // CAPTAIN department
+                        type: "ORDER_IN_KITCHEN",
+                        title: "Order Being Prepared",
+                        message: `Table ${order.table_number} order is now being prepared`,
+                        data: {
+                            orderId: order.id,
+                            tableNumber: order.table_number,
+                        },
+                        priority: "low",
+                    });
+                }
+
+                // Status 4 = Ready → Notify Captains for pickup
+                else if (parseInt(status_id) === 4) {
+                    console.log(`📧 Sending pickup notification for ready order #${order_id}`);
+
+                    await firebaseRealtimeService.sendNotification({
+                        restaurantId: order.restaurant_id,
+                        departments: [5], // CAPTAIN department
+                        type: "ORDER_READY_PICKUP",
+                        title: "🍽️ Order Ready for Pickup",
+                        message: `Table ${order.table_number} order is ready!`,
+                        data: {
+                            orderId: order.id,
+                            tableId: order.table_id,
+                            tableNumber: order.table_number,
+                        },
+                        priority: "high",
+                        actionRequired: true,
+                        sound: "notification",
+                    });
+
+                    console.log(`✅ Pickup notification sent for order #${order_id}`);
+                }
+            } catch (notificationError) {
+                console.error("Failed to send notification:", notificationError);
+                // Don't fail the status update if notification fails
+            }
+
             callBack(resultObject(true, "Order status updated successfully"));
         } else {
             callBack(resultObject(false, "Failed to update order status"));
@@ -317,7 +416,7 @@ const updateTableStatusController = async (request, callBack) => {
             customer_count,
             notes,
             updated_by: authorize.id,
-            restaurant_id: authorize.restaurant_id
+            restaurant_id: authorize.restaurant_id,
         });
 
         if (result) {
@@ -328,7 +427,7 @@ const updateTableStatusController = async (request, callBack) => {
                 status,
                 customer_count,
                 updated_by: authorize.id,
-                updated_at: new Date()
+                updated_at: new Date(),
             });
 
             callBack(resultObject(true, "Table status updated successfully"));
@@ -343,7 +442,7 @@ const updateTableStatusController = async (request, callBack) => {
 
 /**
  * Get captain dashboard summary
- * @param {Object} request - Express request object  
+ * @param {Object} request - Express request object
  * @param {Function} callBack - Callback function
  */
 const getCaptainDashboardController = async (request, callBack) => {
@@ -383,7 +482,7 @@ const assignCaptainToTablesController = async (request, callBack) => {
         const result = await assignCaptainToTablesModel({
             captain_id: authorize.id,
             table_ids,
-            restaurant_id: authorize.restaurant_id
+            restaurant_id: authorize.restaurant_id,
         });
 
         if (result) {
@@ -397,7 +496,6 @@ const assignCaptainToTablesController = async (request, callBack) => {
     }
 };
 
-
 module.exports = {
     getRestaurantTablesController,
     getPendingOrdersController,
@@ -410,5 +508,5 @@ module.exports = {
     getMenuForOrderingController,
     updateTableStatusController,
     getCaptainDashboardController,
-    assignCaptainToTablesController
+    assignCaptainToTablesController,
 };

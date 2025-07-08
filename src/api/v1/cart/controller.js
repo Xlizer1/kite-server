@@ -9,6 +9,7 @@ const {
     getCaptainCallsModel,
     updateCaptainCallModel,
     createOrderFromCartModel,
+    placeOrderFromCartModel,
 } = require("./model");
 const { resultObject, verifyUserToken, processTableEncryptedKey } = require("../../../helpers/common");
 // const { v4: uuidv4 } = require("uuid");
@@ -542,6 +543,80 @@ const getCartSessionInfoController = async (request, callBack) => {
     }
 };
 
+/**
+ * Place order from cart (Customer-facing, no authentication required)
+ * @param {Object} request - Express request object
+ * @param {Function} callBack - Callback function
+ */
+const placeOrderFromCartController = async (request, callBack) => {
+    try {
+        const sessionId = request.query.sessionId || request.cookies.cartSessionId;
+        const { special_request, allergy_info, customer_name } = request.body;
+
+        if (!sessionId) {
+            return callBack(resultObject(false, "Session ID is required"));
+        }
+
+        // Get cart and validate session
+        const cart = await getCartModel(sessionId);
+
+        if (!cart) {
+            return callBack(
+                resultObject(false, "Cart not found. Please scan the QR code again to start a new session.")
+            );
+        }
+
+        if (!cart.items || cart.items.length === 0) {
+            return callBack(resultObject(false, "Cart is empty. Please add items before placing order."));
+        }
+
+        // Create order from cart
+        const result = await placeOrderFromCartModel({
+            sessionId,
+            cartId: cart.id,
+            tableId: cart.table_id,
+            restaurantId: cart.restaurant_id,
+            special_request,
+            allergy_info,
+            customer_name,
+        });
+
+        if (result.status) {
+            // 🔥 NOTIFICATION: Send new order notification to captains
+            try {
+                const firebaseRealtimeService = require("../../../services/firebaseRealtimeService");
+                await firebaseRealtimeService.sendOrderApprovalNotification(cart.restaurant_id, {
+                    order_id: result.orderId,
+                    table_id: cart.table_id,
+                    table_number: cart.table_number,
+                    items_count: cart.items.length,
+                    total_amount: cart.subtotal,
+                });
+
+                console.log(`📧 New order notification sent to captains - Order #${result.orderId}`);
+            } catch (notificationError) {
+                console.error("Failed to send notification:", notificationError);
+                // Don't fail the order if notification fails
+            }
+
+            return callBack(
+                resultObject(true, "Order placed successfully! Please wait for captain approval.", {
+                    orderId: result.orderId,
+                    tableNumber: cart.table_number,
+                    itemsCount: cart.items.length,
+                    totalAmount: cart.subtotal,
+                    estimatedTime: "15-20 minutes",
+                })
+            );
+        } else {
+            return callBack(resultObject(false, result.message || "Failed to place order"));
+        }
+    } catch (error) {
+        console.error("Error in placeOrderFromCartController:", error);
+        return callBack(resultObject(false, "Something went wrong. Please try again later."));
+    }
+};
+
 module.exports = {
     getCartController: getCart,
     // initializeCartController: initializeCart,
@@ -555,4 +630,5 @@ module.exports = {
     createOrderFromCartController: createOrderFromCart,
     validateCartSessionController: validateCartSessionController,
     getCartSessionInfoController: getCartSessionInfoController,
+    placeOrderFromCartController: placeOrderFromCartController,
 };
